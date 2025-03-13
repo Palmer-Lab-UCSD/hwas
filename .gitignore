@@ -3,3 +3,5 @@ test/
 env/
 *~
 *.swp
+*__pycache__/
+*.csv
