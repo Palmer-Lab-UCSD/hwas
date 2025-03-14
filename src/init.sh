@@ -85,7 +85,7 @@ function print_help {
 hgrm="__null__"
 prev="__null__"
 seed="$(tr -dc '0-9' < /dev/urandom | head -c $num_random)"
-tmp_dir="/tmp"
+tmp_path="/tmp"
 for curr in $@; do
 
     if [ $curr = "--help" ]; then
@@ -115,9 +115,9 @@ for curr in $@; do
     elif [ $prev = "--hgrm" ]; then
         is_valid_option $curr
         hgrm=$curr
-    elif [ $prev = "--tmp_dir" ]; then
+    elif [ $prev = "--tmp_path" ]; then
         is_valid_option $curr
-        tmp_dir=$curr
+        tmp_path=$curr
     fi
 
     prev=$curr
@@ -151,8 +151,8 @@ elif [ $hgrm = "__null__" ] && [ -d hgrm ]; then
 fi
 
 
-if [ ! -d "$tmp_dir" ]; then
-    err "$tmp_dir directory does not exist or are permission constrained"
+if [ ! -d "$tmp_path" ]; then
+    err "$tmp_path directory does not exist or are permission constrained"
 fi
 
 

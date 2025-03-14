@@ -1,3 +1,14 @@
+"""Query data from the Palmer Lab database
+
+By: Robert Vogel
+Affiliation: Palmer Lab at UCSD
+
+Acknowledgement:
+    This code has been reviewed by Claude, the AI assistant from Anthropic.
+    The code was designed and implemented by Robert Vogel, code recommendations
+    that were provided by Claude were adapted and implemented by Robert Vogel.
+"""
+
 # Query palmer lab database 
 #
 import sys
@@ -5,34 +16,31 @@ import argparse
 import re
 import os
 
-import data_model as dm
+import config
+import db
 
 import psycopg as pg
 
 
 
+def parse_args(args: list[str]) -> argparse.Namespace:
 
-
-
-covariate_regex = re.compile("covariate")
-
-def parse_args(args):
     parser = argparse.ArgumentParser()
     parser.add_argument("--dbname",
             type=str,
-            default="PalmerLab_Datasets",
+            default=config.DEFAULT_DB_NAME,
             help="Name of data base to query from.")
     parser.add_argument("--host",
             type=str,
-            default="palmerlab-main-database-c2021-08-02.c6sgfwysomht.us-west-2.rds.amazonaws.com",
+            default=config.DEFAULT_DB,
             help="Hostname of database")
     parser.add_argument("--user",
             type=str,
-            default="postgres",
+            default=config.DEFAULT_DB_USER,
             help="User name for logging into database.")
     parser.add_argument("--port",
             type=str,
-            default="5432",
+            default=config.DEFAULT_DB_PORT,
             help="Port in which to connect to db.")
     parser.add_argument("-p",
             type=str,
@@ -53,7 +61,7 @@ def parse_args(args):
     return parser.parse_args(args)
 
 
-def main(args):
+def main(args: list[str]) -> None:
     args = parse_args(args)
 
     connection_name = (f"dbname={args.dbname}"
@@ -67,106 +75,91 @@ def main(args):
 
     with (pg.connect(connection_name) as conn,
         conn.cursor() as cur,
-        conn.cursor(row_factory=pg.rows.class_row(dm.Metadata)) as cur_mdata,
-        conn.cursor(row_factory=pg.rows.class_row(dm.PhenotypeRecord)) as cur_data):
+        conn.cursor(row_factory=pg.rows.class_row(db.Metadata)) as cur_mdata,
+        conn.cursor(row_factory=pg.rows.class_row(db.PhenotypeRecord)) as cur_data):
 
 
 
         # determine wither schema exists
-        if ((out := cur_mdata.execute("SELECT 1 FROM information_schema.schemata"
-            " WHERE schema_name = %s", (args.schema_name,))) is None
-            or out.rowcount != 1):
-    
+        if not db.is_schema_unique(cur, args.schema_name):
             raise ValueError(f"The schema, {args.schema_name}, is not"
                 " uniquely defined in db")
     
 
         # determine whether schema has required tables
-        if ((out := cur_mdata.execute(("SELECT 1 FROM"
-            " (SELECT * FROM information_schema.tables WHERE table_schema = %s)"
-            " WHERE table_name = %s OR table_name = %s"),
-            (args.schema_name, dm.METADATA_TABLENAME, dm.PHENOTYPE_TABLENAME))) is None 
-            or out.rowcount != 2):
+        if not db.is_table_unique(cur, args.schema_name, db.METADATA_TABLENAME):
+            raise ValueError(f"The table, {db.METADATA_TABLENAME} is not"
+                    f" uniquely defined in schema {args.schema_name}.")
 
-            raise ValueError(f"The schema, {args.schema_name}, does not contain the"
-                    f" required tables: '{dm.METADATA_TABLENAME}'"
-                    f" and '{dm.PHENOTYPE_TABLENAME}'.")
+
+        if not db.is_table_unique(cur, args.schema_name, db.PHENOTYPE_TABLENAME):
+            raise ValueError(f"The table, {db.PHENOTYPE_TABLENAME} is not"
+                    f" uniquely defined in schema {args.schema_name}.")
+            
         
 
-        
+        # use meta data to determine what covariates to use for the 
+        # association analysis
         query = pg.sql.SQL(
-                    "SELECT * FROM {schema_name}.{table_name} WHERE measure = %s"
-                ).format(
-                    schema_name = pg.sql.Identifier(args.schema_name),
-                    table_name = pg.sql.Identifier(dm.METADATA_TABLENAME)
-                )
+                        "SELECT * FROM {schema_name}.{table_name}" 
+                        " WHERE measure = %s;"
+                    ).format(
+                        schema_name = pg.sql.Identifier(args.schema_name),
+                        table_name = pg.sql.Identifier(db.METADATA_TABLENAME)
+                    )
 
-        if ((out := cur_mdata.execute(query, (args.phenotype,))) is None 
-                or out.rowcount != 1):
+        if ((metadata := cur_mdata.execute(query, (args.phenotype,))) is None 
+                or metadata.rowcount != 1):
             raise ValueError((f"Phenotype, {args.phenotype}, is not uniquely defined"
-                    f" in {args.schema_name}.description."))
+                    f" in {args.schema_name}.{db.METADATA_TABLENAME}."))
 
-        out = out.fetchone()
+        metadata = metadata.fetchone()
 
-
-        # This code clip is adapted from the example at
-        # https://www.psycopg.org/psycopg3/docs/api/sql.html#module-usage
-        # It is meant to dynamically make a SQL query with columns names
-        # specified by the covariates field from the previous query
-
-
-        if covariate_regex.match(out.trait_covariate) is not None:
+        # make sure phenotype is not a covariate
+        if config.IS_COVARIATE.match(metadata.trait_covariate) is not None:
             raise ValueError("Input phenotype is a covariate.")
 
 
         # Check that specified covariate is a covariate and that a
         # column for that covariate exists in the PHENOTYPE_TABLENAME
         # table.
-        covariate_names = ([dm.SAMPLE_COLNAME] 
-                            + out.covariates.split(dm.COVARIATE_DELIMITER))
+        covariate_names = metadata.covariates.split(db.COVARIATE_DELIMITER)
 
         for w in covariate_names:
-            query = pg.sql.SQL(
-                        "SELECT {column_name} IN"
-                        " (SELECT column_name FROM information_schema.columns"
-                        " WHERE table_schema = %s AND table_name = %s)"
-                    ).format(
-                        column_name = pg.sql.Literal(w)
-                    )
 
-            if ((tmp_out := cur.execute(query,
-                            (args.schema_name, dm.PHENOTYPE_TABLENAME))) is None
-                or tmp_out.rowcount != 1
-                or not tmp_out.fetchone()[0]):
-
-                raise ValueError(f"The covariate, {w}, is not a named column"
-                                 f" in the {dm.PHENOTYPE_TABLENAME} table.")
-                
+            if not db.is_covariate(cur, args.schema_name, w):
+                raise ValueError(f"The covariate {w} specified in the database"
+                                 f" for phenotype {args.phenotype}"
+                                 " is not labeled a covariate in the table"
+                                 f" {args.schema_name}.{db.METADATA_TABLENAME}.")
 
 
+        cov_columns = [db.SAMPLE_COLNAME] + covariate_names
         query = pg.sql.SQL(
                     "SELECT {fields} FROM {schema_name}.{table_name}"
                 ).format(
                     fields = pg.sql.SQL(',').join(
                         [
-                            pg.sql.Identifier(w) for w in covariate_names
+                            pg.sql.Identifier(w) for w in cov_columns
                         ]
                     ),
                     schema_name = pg.sql.Identifier(args.schema_name),
-                    table_name = pg.sql.Identifier(dm.PHENOTYPE_TABLENAME)
+                    table_name = pg.sql.Identifier(db.PHENOTYPE_TABLENAME)
                 )
 
-        cov_out = cur.execute(query)
+        if ((cov_out := cur.execute(query)) is None
+            or cov_out.rowcount == 0):
+            raise ValueError("No covariate records found")
 
         with (open(os.path.join(args.o, f"{args.phenotype}_covariates.csv"), "w")
             as fid):
 
             # write header
-            fid.write(f"{dm.COVARIATE_DELIMITER.join(covariate_names)}\n")
+            fid.write(f"{db.COVARIATE_DELIMITER.join(covariate_names)}\n")
 
             #write query results
             for w in cov_out:
-                fid.write(f"{dm.COVARIATE_DELIMITER.join(w)}\n")
+                fid.write(f"{db.COVARIATE_DELIMITER.join(w)}\n")
 
         
 
