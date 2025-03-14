@@ -3,5 +3,6 @@ test/
 env/
 *~
 *.swp
+*egg-info/
 *__pycache__/
 *.csv

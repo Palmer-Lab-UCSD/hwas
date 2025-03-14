@@ -15,9 +15,10 @@ import sys
 import argparse
 import re
 import os
+import datetime
+import configparser
 
-import config
-import db
+import _db
 
 import psycopg as pg
 
@@ -153,6 +154,22 @@ def main(args: list[str]) -> None:
 
         with (open(os.path.join(args.o, f"{args.phenotype}_covariates.csv"), "w")
             as fid):
+
+            date = datetime.datetime.now(datetime.UTC)
+
+
+            fid.write(f"{OUTPUT_META_PREFIX}date"
+                      f"={date.year}-{date.month:02}-{date.day:02}"
+                      f"-{date.hour:02}\:{data.minute:02}\:{date.second:02}\n")
+            fid.write(f"{OUTPUT_META_PREFIX}timezone={date.tzinfo}\n")
+            fid.write(f"{OUTPUT_META_PREFIX}user={os.environ['USER']}\n")
+            fid.write(f"{OUTPUT_META_PREFIX}database={args.dbname}\n")
+            fid.write(f"{OUTPUT_META_PREFIX}schema={args.schema_name}\n")
+            fid.write(f"{OUTPUT_META_PREFIX}phenotype={args.phenotype}\n")
+            fid.write(f"{OUTPUT_META_PREFIX}pipeline_version={config.VERSION}\n")
+
+
+
 
             # write header
             fid.write(f"{db.COVARIATE_DELIMITER.join(covariate_names)}\n")
