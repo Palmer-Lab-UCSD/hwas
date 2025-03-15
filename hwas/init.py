@@ -13,7 +13,7 @@ def run(config: str | None,
         qos: str | None,
         db_pw_env_var: str | None,
         schema_name: str,
-        phenotype: str) -> None
+        phenotype: str) -> None:
 
     cfg = configparser.ConfigParser()
 
@@ -63,9 +63,11 @@ def run(config: str | None,
             host = _constants.DEFAULT_DB_HOST,
             port = _constants.DEFAULT_DB_PORT,
             user = _constants.DEFAULT_DB_USER,
-            dbname = _constants.DEFAULT_DB_NAME
-            schema = '${common:schema}'
-            phenotype = '${common:phenotype}'
+            dbname = _constants.DEFAULT_DB_NAME,
+            db_password_env_var = _constants.DEFAULT_DB_PASSWORD_ENV_VAR,
+            outdir = '${common:path}',
+            schema = '${common:schema}',
+            phenotype = '${common:phenotype}',
             )
 
     if "PALMER_DB_USERNAME" in os.environ:

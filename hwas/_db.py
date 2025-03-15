@@ -30,11 +30,13 @@ Table names:
     etc.
 """
 
+import re
 from dataclasses import dataclass
 from collections.abc import Iterable
 import psycopg as pg
 
 
+IS_COVARIATE = re.compile("covariate")
 PHENOTYPE_TABLENAME = "gwas_phenotypes"
 METADATA_TABLENAME = "descriptions"
 

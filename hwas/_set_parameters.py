@@ -1,11 +1,12 @@
 
+import os
 import configparser
 from . import _constants
 
 
 class BaseSetParameter:
-    def __init__(self: BaseSetParameter,
-                 config_file: str | None,
+    def __init__(self,
+                 config_filename: str | None,
                  name: str) -> None:
 
         if config_filename is None:
@@ -17,7 +18,7 @@ class BaseSetParameter:
                                     " the `init` subcommand.")
 
         self._config = configparser.ConfigParser(
-                            interpolation = configparser.ExtendedInterpolation
+                            interpolation = configparser.ExtendedInterpolation()
                         )
         self._config.read(config_filename)
 
