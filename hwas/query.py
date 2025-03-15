@@ -12,65 +12,89 @@ Acknowledgement:
 # Query palmer lab database 
 #
 import sys
-import argparse
 import re
 import os
 import datetime
 import configparser
-
-import _db
-
 import psycopg as pg
 
 
-
-def parse_args(args: list[str]) -> argparse.Namespace:
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dbname",
-            type=str,
-            default=config.DEFAULT_DB_NAME,
-            help="Name of data base to query from.")
-    parser.add_argument("--host",
-            type=str,
-            default=config.DEFAULT_DB,
-            help="Hostname of database")
-    parser.add_argument("--user",
-            type=str,
-            default=config.DEFAULT_DB_USER,
-            help="User name for logging into database.")
-    parser.add_argument("--port",
-            type=str,
-            default=config.DEFAULT_DB_PORT,
-            help="Port in which to connect to db.")
-    parser.add_argument("-p",
-            type=str,
-            default=None,
-            help="Password for logging into database")
-    parser.add_argument("-o",
-            type=str,
-            default=None,
-            help="Directory to print queried data output.")
-
-    parser.add_argument("schema_name",
-            type=str,
-            help="Name of schema to query from.")
-    parser.add_argument("phenotype",
-            type=str,
-            help="Name of phenotype to query.")
-    
-    return parser.parse_args(args)
+from . import _db
+from . import _constants
+from . import _set_parameters
 
 
-def main(args: list[str]) -> None:
-    args = parse_args(args)
+
+class SetQueryParameters(_set_parameters.BaseSetParameter):
+    """Determine and set the query parameters
+
+    Query parameters may be specified as command line inputs or
+    read from a configuration file.  The values that specified 
+    at the command line take precedence over configuration file.
+    """
+
+    def __init__(self: SetQueryParameters,
+                 dbname: str | None,
+                 host: str | None,
+                 port: str | int | None,
+                 user: str | None,
+                 schema: str | None,
+                 phenotype: str | None,
+                 config_filename: str | None) -> None:
+
+
+        super().__init__(config_filename, "query") 
+
+        self.dbname = self.set_parameter("dbname", dbname)
+        self.host = self.set_parameter("host", host)
+        self.port = self.set_parameter("port", port)
+        self.user = self.set_parameter("user", user)
+        self.schema = self.set_parameter("schema", schema)
+        self.phenotype = self.set_parameter("phenotype", phenotype)
+
+        password_env_var = self.set_parameter("db_password_env_var", None)
+
+        self.password = None
+        if password_env_var in os.environ:
+            self.password = os.environ[_constants.DB_PASSWORD_ENV_VAR]
+        
+
+
+    def set_parameter(self: SetQueryParameters,
+                        name: str,
+                        val: str) -> str:
+
+        if val is not None:
+            return val
+
+        if name in self._config:
+            val = self._config[name]
+            
+        if val is None:
+            raise ValueError(f"The parameter {name} is set to None.")
+
+        return val
+
+
+
+
+def run(dbname: str | None,
+        host: str | None,
+        port: str | int | None,
+        user: str | None,
+        schema: str,
+        phenotype: str,
+        ) -> None:
+
+    args = QueryParameters(dbname, host, port, user, schema, phenotype
+                           _constants.DEFAULT_CONFIG_FILENAME)
 
     connection_name = (f"dbname={args.dbname}"
             f" host={args.host}"
             f" port={args.port}"
             f" user={args.user}")
 
-    if args.p is not None:
+    if args.password is not None:
         connection_name = f"{connection_name} password={args.p}"
 
 
@@ -160,7 +184,7 @@ def main(args: list[str]) -> None:
 
             fid.write(f"{OUTPUT_META_PREFIX}date"
                       f"={date.year}-{date.month:02}-{date.day:02}"
-                      f"-{date.hour:02}\:{data.minute:02}\:{date.second:02}\n")
+                      f"-{date.hour:02}:{data.minute:02}:{date.second:02}\n")
             fid.write(f"{OUTPUT_META_PREFIX}timezone={date.tzinfo}\n")
             fid.write(f"{OUTPUT_META_PREFIX}user={os.environ['USER']}\n")
             fid.write(f"{OUTPUT_META_PREFIX}database={args.dbname}\n")
@@ -178,8 +202,3 @@ def main(args: list[str]) -> None:
             for w in cov_out:
                 fid.write(f"{db.COVARIATE_DELIMITER.join(w)}\n")
 
-        
-
-
-if __name__ == "__main__":
-    main(sys.argv[1:])

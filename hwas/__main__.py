@@ -6,6 +6,9 @@ import os
 
 
 
+
+
+
 def _parse_args(args):
 
     parser = argparse.ArgumentParser()
@@ -38,10 +41,15 @@ def _parse_args(args):
                              type = str,
                              default = None,
                              help = "SLURM quality-of-service")
+    parser_init.add_argument("--db_pw_env_var",
+                             type = str,
+                             default = None,
+                             help = ("Environment variable that stores the"
+                                    " database password."))
 
 
     # required 
-    parser_init.add_argument("schema_name",
+    parser_init.add_argument("schema",
                              type = str,
                              help = ("Name of schema / project for which phenotype"
                                      " are stored."))
@@ -50,7 +58,40 @@ def _parse_args(args):
                              help = ("Name of the phenotype/measurement to compute"
                                      " genetic associations."))
     
+    # -----------------------------------------------------------------------------
+    # Query database
     
+    parser_query = subparser.add_parser("query",
+                                        help = ("Query phenotype and covariates"
+                                                " from a specified database."))
+
+    parser_query.add_argument("--dbname",
+            type=str,
+            default=None,
+            help="Name of data base to query from.")
+    parser_query.add_argument("--host",
+            type=str,
+            default=None,
+            help="Hostname of database")
+    parser_query.add_argument("--port",
+            type=str,
+            default=None,
+            help="Port in which to connect to db.")
+    parser_query.add_argument("--user",
+            type=str,
+            default=None,
+            help="User name for logging into database.")
+
+    parser_query.add_argument("--schema",
+            default=None,
+            type=str,
+            help="Name of schema to query from.")
+    parser_query.add_argument("--phenotype",
+            type=str,
+            default=None,
+            help="Name of phenotype to query.")
+
+
     # -----------------------------------------------------------------------------
     # Compute the hgrm: a single chromsome, all chromosomes, or LOCO
     
@@ -58,8 +99,6 @@ def _parse_args(args):
     
     
     
-    # -----------------------------------------------------------------------------
-    # Query database
     
     
 
@@ -75,12 +114,14 @@ def main(args=None):
     args = _parse_args(args)
     
     if args.subcommand == "init":
-        from . import _init
-        _init.run(args.config, args.account, args.qos, args.schema_name, args.phenotype)
+        from . import init
+        init.run(args.config, args.account, args.qos, args.db_pw_env_var,
+                 args.schema, args.phenotype)
     
     elif args.subcommand == "query":
-        raise NotImplementedError
-        # _query.run()
+        from . import query
+        query.run(args.dbname, args.host, args.port, args.user,
+                  args.schema, args.phenotype)
     
     elif args.subcommand == "hgrm":
         raise NotImplementedError

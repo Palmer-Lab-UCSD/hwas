@@ -4,14 +4,16 @@ import os
 import configparser
 
 from . import __version__
+from . import _constants
 
 
 
 def run(config: str | None, 
         account: str | None,
         qos: str | None,
+        db_pw_env_var: str | None,
         schema_name: str,
-        phenotype: str) -> None:
+        phenotype: str) -> None
 
     cfg = configparser.ConfigParser()
 
@@ -25,7 +27,7 @@ def run(config: str | None,
     path = os.path.join(os.getcwd(), schema_name)
 
     if not os.path.exists(path):
-        os.mkdir(path, mode = 0o770)
+        os.mkdir(path, mode = _constants.DEFAULT_DIRMODE)
 
     path = os.path.join(path, phenotype)
 
@@ -35,21 +37,19 @@ def run(config: str | None,
                          " Either delete these data or change directories.")
 
 
-    os.mkdir(path, mode = 0o750)
+    os.mkdir(path, mode = _constants.DEFAULT_DIRMODE)
 
-    log_path = os.path.join(path, "logs")
-    os.mkdir(log_path, mode = 0o750)
+    log_path = os.path.join(path, _constants.DEFAULT_LOG_DIR)
+    os.mkdir(log_path, mode = _constants.DEFAULT_DIRMODE)
 
-    cfg["hwas_pkg"] = dict(
-            version = __version__.version
-            )
 
     cfg["common"] = dict(
+            version = __version__.version,
             path = path,
             schema = schema_name,
             phenotype = phenotype,
             user = os.environ["USER"],
-            logs = os.path.join(path, "logs")
+            logs = log_path
             )
 
     cfg["slurm"] = dict()
@@ -59,33 +59,36 @@ def run(config: str | None,
     if qos is not None:
         cfg["slurm"]["qos"] = qos
 
-    cfg["db"] = dict(
-            host = "localhost",
-            port = 5432,
-            username = os.environ["USER"],
-            dbname = "data"
+    cfg["query"] = dict(
+            host = _constants.DEFAULT_DB_HOST,
+            port = _constants.DEFAULT_DB_PORT,
+            user = _constants.DEFAULT_DB_USER,
+            dbname = _constants.DEFAULT_DB_NAME
+            schema = '${common:schema}'
+            phenotype = '${common:phenotype}'
             )
 
     if "PALMER_DB_USERNAME" in os.environ:
-        cfg["db"]["username"] = os.environ["PALMER_DB_USERNAME"]
+        cfg["query"]["username"] = os.environ["PALMER_DB_USERNAME"]
 
     if "PALMER_DB_HOST" in os.environ:
-        cfg["db"]["host"] = os.environ["PALMER_DB_HOST"]
+        cfg["query"]["host"] = os.environ["PALMER_DB_HOST"]
 
     if "PALMER_DB_PORT" in os.environ:
-        cfg["db"]["port"] = os.environ["PALMER_DB_PORT"]
+        cfg["query"]["port"] = os.environ["PALMER_DB_PORT"]
 
-    if "PALMER_DB_DBNAME" in os.environ:
-        cfg["db"]["dbname"] = os.environ["PALMER_DB_DBNAME"]
+    if "PALMER_DB_NAME" in os.environ:
+        cfg["query"]["dbname"] = os.environ["PALMER_DB_NAME"]
 
     if "PALMER_BIN" in os.environ:
         cfg["common"]["bin"] = os.environ["PALMER_BIN"]
 
 
     cfg["output"] = dict(
-            meta_prefix = "##"
+            meta_prefix = _constants.DEFAULT_META_PREFIX
             )
         
-    with open(os.path.join(path, "config"), "w") as fid:
+    with (open(os.path.join(path, _constants.DEFAULT_CONFIG_FILENAME), "w")
+          as fid):
         cfg.write(fid)
 
