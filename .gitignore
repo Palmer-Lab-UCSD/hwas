@@ -1,8 +1,8 @@
 *.DS_Store
-test/
 env/
 *~
 *.swp
 *egg-info/
 *__pycache__/
 *.csv
+*db/

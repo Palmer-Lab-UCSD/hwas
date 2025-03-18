@@ -29,7 +29,7 @@ Table names:
     gwas_phenotypes,
     etc.
 """
-
+import os
 import re
 from dataclasses import dataclass
 from collections.abc import Iterable
@@ -129,14 +129,10 @@ def is_schema_unique(cur: pg.Cursor,
                         " WHERE schema_name = %s"),
                         (schema_name,))
 
-    if out.rowcount == 0:
-        raise ValueError(f"The schema, {schema_name}, is not"
-                        " defined in db")
+    if out.rowcount == 1:
+        return True
 
-    if out.rowcount > 1:
-        return False
-
-    return True
+    return False
 
 
 def is_table_unique(cur: pg.Cursor,
@@ -151,15 +147,10 @@ def is_table_unique(cur: pg.Cursor,
                 (schema_name, table_name)
             )
 
+    if out.rowcount == 1:
+        return True
 
-    if out.rowcount == 0:
-        raise ValueError(f"The table {table_name} is not defined"
-                         f" in schema {schema_name}.")
-
-    if out.rowcount > 1:
-        return False
-
-    return True
+    return False
 
 
 def is_covariate(cur: pg.Cursor,
@@ -181,16 +172,10 @@ def is_covariate(cur: pg.Cursor,
                 (COVARIATE_TYPE_TOKEN,)
             )
 
+    if out.rowcount == 1:
+        return True
 
-    if out.rowcount == 0:
-        raise ValueError(f"The measurement {measurement} is not defined"
-                         f" in {schema_name}.")
-
-    if out.rowcount > 1:
-        raise ValueError(f"The phenotype {measurement} is not uniquely defined"
-                         f" in {schema_name}.")
-
-    return out.fetchone()[0]
+    return False
 
 
 def connect(dbname: str,
@@ -261,7 +246,7 @@ def get_covariate_names(cur_meta: pg.Cursor,
 
         for w in covariate_names:
 
-            if not _db.is_covariate(cur, args.schema, w):
+            if not is_covariate(cur, args.schema, w):
                 raise ValueError(f"The covariate {w} specified in the database"
                                  f" for phenotype {args.phenotype}"
                                  " is not labeled a covariate in the table"
