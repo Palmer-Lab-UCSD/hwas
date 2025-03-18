@@ -61,7 +61,7 @@ def run(dbname: str | None,
 
         # use meta data to determine what covariates to use for the 
         # association analysis
-        covariate_names = get_covariate_names(args.schema, args.phenotype)
+        covariate_names = _db.get_covariate_names(cur_mdata, args.schema, args.phenotype)
         column_names = [_db.SAMPLE_COLNAME] + covariate_names
 
         query = pg.sql.SQL(
