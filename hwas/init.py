@@ -11,6 +11,7 @@ from . import _constants
 def run(config: str | None, 
         account: str | None,
         qos: str | None,
+        dbname: str | None,
         db_pw_env_var: str | None,
         schema_name: str,
         phenotype: str) -> None:
@@ -90,6 +91,10 @@ def run(config: str | None,
             meta_prefix = _constants.DEFAULT_META_PREFIX
             )
         
+    if dbname is not None:
+        cfg["query"]["dbname"] = dbname 
+
+
     with (open(os.path.join(path, _constants.DEFAULT_CONFIG_FILENAME), "w")
           as fid):
         cfg.write(fid)

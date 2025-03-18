@@ -41,6 +41,10 @@ def _parse_args(args):
                              type = str,
                              default = None,
                              help = "SLURM quality-of-service")
+    parser_init.add_argument("--dbname",
+                             type = str,
+                             default = None,
+                             help = "Database name")
     parser_init.add_argument("--db_pw_env_var",
                              type = str,
                              default = None,
@@ -115,7 +119,8 @@ def main(input_args=None):
     
     if args.subcommand == "init":
         from . import init
-        init.run(args.config, args.account, args.qos, args.db_pw_env_var,
+        init.run(args.config, args.account, args.qos,
+                 args.dbname, args.db_pw_env_var,
                  args.schema, args.phenotype)
     
     elif args.subcommand == "query":
