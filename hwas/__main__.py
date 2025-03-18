@@ -106,12 +106,12 @@ def _parse_args(args):
     
     
     
-def main(args=None):
+def main(input_args=None):
 
-    if args is None:
-        args = sys.argv[1:]
+    if input_args is None:
+        input_args = sys.argv[1:]
 
-    args = _parse_args(args)
+    args = _parse_args(input_args)
     
     if args.subcommand == "init":
         from . import init
@@ -121,7 +121,7 @@ def main(args=None):
     elif args.subcommand == "query":
         from . import query
         query.run(args.dbname, args.host, args.port, args.user,
-                  args.schema, args.phenotype)
+                  args.schema, args.phenotype, cmd = ' '.join(input_args))
     
     elif args.subcommand == "hgrm":
         raise NotImplementedError
