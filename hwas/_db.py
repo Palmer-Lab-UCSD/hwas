@@ -227,10 +227,10 @@ def get_covariate_names(cur_meta: pg.Cursor,
                         table_name = pg.sql.Identifier(METADATA_TABLENAME)
                     )
 
-        if ((metadata := cur_mdata.execute(query, (phenotype,))) is None 
+        if ((metadata := cur_meta.execute(query, (phenotype,))) is None 
                 or metadata.rowcount != 1):
-            raise ValueError((f"Phenotype, {args.phenotype}, is not uniquely defined"
-                    f" in {args.schema}.{_db.METADATA_TABLENAME}."))
+            raise ValueError((f"Phenotype, {phenotype}, is not uniquely defined"
+                    f" in {schema}.{METADATA_TABLENAME}."))
 
         metadata = metadata.fetchone()
 
@@ -242,15 +242,17 @@ def get_covariate_names(cur_meta: pg.Cursor,
         # Check that specified covariate is a covariate and that a
         # column for that covariate exists in the PHENOTYPE_TABLENAME
         # table.
-        covariate_names = metadata.covariates.split(_db.COVARIATE_DELIMITER)
+        covariate_names = metadata.covariates.split(COVARIATE_DELIMITER)
 
         for w in covariate_names:
 
-            if not is_covariate(cur, args.schema, w):
+            if not is_covariate(cur_meta, schema, w):
                 raise ValueError(f"The covariate {w} specified in the database"
-                                 f" for phenotype {args.phenotype}"
+                                 f" for phenotype {phenotype}"
                                  " is not labeled a covariate in the table"
-                                 f" {args.schema}.{_db.METADATA_TABLENAME}.")
+                                 f" {schema}.{METADATA_TABLENAME}.")
 
 
         return covariate_names
+
+
