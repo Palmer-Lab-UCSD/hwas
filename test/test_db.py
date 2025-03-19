@@ -1,7 +1,7 @@
 import re
 from unittest import mock,TestCase,main
 
-from hwas import _db
+from hwas import _io
 
 
 
@@ -13,7 +13,7 @@ class TestMetaData(TestCase):
         self.cmd = "this is the command used at the command line"
 
     def test_output(self):
-        output = _db.make_output_metadata(self.dbname,
+        output = _io.make_output_metadata(self.dbname,
                                           self.schema,
                                           self.phenotype,
                                           self.cmd)

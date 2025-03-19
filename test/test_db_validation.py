@@ -4,6 +4,7 @@ import os
 from unittest import mock, TestCase, main
 from dataclasses import dataclass
 
+from hwas import _constants
 from hwas import _db
 
 
@@ -72,7 +73,7 @@ class TestIsTableUnique(TestCase):
 
 class TestIsCovariate(TestCase):
     def _execute(self, sql_str: str, parameters: tuple[str]) -> mock.MagicMock:
-        if _db.COVARIATE_TYPE_TOKEN not in parameters:
+        if _constants.COVARIATE_TYPE_TOKEN not in parameters:
             return MockOut(0)
 
         if "not_unique" in sql_str.as_string():

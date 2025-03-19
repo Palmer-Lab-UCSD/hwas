@@ -4,6 +4,7 @@ By: Robert Vogel
 Affiliation: Palmer Lab at UCSD
 """
 from unittest import mock, TestCase, main
+import collections
 
 from hwas import _db
 from hwas import _constants
@@ -13,10 +14,14 @@ from hwas import _constants
 class TestCovariate(TestCase):
 
     def setUp(self):
+        self.Metadata = collections.namedtuple("Metadata", 
+                                ['measure', 'description',
+                                'trait_covariate', 'covariates'])
+
         self.cur = mock.MagicMock()
         self.out = mock.MagicMock()
         self.out.rowcount = 1
-        self.out.fetchone.return_value = _db.Metadata("measurement",
+        self.out.fetchone.return_value = self.Metadata("measurement",
                                                 "This is the description.",
                                                 "trait",
                                                 "batch,date,meta,testing")
@@ -39,7 +44,7 @@ class TestCovariate(TestCase):
     @mock.patch('hwas._db.is_covariate')
     def test_measure_is_covariate(self, mock_is_covariate):
         mock_is_covariate = True
-        self.out.fetchone.return_value = _db.Metadata("measurement",
+        self.out.fetchone.return_value = self.Metadata("measurement",
                                                 "This is the description.",
                                                 "covariate_trait",
                                                 "batch,date,meta,testing")

@@ -2,6 +2,7 @@
 
 import os
 import configparser
+import string
 
 from . import __version__
 from . import _constants
@@ -101,8 +102,8 @@ def run(config: str | None,
 
 
     # TODO
-    with (open(os.path.join(path, ), "r") as fin,
-          open(os.path.join(path, _constants.HWAS_BASH), "w") as fout):
+    # with (open(os.path.join(path, ), "r") as fin,
+    #       open(os.path.join(path, _constants.HWAS_BASH), "w") as fout):
 
-        tmp = Template(fin.read())
+    #     tmp = string.Template(fin.read())
         

@@ -30,96 +30,13 @@ Table names:
     etc.
 """
 import os
-import re
-from dataclasses import dataclass
 from collections.abc import Iterable
 import datetime
 import psycopg as pg
 
-from . import _set_parameters
 from . import _constants
 
 
-IS_COVARIATE = re.compile("covariate")
-PHENOTYPE_TABLENAME = "gwas_phenotypes"
-METADATA_TABLENAME = "descriptions"
-
-SAMPLE_COLNAME = "rfid"
-
-COVARIATE_DELIMITER = ','
-COVARIATE_TYPE_TOKEN = '%covariate%'
-
-MEASURE_TYPE_COLNAME = 'trait_covariate'
-MEASURE_NAME_COLNAME = "measure"
-
-OUTPUT_DELIMITER = ','
-
-
-@dataclass
-class Metadata:
-    measure: str
-    description: str
-    trait_covariate: str
-    covariates: str
-
-
-@dataclass
-class PhenotypeRecord:
-    rfid:str
-    measurement:str
-
-
-class SetQueryParameters(_set_parameters.BaseSetParameter):
-    """Determine and set the query parameters
-
-    Query parameters may be specified as command line inputs or
-    read from a configuration file.  The values that specified 
-    at the command line take precedence over configuration file.
-    """
-
-    def __init__(self,
-                 dbname: str | None,
-                 host: str | None,
-                 port: str | None,
-                 user: str | None,
-                 schema: str | None,
-                 phenotype: str | None,
-                 config_filename: str | None) -> None:
-
-
-        super().__init__(config_filename, "query") 
-
-        self.dbname = self.set_parameter("dbname", dbname)
-        self.host = self.set_parameter("host", host)
-        self.port = self.set_parameter("port", port)
-        self.user = self.set_parameter("user", user)
-        self.schema = self.set_parameter("schema", schema)
-        self.phenotype = self.set_parameter("phenotype", phenotype)
-
-        self.outdir = self.set_parameter("outdir", None)
-
-        password_env_var = self.set_parameter("db_password_env_var", None)
-
-        self.password = None
-        if password_env_var in os.environ:
-            self.password = os.environ[password_env_var]
-        
-
-
-    def set_parameter(self,
-                        name: str,
-                        val: str | None) -> str:
-
-        if val is not None:
-            return val
-
-        if name in self._config:
-            val = self._config[name]
-            
-        if val is None:
-            raise ValueError(f"The parameter {name} is set to None.")
-
-        return val
 
 
 def is_schema_unique(cur: pg.Cursor,
@@ -164,18 +81,94 @@ def is_covariate(cur: pg.Cursor,
                 " WHERE {data_type_colname} LIKE %s);"
                 ).format(
                     measurement = pg.sql.Literal(measurement),
-                    data_name_colname = pg.sql.Identifier(MEASURE_NAME_COLNAME),
+                    data_name_colname = pg.sql.Identifier(_constants.MEASURE_NAME_COLNAME),
                     schema_name = pg.sql.Identifier(schema_name),
-                    table_name = pg.sql.Identifier(METADATA_TABLENAME),
-                    data_type_colname = pg.sql.Identifier(MEASURE_TYPE_COLNAME)
+                    table_name = pg.sql.Identifier(_constants.METADATA_TABLENAME),
+                    data_type_colname = pg.sql.Identifier(_constants.MEASURE_TYPE_COLNAME)
                 ),
-                (COVARIATE_TYPE_TOKEN,)
+                (_constants.COVARIATE_TYPE_TOKEN,)
             )
 
     if out.rowcount == 1:
         return True
 
     return False
+
+
+def get_covariate_names(cur: pg.Cursor,
+                        schema: str,
+                        phenotype: str) -> list[str]:
+
+        query = pg.sql.SQL(
+                        "SELECT * FROM {schema_name}.{table_name}" 
+                        " WHERE measure = %s;"
+                    ).format(
+                        schema_name = pg.sql.Identifier(schema),
+                        table_name = pg.sql.Identifier(_constants.METADATA_TABLENAME)
+                    )
+
+        if ((metadata := cur.execute(query, (phenotype,))) is None 
+                or metadata.rowcount != 1):
+            raise ValueError((f"Phenotype, {phenotype}, is not uniquely defined"
+                    f" in {schema}.{_constants.METADATA_TABLENAME}."))
+
+        metadata = metadata.fetchone()
+
+        # make sure phenotype is not a covariate
+        if _constants.IS_COVARIATE.match(metadata.trait_covariate) is not None:
+            raise ValueError("Input phenotype is a covariate.")
+
+
+        # Check that specified covariate is a covariate and that a
+        # column for that covariate exists in the PHENOTYPE_TABLENAME
+        # table.
+        covariate_names = metadata.covariates.split(_constants.COVARIATE_DELIMITER)
+
+        for w in covariate_names:
+
+            if not is_covariate(cur, schema, w):
+                raise ValueError(f"The covariate {w} specified in the database"
+                                 f" for phenotype {phenotype}"
+                                 " is not labeled a covariate in the table"
+                                 f" {schema}.{_constants.METADATA_TABLENAME}.")
+
+
+        return covariate_names
+
+
+def get_records(cur: pg.Cursor,
+                schema_name: str,
+                table_name: str,
+                colnames: Iterable[str],
+                sample_colname: str | None) -> (Iterable[str], pg.Cursor):
+
+    if not isinstance(sample_colname, str) and sample_colname is not None:
+        raise ValueError("{sample_colname} must be either type str or None")
+
+    column_names = colnames
+
+    if sample_colname is not None:
+        column_names = [sample_colname] + column_names
+
+
+    query = pg.sql.SQL(
+                "SELECT {fields} FROM {schema_name}.{table_name}"
+            ).format(
+                fields = pg.sql.SQL(',').join(
+                    [
+                        pg.sql.Identifier(w) for w in column_names
+                    ]
+                ),
+                schema_name = pg.sql.Identifier(schema_name),
+                table_name = pg.sql.Identifier(_constants.PHENOTYPE_TABLENAME)
+            )
+    
+    if ((cov_out := cur.execute(query)) is None
+        or cov_out.rowcount == 0):
+        raise ValueError("No covariate records found")
+
+    return (column_names, cov_out)
+
 
 
 def connect(dbname: str,
@@ -197,62 +190,6 @@ def connect(dbname: str,
     return pg.connect(connection_name) 
 
 
-def make_output_metadata(dbname: str,
-                         schema: str,
-                         phenotype: str,
-                         cmd: str) -> str:
-    date = datetime.datetime.now(datetime.UTC)
-    
-    return (f"{_constants.DEFAULT_META_PREFIX}date"
-              f"={date.year}-{date.month:02}-{date.day:02}"
-              f"-{date.hour:02}:{date.minute:02}:{date.second:02}\n"
-        f"{_constants.DEFAULT_META_PREFIX}timezone={date.tzinfo}\n"
-        f"{_constants.DEFAULT_META_PREFIX}user={os.environ['USER']}\n"
-        f"{_constants.DEFAULT_META_PREFIX}database={dbname}\n"
-        f"{_constants.DEFAULT_META_PREFIX}schema={schema}\n"
-        f"{_constants.DEFAULT_META_PREFIX}phenotype={phenotype}\n"
-        f"{_constants.DEFAULT_META_PREFIX}pipeline_version={_constants.VERSION}\n"
-        f"{_constants.DEFAULT_META_PREFIX}input_command={cmd}\n")
-
-
-def get_covariate_names(cur_meta: pg.Cursor,
-                        schema: str,
-                        phenotype: str) -> list[str]:
-
-        query = pg.sql.SQL(
-                        "SELECT * FROM {schema_name}.{table_name}" 
-                        " WHERE measure = %s;"
-                    ).format(
-                        schema_name = pg.sql.Identifier(schema),
-                        table_name = pg.sql.Identifier(METADATA_TABLENAME)
-                    )
-
-        if ((metadata := cur_meta.execute(query, (phenotype,))) is None 
-                or metadata.rowcount != 1):
-            raise ValueError((f"Phenotype, {phenotype}, is not uniquely defined"
-                    f" in {schema}.{METADATA_TABLENAME}."))
-
-        metadata = metadata.fetchone()
-
-        # make sure phenotype is not a covariate
-        if IS_COVARIATE.match(metadata.trait_covariate) is not None:
-            raise ValueError("Input phenotype is a covariate.")
-
-
-        # Check that specified covariate is a covariate and that a
-        # column for that covariate exists in the PHENOTYPE_TABLENAME
-        # table.
-        covariate_names = metadata.covariates.split(COVARIATE_DELIMITER)
-
-        for w in covariate_names:
-
-            if not is_covariate(cur_meta, schema, w):
-                raise ValueError(f"The covariate {w} specified in the database"
-                                 f" for phenotype {phenotype}"
-                                 " is not labeled a covariate in the table"
-                                 f" {schema}.{METADATA_TABLENAME}.")
-
-
-        return covariate_names
-
+def data_cur(conn: pg.Connection) -> pg.Cursor:
+    return conn.cursor(row_factory = pg.rows.dict_row)
 
