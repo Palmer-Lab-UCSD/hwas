@@ -99,3 +99,10 @@ def run(config: str | None,
           as fid):
         cfg.write(fid)
 
+
+    # TODO
+    with (open(os.path.join(path, ), "r") as fin,
+          open(os.path.join(path, _constants.HWAS_BASH), "w") as fout):
+
+        tmp = Template(fin.read())
+        
