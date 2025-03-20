@@ -12,16 +12,18 @@ from hwas import _constants
 
 
 class TestCovariate(TestCase):
+    def _metadata(self, measure, description, trait_covariate, covariates):
+        return dict(measure = measure,
+                    description = description,
+                    trait_covariate = trait_covariate,
+                    covariates = covariates)
 
     def setUp(self):
-        self.Metadata = collections.namedtuple("Metadata", 
-                                ['measure', 'description',
-                                'trait_covariate', 'covariates'])
 
         self.cur = mock.MagicMock()
         self.out = mock.MagicMock()
         self.out.rowcount = 1
-        self.out.fetchone.return_value = self.Metadata("measurement",
+        self.out.fetchone.return_value = self._metadata("measurement",
                                                 "This is the description.",
                                                 "trait",
                                                 "batch,date,meta,testing")
@@ -44,7 +46,7 @@ class TestCovariate(TestCase):
     @mock.patch('hwas._db.is_covariate')
     def test_measure_is_covariate(self, mock_is_covariate):
         mock_is_covariate = True
-        self.out.fetchone.return_value = self.Metadata("measurement",
+        self.out.fetchone.return_value = self._metadata("measurement",
                                                 "This is the description.",
                                                 "covariate_trait",
                                                 "batch,date,meta,testing")

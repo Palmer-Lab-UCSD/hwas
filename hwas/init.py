@@ -3,6 +3,7 @@
 import os
 import configparser
 import string
+import importlib.resources
 
 from . import __version__
 from . import _constants
@@ -12,12 +13,20 @@ from . import _constants
 def run(config: str | None, 
         account: str | None,
         qos: str | None,
+        bin: str | None,
         dbname: str | None,
-        db_pw_env_var: str | None,
+        env_pw: str | None,
         schema_name: str,
         phenotype: str) -> None:
 
+    
     cfg = configparser.ConfigParser()
+    if (len(cfg.read(importlib.resources
+               .files(_constants.DEFAULT_CONFIG_PATH)
+               .joinpath('config'))) != 1):
+        raise FileNotFoundError("Default config file for package not found."
+                                " Please submit an issue on GitHub.")
+
 
     if config is not None and os.path.exists(config):
         cfg.read(config)
@@ -45,48 +54,43 @@ def run(config: str | None,
     os.mkdir(log_path, mode = _constants.DEFAULT_DIRMODE)
 
 
-    cfg["common"] = dict(
-            version = __version__.version,
-            path = path,
-            schema = schema_name,
-            phenotype = phenotype,
-            user = os.environ["USER"],
-            logs = log_path
-            )
+    cfg["common"]["version"] = __version__.version
+    cfg["common"]["path"] = path
+    cfg["common"]["schema"] = schema_name
+    cfg["common"]["phenotype"] = phenotype
+    cfg["common"]["user"] = os.environ["USER"]
+    cfg["common"]["logs"] = log_path
+    cfg["common"]["bin"] = bin
 
-    cfg["slurm"] = dict()
+
     if account is not None:
         cfg["slurm"]["account"] = account
 
     if qos is not None:
         cfg["slurm"]["qos"] = qos
 
-    cfg["query"] = dict(
-            host = _constants.DEFAULT_DB_HOST,
-            port = _constants.DEFAULT_DB_PORT,
-            user = _constants.DEFAULT_DB_USER,
-            dbname = _constants.DEFAULT_DB_NAME,
-            db_password_env_var = _constants.DEFAULT_DB_PASSWORD_ENV_VAR,
-            outdir = '${common:path}',
-            schema = '${common:schema}',
-            phenotype = '${common:phenotype}',
-            )
+    cfg["query"]["user"] = _constants.DEFAULT_DB_USER
+    cfg["query"]["env_pw"] = _constants.ENV_DB_PASSWORD
 
-    if "PALMER_DB_USERNAME" in os.environ:
-        cfg["query"]["username"] = os.environ["PALMER_DB_USERNAME"]
+    if _constants.ENV_DB_USERNAME in os.environ:
+        cfg["query"]["user"] = os.environ[_constants.ENV_DB_USERNAME]
 
-    if "PALMER_DB_HOST" in os.environ:
-        cfg["query"]["host"] = os.environ["PALMER_DB_HOST"]
+    if _constants.ENV_DB_HOST in os.environ:
+        cfg["query"]["host"] = os.environ[_constants.ENV_DB_HOST]
 
-    if "PALMER_DB_PORT" in os.environ:
-        cfg["query"]["port"] = os.environ["PALMER_DB_PORT"]
+    if _constants.ENV_DB_PORT in os.environ:
+        cfg["query"]["port"] = os.environ[_constants.ENV_DB_PORT]
 
-    if "PALMER_DB_NAME" in os.environ:
-        cfg["query"]["dbname"] = os.environ["PALMER_DB_NAME"]
+    if _constants.ENV_DB_NAME in os.environ:
+        cfg["query"]["dbname"] = os.environ[_constants.ENV_DB_NAME]
 
-    if "PALMER_BIN" in os.environ:
-        cfg["common"]["bin"] = os.environ["PALMER_BIN"]
+    if bin is None and _constants.ENV_BIN in os.environ:
+        bin = os.environ[_constants.ENV_BIN]
 
+    if bin is None:
+        raise FileNotFoundError("Software bin directory not found.")
+
+    cfg["common"]["bin"] = bin
 
     cfg["output"] = dict(
             meta_prefix = _constants.DEFAULT_META_PREFIX
@@ -94,6 +98,8 @@ def run(config: str | None,
         
     if dbname is not None:
         cfg["query"]["dbname"] = dbname 
+
+    
 
 
     with (open(os.path.join(path, _constants.DEFAULT_CONFIG_FILENAME), "w")

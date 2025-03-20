@@ -6,12 +6,26 @@ Affiliation: Palmer Lab at UCSD
 
 """
 import importlib.resources
+
 import subprocess
-import configparser
+
+
+from . import _settings
+from . import _constants
+
 
 
 def run(vcf: str) -> None:
-    print(importlib.resources.files('hwas.R').joinpath('trait_intersect.R'))
 
+    args = _settings.SetIntersectParameters(vcf)
+
+    rscript_path = importlib.resources.files('hwas.R').joinpath('trait_intersect.R')
+
+    subprocess.run(["Rscript", rscript_path,
+                   "--covariate", args.covariates_file,
+                   "--phenotype", args.phenotype_file,
+                   "--vcf", args.vcf,
+                   "--id", _constants.SAMPLE_COLNAME],
+                   check = True)
 
 

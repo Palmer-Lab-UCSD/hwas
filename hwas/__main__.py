@@ -41,11 +41,15 @@ def _parse_args(args):
                              type = str,
                              default = None,
                              help = "SLURM quality-of-service")
+    parser_init.add_argument("--bin",
+                             type = str,
+                             default = None,
+                             help = "Path to where program binary files are found.")
     parser_init.add_argument("--dbname",
                              type = str,
                              default = None,
                              help = "Database name")
-    parser_init.add_argument("--db_pw_env_var",
+    parser_init.add_argument("--env_pw",
                              type = str,
                              default = None,
                              help = ("Environment variable that stores the"
@@ -133,7 +137,8 @@ def main(input_args=None):
     if args.subcommand == "init":
         from . import init
         init.run(args.config, args.account, args.qos,
-                 args.dbname, args.db_pw_env_var,
+                 args.bin,
+                 args.dbname, args.env_pw,
                  args.schema, args.phenotype)
     
     elif args.subcommand == "query":

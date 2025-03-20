@@ -1,11 +1,12 @@
 library(argparse)
-source("trait_io.R")
 
 
 
+main <- function(covariates_file, phenotype_file, vcf_file, samp_id, me) {
 
-
-main <- function(covariates_file, phenotype_file, vcf_file, samp_id) {
+    if (!is.null(me)) {
+        source(file.path(dirname(me),"trait_io.R"))
+    }
 
     covariates <- read_data(covariates_file)$data
     phenotype <- read_data(phenotype_file)$data
@@ -45,7 +46,7 @@ parser <- argparse::argument_parser(
 
 if (!interactive())
 {
-    args <- parser(commandArgs())
-
-    main(args$covariates, args$phenotype, args$vcf, args$id)
+    out <- parser(commandArgs(), return_program_name=TRUE)
+    args <- out$args
+    main(args$covariate, args$phenotype, args$vcf, args$id, out$program)
 }

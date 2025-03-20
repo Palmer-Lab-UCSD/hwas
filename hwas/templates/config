@@ -1,0 +1,51 @@
+[common]
+version =
+path = 
+schema =
+phenotype =
+user =
+vcf =
+bin =
+logs = ${path}/logs
+rscript = ${bin}/Rscript
+bcftools = ${bin}/bcftools
+
+[slurm]
+qos =
+account =
+logs = ${common:logs}
+
+
+
+[query]
+covariates_file =
+phenotype_file =
+env_pw =
+host = localhost
+port = 5432
+dbname = hsrats
+user = ${common:user}
+schema = ${common:schema}
+phenotype = ${common:phenotype}
+
+[output]
+meta_prefix = ##
+header_prefix = #
+
+
+[intersect]
+vcf = ${common:vcf}
+covariates_file = ${query:covariates_file}
+phenotype_file = ${query:phenotype_file}
+bcftools = ${common:bcftools}
+rscript = ${common:rscript}
+
+
+[hgrm]
+vcf = ${common:vcf}
+hgrm = ${common:bin}/hgrm
+
+
+[association]
+vcf = ${common:vcf}
+

@@ -75,8 +75,7 @@ def run(dbname: str | None,
                                                args.phenotype,
                                                cmd)
 
-        _io.write_to_file(os.path.join(args.outdir,
-                                       f"{args.phenotype}_covariates.csv"),
+        _io.write_to_file(args.covariates_file,
                           cov_out,
                           colnames,
                           meta_data = meta_data)
@@ -87,8 +86,7 @@ def run(dbname: str | None,
                                               [args.phenotype],
                                               _constants.SAMPLE_COLNAME)
 
-        _io.write_to_file(os.path.join(args.outdir,
-                                       f"{args.phenotype}.csv"),
+        _io.write_to_file(args.phenotype_file,
                           pheno_out,
                           colnames,
                           meta_data = meta_data)
