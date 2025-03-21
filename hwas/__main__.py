@@ -3,8 +3,10 @@
 import sys
 import argparse
 import os
+import logging
 
 
+logger = logging.getLogger(__name__)
 
 
 
@@ -128,6 +130,13 @@ def _parse_args(args):
     
     
 def main(input_args=None):
+
+    logging.basicConfig(format = ("%(asctime)s\t%(levelname)s"
+                                  "\t%(filename)s"
+                                  "\t%(message)s"),
+                        level = logging.INFO)
+
+    logger.info(' '.join(sys.argv))
 
     if input_args is None:
         input_args = sys.argv[1:]

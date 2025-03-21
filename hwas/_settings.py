@@ -109,8 +109,6 @@ class SetQueryParameters(BaseSetParameter):
         self.update()
 
 
-
-
 class SetIntersectParameters(BaseSetParameter):
     def __init__(self,
                  vcf: str,
@@ -129,3 +127,5 @@ class SetIntersectParameters(BaseSetParameter):
 
         self.vcf = self.set_parameter("vcf", vcf)
         self.update()
+
+

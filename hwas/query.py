@@ -3,10 +3,20 @@
 By: Robert Vogel
 Affiliation: Palmer Lab at UCSD
 
-Acknowledgement:
-    This code has been reviewed by Claude, the AI assistant from Anthropic.
-    The code was designed and implemented by Robert Vogel, code recommendations
-    that were provided by Claude were adapted and implemented by Robert Vogel.
+
+
+DESCRIPTION
+
+Query covariates and phenotypic measurements from the Palmer Lab 
+database.
+
+
+
+ACKNOWLEDGEMENT:
+
+This code has been reviewed by Claude, the AI assistant from Anthropic.
+The code was designed and implemented by Robert Vogel, code recommendations
+that were provided by Claude were adapted and implemented by Robert Vogel.
 """
 
 # Query palmer lab database 
@@ -14,6 +24,7 @@ Acknowledgement:
 import sys
 import re
 import os
+import logging
 import psycopg as pg
 
 
@@ -22,6 +33,8 @@ from . import _settings
 from . import _db
 from . import _io
 
+
+logger = logging.getLogger(__name__)
 
 
 def run(dbname: str | None,
@@ -64,11 +77,14 @@ def run(dbname: str | None,
         # covariate data
         covariate_names = _db.get_covariate_names(data_cur, args.schema, args.phenotype)
 
+        logger.info("Identified covariates: %s",covariate_names)
         colnames, cov_out = _db.get_records(data_cur,
                                             args.schema,
                                             _constants.PHENOTYPE_TABLENAME,  
                                             covariate_names,
                                             _constants.SAMPLE_COLNAME)
+
+        logger.info("Covariate table columns: %s", colnames)
 
         meta_data = _io.make_output_metadata(args.dbname,
                                                args.schema,
@@ -79,6 +95,8 @@ def run(dbname: str | None,
                           cov_out,
                           colnames,
                           meta_data = meta_data)
+
+
         # phenotype data
         colnames, pheno_out = _db.get_records(data_cur,
                                               args.schema,
@@ -86,9 +104,9 @@ def run(dbname: str | None,
                                               [args.phenotype],
                                               _constants.SAMPLE_COLNAME)
 
+        logger.info("Phenotype table columns: %s", colnames)
+
         _io.write_to_file(args.phenotype_file,
                           pheno_out,
                           colnames,
                           meta_data = meta_data)
-
-

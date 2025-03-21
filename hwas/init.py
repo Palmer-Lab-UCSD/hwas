@@ -4,10 +4,12 @@ import os
 import configparser
 import string
 import importlib.resources
+import logging
 
 from . import __version__
 from . import _constants
 
+logger = logging.getLogger(__name__)
 
 
 def run(config: str | None, 
@@ -28,21 +30,21 @@ def run(config: str | None,
                                 " Please submit an issue on GitHub.")
 
 
-    if config is not None and os.path.exists(config):
+    if config is not None and os.path.isfile(config):
         cfg.read(config)
-    elif config is not None and not os.path.exists(config):
+    elif config is not None and not os.path.isfile(config):
         raise FileNotFoundError(f"The input file {config} is not found.")
 
 
     # Set up directories for results
     path = os.path.join(os.getcwd(), schema_name)
 
-    if not os.path.exists(path):
+    if not os.path.isdir(path):
         os.mkdir(path, mode = _constants.DEFAULT_DIRMODE)
 
     path = os.path.join(path, phenotype)
 
-    if os.path.exists(path):
+    if os.path.isdir(path):
         raise FileExistsError(f"Analysis for {schema_name}/{phenotype}"
                          " already exists in the current directory."
                          " Either delete these data or change directories.")
@@ -51,16 +53,19 @@ def run(config: str | None,
     os.mkdir(path, mode = _constants.DEFAULT_DIRMODE)
 
     log_path = os.path.join(path, _constants.DEFAULT_LOG_DIR)
+    logger.info("Made directory %s", path)
+
     os.mkdir(log_path, mode = _constants.DEFAULT_DIRMODE)
+    logger.info("Made directory %s", log_path)
 
 
     cfg["common"]["version"] = __version__.version
-    cfg["common"]["path"] = path
+    cfg["common"]["path"] = os.path.expanduser(path)
     cfg["common"]["schema"] = schema_name
     cfg["common"]["phenotype"] = phenotype
     cfg["common"]["user"] = os.environ["USER"]
-    cfg["common"]["logs"] = log_path
-    cfg["common"]["bin"] = bin
+    cfg["common"]["logs"] = os.path.expanduser(log_path)
+    cfg["common"]["bin"] = os.path.expanduser(bin)
 
 
     if account is not None:
@@ -102,9 +107,11 @@ def run(config: str | None,
     
 
 
-    with (open(os.path.join(path, _constants.DEFAULT_CONFIG_FILENAME), "w")
-          as fid):
+    config_filename = os.path.join(path, _constants.DEFAULT_CONFIG_FILENAME)
+    with open(config_filename, "w") as fid:
         cfg.write(fid)
+
+    logger.info("Wrote config file to %s", config_filename)
 
 
     # TODO

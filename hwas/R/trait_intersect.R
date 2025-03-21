@@ -1,24 +1,81 @@
+# Determine the set of valid samples
+# 
+# By: Robert Vogel
+# Affiliation: Palmer Lab at UCSD
+# 
+#
+#
+# ACKNOWLEDGEMENT
+# 
+# This code has been reviewed by Claude, the AI assistant from Anthropic.
+# The code was designed and implemented by Robert Vogel, code recommendations
+# that were provided by Claude were scrutinized, adapted if deemed relevant,
+# and implemented by Robert Vogel.
+#
+
 library(argparse)
 
 
 
-main <- function(covariates_file, phenotype_file, vcf_file, samp_id, me) {
+main <- function(covariates_file, phenotype_file, vcf_samples_file, samp_id, me) {
 
     if (!is.null(me)) {
         source(file.path(dirname(me),"trait_io.R"))
     }
 
-    covariates <- read_data(covariates_file)$data
-    phenotype <- read_data(phenotype_file)$data
+    genotyped_samples <- read.table(vcf_samples_file, header=FALSE, col.names=samp_id)
 
-    out <- merge(covariates, phenotype, by=samp_id)
+    print(sprintf("N samples vcf: %d", dim(genotyped_samples)[1]))
 
-    is_valid_row <- apply(out, 1,
-                          function (x) (all(x != "")
-                            && !is.element(NaN, x)
-                            && !is.element(NA, x)))
+    covariates <- read_data(covariates_file)
+    phenotype <- read_data(phenotype_file)
 
-    print(out[is_valid_row,samp_id])
+    print(sprintf("N samples covariate table: %d", dim(covariates$data)[1]))
+    print(sprintf("N samples phenotype table: %d", dim(phenotype$data)[1]))
+
+    out <- merge(covariates$data, phenotype$data, 
+                 by=samp_id, sort=TRUE, all=FALSE)
+    out <- merge(out, genotyped_samples, by=samp_id, sort=TRUE, all=FALSE)
+
+    # read.table converts missing data as follows:
+    #   empty cell  ->  ''
+    #   NA          ->  NA 
+    #   NULL        ->  'NULL'
+
+    is_not_valid_matrix <- ((out == "") 
+                            + is.na(out) 
+                            + t(apply(out, 1, is.nan)))
+
+    invalid_sample_counts <- colSums(is_not_valid_matrix)
+
+    s = "Invalid sample counts by column:"
+    for (cname in names(invalid_sample_counts))
+        s <- sprintf("%s    %s=%d", s, cname, invalid_sample_counts[cname])
+    print(s)
+
+    is_valid_row <- rowSums(is_not_valid_matrix) == 0
+
+    print(sprintf("N samples output %d", sum(is_valid_row)))
+
+    sample_ids <- out[is_valid_row,samp_id]
+
+    rownames(covariates$data) <- covariates$data[,samp_id]
+    rownames(phenotype$data) <- phenotype$data[,samp_id]
+
+    covariates$data <- covariates$data[sample_ids,]
+    phenotype$data <- phenotype$data[sample_ids,]
+
+    write_data(covariates_file, covariates)
+    write_data(phenotype_file, phenotype)
+    # write.table(covariates[valid_sample_ids,],
+    #             file = covariates_file,
+    #             row.names=FALSE,
+    #             quote=FALSE)
+
+    # write.table(phenotype[valid_sample_ids,],
+    #             file = phenotype_file,
+    #             row.names=FALSE,
+    #             quote=FALSE)
 }
 
 

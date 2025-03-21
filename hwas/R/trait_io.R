@@ -35,3 +35,23 @@ read_data <- function(filename, delimiter = CSV_DELIMITER) {
 
     return(list("meta" = meta, "data" = data))
 }
+
+
+write_data <- function(filename, data_set) {
+
+    fid <- file(filename, 'w')
+    cat(data_set$meta, file = fid, sep = '\n')
+
+    cnames <- colnames(data_set$data)
+    cnames[1] <- paste0(HEADER_PREFIX, cnames[1])
+    colnames(data_set$data) <- cnames
+    write.table(data_set$data,
+                file = fid,
+                row.names = FALSE,
+                quote = FALSE,
+                append = TRUE,
+                sep = CSV_DELIMITER)
+
+    if (isOpen(fid))
+        close(fid)
+}
