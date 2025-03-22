@@ -1,33 +1,20 @@
 """Data types, tables, and functions for Palmer Lab database
 
-By: Robert Vogel
-Affiliation: Palmer Lab at UCSD
 
-Acknowledgement:
-    This code has been reviewed by Claude, the AI assistant from Anthropic.
-    The code was designed and implemented by Robert Vogel, code recommendations
-    that were provided by Claude were adapted and implemented by Robert Vogel.
+The Palmer Lab data base is organized, roughly, as follows.  Experimental
+data produced by a single lab, award, or other logical unit is organized
+in a schema.  Each schema contains, at a minimum, two tables 'descriptions'
+and 'gwas_phenotypes'.  The 'descriptions' table enumerates all measurements
+in the 'gwas_phenotypes' table, and documents which are to be used as
+covariates vs. experimental phenotypes.  Moreover, for each experimental
+phenotype the set of measured covariates to be used are documented.
+
+Typical usage example:
 
 
-The Palmer Lab data base is organized, roughly, as follows.
-Experimental data produced by a single lab, award, or other
-logical unit is organized in a schema.  Each schema contains,
-at a minimum, two tables 'descriptions' and 'gwas_phenotypes'.
-The 'descriptions' table enumerates all measurements in the 
-'gwas_phenotypes' table, and documents which are to be used
-as covariates vs. experimental phenotypes.  Moreover, for each
-experimental phenotype the set of measured covariates to be
-used are documented.
-
-Example
-
-Schema name:
-    p50_investigator
-
-Table names:
-    descriptions,
-    gwas_phenotypes,
-    etc.
+Functions:
+    is_schema_unique: Query database and determine whether unique schema
+    is_table_unique: Query database and determine wither (schema,table)
 """
 import os
 from collections.abc import Iterable

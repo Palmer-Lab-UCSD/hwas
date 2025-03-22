@@ -1,22 +1,8 @@
 """Query data from the Palmer Lab database
 
-By: Robert Vogel
-Affiliation: Palmer Lab at UCSD
-
-
-
-DESCRIPTION
-
 Query covariates and phenotypic measurements from the Palmer Lab 
 database.
 
-
-
-ACKNOWLEDGEMENT:
-
-This code has been reviewed by Claude, the AI assistant from Anthropic.
-The code was designed and implemented by Robert Vogel, code recommendations
-that were provided by Claude were adapted and implemented by Robert Vogel.
 """
 
 # Query palmer lab database 

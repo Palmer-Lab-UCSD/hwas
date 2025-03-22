@@ -1,4 +1,24 @@
-"""Entry point to HWAS pipeline
+"""hwas pipeline
+
+This module is the entry point for the haplotype wide study association
+analysis (hwas) pipeline developed by the Palmer Lab at UCSD.  Components
+of the pipeline are represented as subcommands.  See subcommand module
+for more module specific information.  
+
+The pipeline uses a combination of custom tools and those commonly used
+by the statistical genetics community.  It is not fully generalizable to
+any system as it makes some assumptions that are specific to the Palmer
+Lab data organization.
+
+
+Typical usage example:
+    # Let us assume the `$` denote a `bash` prompt
+
+    $ hwas init --dbname my_database \
+                --bin path_to_binaries \
+                --
+                data_schema \
+                phenotype_measurement_name
 """
 import sys
 import argparse
@@ -144,20 +164,20 @@ def main(input_args=None):
     args = _parse_args(input_args)
     
     if args.subcommand == "init":
-        from . import init
-        init.run(args.config, args.account, args.qos,
-                 args.bin,
-                 args.dbname, args.env_pw,
-                 args.schema, args.phenotype)
+        from . import _init
+        _init.run(args.config, args.account, args.qos,
+                  args.bin,
+                  args.dbname, args.env_pw,
+                  args.schema, args.phenotype)
     
     elif args.subcommand == "query":
-        from . import query
-        query.run(args.dbname, args.host, args.port, args.user,
-                  args.schema, args.phenotype, cmd = ' '.join(input_args))
+        from . import _query
+        _query.run(args.dbname, args.host, args.port, args.user,
+                   args.schema, args.phenotype, cmd = ' '.join(input_args))
     
     elif args.subcommand == "intersect":
-        from . import intersect
-        intersect.run(args.vcf)
+        from . import _intersect
+        _intersect.run(args.vcf)
 
     elif args.subcommand == "hgrm":
         raise NotImplementedError

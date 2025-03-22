@@ -1,16 +1,6 @@
 # Determine the set of valid samples
 # 
-# By: Robert Vogel
-# Affiliation: Palmer Lab at UCSD
-# 
-#
-#
-# ACKNOWLEDGEMENT
-# 
-# This code has been reviewed by Claude, the AI assistant from Anthropic.
-# The code was designed and implemented by Robert Vogel, code recommendations
-# that were provided by Claude were scrutinized, adapted if deemed relevant,
-# and implemented by Robert Vogel.
+# Typical usage example:
 #
 
 library(argparse)
@@ -67,15 +57,6 @@ main <- function(covariates_file, phenotype_file, vcf_samples_file, samp_id, me)
 
     write_data(covariates_file, covariates)
     write_data(phenotype_file, phenotype)
-    # write.table(covariates[valid_sample_ids,],
-    #             file = covariates_file,
-    #             row.names=FALSE,
-    #             quote=FALSE)
-
-    # write.table(phenotype[valid_sample_ids,],
-    #             file = phenotype_file,
-    #             row.names=FALSE,
-    #             quote=FALSE)
 }
 
 

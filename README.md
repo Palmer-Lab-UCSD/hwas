@@ -12,9 +12,17 @@ specific use by the Palmer Lab given the Palmer Lab infrastructure.
 
 * R >= 4.1.1
     - qtl2: package for association testing
-* python >= 3.9.18 
+* python >= 3.10
     - psycopg 
 * hgrm: Lab tool for computing kinship matrices
 
 
-## How-to
+
+
+# Acknowledgment
+
+
+This code has been reviewed by Claude, the AI assistant from Anthropic. 
+The code was designed and implemented by Robert Vogel, code recommendations
+that were provided by Claude were adapted and implemented by Robert Vogel.
+

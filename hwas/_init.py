@@ -1,4 +1,16 @@
+"""Initialize parameter settings and directory structure.
 
+
+
+Example:
+    init.run(config, account_numer, quality_of_service_code,
+                '/home/me/.local/bin',
+                database_name, environment_variable_for_password,
+                schema_name, phenotype_measurement_name)
+
+Functions:
+    run: set up directories and configuration file
+"""
 
 import os
 import configparser

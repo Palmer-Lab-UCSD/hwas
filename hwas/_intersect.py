@@ -10,15 +10,6 @@ DESCRIPTION
 Find the intersection of samples with genotypes, rfid, valid covariate
 measurements, and valid phenotype measurements.  Meta data are printed
 to logger.
-
-
-
-ACKNOWLEDGEMENT
-
-This code has been reviewed by Claude, the AI assistant from Anthropic.
-The code was designed and implemented by Robert Vogel, code recommendations
-that were provided by Claude were scrutinized, adapted if deemed relevant,
-and implemented by Robert Vogel.
 """
 import os
 import importlib.resources
