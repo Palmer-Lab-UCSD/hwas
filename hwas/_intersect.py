@@ -1,15 +1,10 @@
-"""Find sample set intersectionWARE.
-
-By: Robert Vogel
-Affiliation: Palmer Lab at UCSD
-
-
-
-DESCRIPTION
+"""Find sample set intersectio
 
 Find the intersection of samples with genotypes, rfid, valid covariate
 measurements, and valid phenotype measurements.  Meta data are printed
 to logger.
+
+
 """
 import os
 import importlib.resources
@@ -18,18 +13,21 @@ import tempfile
 import subprocess
 
 
-from . import _settings
+from . import _config
 from . import _constants
 
 logger = logging.getLogger(__name__)
 
 def run(vcf: str) -> None:
 
-    args = _settings.SetIntersectParameters(vcf)
+    args = _config.get_config_section(_constants.FILENAME_CONFIG,
+                                         "intersect")
+
+    args.vcf = vcf
 
     with tempfile.NamedTemporaryFile(delete_on_close=False) as ftmp:
 
-        out = subprocess.run([args.bcftools,"query","--list-samples",vcf],
+        out = subprocess.run([args.bcftools,"query","--list-samples", args.vcf],
                              check = True,
                              stdout=ftmp,
                              stderr=subprocess.PIPE)

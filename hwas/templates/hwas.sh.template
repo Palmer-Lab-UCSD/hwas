@@ -1,0 +1,119 @@
+#!/env/bin/bash
+
+# SBATCH --job-name=hwas
+# SBATCH --partition=@partition
+# SBATCH --account=@account
+# SBATCH --qos=@qos
+# 
+# SBATCH --time=@alloc_time
+# SBATCH --cpus-per-task=@cpus_per_task
+# SBATCH --mem-per-cpu=@mem_per_cpu
+#
+# SBATCH --output=@{log_dir}/%j_%x_stdout.log
+# SBATCH --error=@{log_dir}/%j_%x_stderr.log
+#
+
+module purge
+module load shared
+module load slurm
+module load hwas
+
+CONFIG_FILENAME="config"
+
+
+echo "Start $SLURM_JOB_START_TIME"
+
+echo "########################################################################"
+echo " Node and job information"
+echo "########################################################################"
+echo ""
+echo "SLURM_CLUSTER_NAME: $SLURM_CLUSTER_NAME"
+echo "SLURM_JOB_NODELIST: $SLURM_JOB_NODELIST"
+echo "SLURM_NODEID: $SLURM_NODEID"
+echo "SLURMD_NODENAME: $SLURMD_NODENAME"
+echo ""
+echo "SLURM_SUBMIT_DIR: $SLURM_SUBMIT_DIR"
+
+
+echo "lscpu output"
+lscpu
+
+
+echo "########################################################################"
+echo " Validate specified parameters"
+echo "########################################################################"
+
+date
+
+
+
+if [ ! -f "@{out_dir}/${CONFIG_FILENAME}" ]; then
+    echo "FileNotFoundError: Configuration file, @{out_dir}/${CONFIG_FILENAME},"
+    echo " not found."
+    exit
+fi
+echo "@{out_dir}/${CONFIG_FILENAME} ok"
+
+
+if [ ! -d "@log_dir" ]; then
+    echo "DirectoryNotFoundError: Log directory, @{log_dir}, not found."
+    exit
+fi
+echo "@{log_dir} ok"
+
+
+if [ ! -d "@out_dir" ]; then
+    echo "DirectoryNotFoundError: Output directory, @{out_dir}, not found."
+    exit
+fi
+echo "@{out_dir} ok"
+
+
+
+hwas validate "@{out_dir}/${CONFIG_FILENAME}"
+
+
+echo "########################################################################"
+echo " Get phenotype data"
+echo "########################################################################"
+
+
+if [ -f "@{out_dir}/@{phenotype_file}" ]; then
+    echo "Phenotype file exists, @{out_dir}/@{phenotype_file}, skipping to"
+    echo "next task."
+else
+    echo "TODO"
+fi
+
+
+
+echo "########################################################################"
+echo " Compute haplotype genetic relationship matrix, hgrm"
+echo "########################################################################"
+
+if [ -f ]; then 
+    echo "hgrm already exists, , skipping to next section"
+else
+    hgrm_jobid=$(sbatch hwas hgrm)
+fi
+
+
+
+
+echo "########################################################################"
+echo " Compute haplotype associations"
+echo "########################################################################"
+
+
+if [ -f ]; then
+    echo "Association analysis, , already exists, exiting."
+    exit
+fi
+
+
+
+if [ "${hgrm_job}" ]; then
+    sbatch -d afterok:"${hgrm_jobid}" \
+        "@{out_dir}/${SBATCH_ASSOCIATION}"
+else
+    sbatch "@{out_dir}/${SBATCH_ASSOCIATION}"

@@ -67,10 +67,6 @@ def _parse_args(args):
                              type = str,
                              default = None,
                              help = "Path to where program binary files are found.")
-    parser_init.add_argument("--dbname",
-                             type = str,
-                             default = None,
-                             help = "Database name")
     parser_init.add_argument("--env_pw",
                              type = str,
                              default = None,
@@ -165,15 +161,17 @@ def main(input_args=None):
     
     if args.subcommand == "init":
         from . import _init
-        _init.run(args.config, args.account, args.qos,
+        _init.run(args.schema, args.phenotype,
+                  args.account,
+                  args.qos,
+                  args.config, 
                   args.bin,
-                  args.dbname, args.env_pw,
-                  args.schema, args.phenotype)
+                  args.env_pw)
     
     elif args.subcommand == "query":
         from . import _query
         _query.run(args.dbname, args.host, args.port, args.user,
-                   args.schema, args.phenotype, cmd = ' '.join(input_args))
+                   cmd = ' '.join(input_args))
     
     elif args.subcommand == "intersect":
         from . import _intersect

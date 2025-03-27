@@ -127,7 +127,7 @@ def get_records(cur: pg.Cursor,
                 schema_name: str,
                 table_name: str,
                 colnames: list[str],
-                sample_colname: str | None) -> (Iterable[str], pg.Cursor):
+                sample_colname: str | None) -> tuple[Iterable[str], pg.Cursor]:
 
     if not isinstance(sample_colname, str) and sample_colname is not None:
         raise ValueError("{sample_colname} must be either type str or None")

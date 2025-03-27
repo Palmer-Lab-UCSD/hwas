@@ -1,9 +1,4 @@
-"""Default configuration parameters
-
-By: Robert Vogel
-Affiliation: Palmer Lab at UCSD
-
-"""
+"""Default configuration parameters and environment variables"""
 
 import os
 import re
@@ -13,18 +8,14 @@ from . import __version__
 VERSION = __version__.version
 
 
+GITHUB_URL = "https://github.com/Palmer-Lab-UCSD/hwas"
 
-DEFAULT_CONFIG_PATH = "hwas.templates"
 DEFAULT_META_PREFIX = "##"
 DEFAULT_HEADER_PREFIX = "#"
-DEFAULT_CONFIG_FILENAME = "config"
 DEFAULT_DIRMODE = 0o770
 
 OUTPUT_DELIMITER = ','
 
-# DEFAULT_DB_HOST = "localhost"
-# DEFAULT_DB_PORT = "5432"
-# DEFAULT_DB_NAME = "hsrats"
 
 
 DEFAULT_DB_USER = None
@@ -35,12 +26,16 @@ DEFAULT_LOG_DIR = "logs"
 
 
 # environmental variables to check value
-ENV_DB_PASSWORD = "PALMER_LAB_DB_PASSWORD"
 ENV_BIN = "PALMER_BIN"
+ENV_SLURM_QOS = "PALMER_QOS"
+ENV_SLURM_ACCOUNT = "PALMER_ACCOUNT"
+ENV_SLURM_PARTITION = "PALMER_PARTITION"
+ENV_SLURM_NODES = "PALMER_NODES"
+ENV_SLURM_RUNTIME = "PALMER_RUNTIME"
+ENV_DB_NAME = "PALMER_DB_NAME"
 ENV_DB_USERNAME = "PALMER_DB_USERNAME"
 ENV_DB_HOST = "PALMER_DB_HOST"
 ENV_DB_PORT = "PALMER_DB_PORT"
-ENV_DB_NAME = "PALMER_DB_NAME"
 
 
 # Palmer lab database specific parameters
@@ -59,3 +54,15 @@ PHENOTYPE_FILE_SUFFIX = ".csv"
 MEASURE_TYPE_COLNAME = 'trait_covariate'
 MEASURE_NAME_COLNAME = "measure"
 
+
+TEMPLATES_PATH = "hwas.templates"
+
+TEMPLATES_CONFIG = "config.template"
+FILENAME_CONFIG = "config"
+
+TEMPLATES_HWAS_SBATCH="hwas.sh.template"
+FILENAME_HWAS_SBATCH="hwas.sh"
+
+
+FILENAME_PHENOTYPE="phenotype.csv"
+FILENAME_COVARIATES="covariates.csv"

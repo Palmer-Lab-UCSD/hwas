@@ -1,36 +1,40 @@
 [common]
-version =
-path = 
-schema =
-phenotype =
-user =
-vcf =
-bin =
+version
+user
+bin
+path
+schema
+phenotype
+covariates_file
+phenotype_file
+vcf
+meta_prefix
+header_prefix
 logs = ${path}/logs
 rscript = ${bin}/Rscript
 bcftools = ${bin}/bcftools
 
+
 [slurm]
-qos =
-account =
+qos
+account
+partition
 logs = ${common:logs}
 
 
-
 [query]
-covariates_file =
-phenotype_file =
-env_pw =
-host = localhost
-port = 5432
-dbname = hsrats
-user = ${common:user}
+dbname
+env_pw
+host
+port
+db_user
+alloc_time = 1:00:00
+cpus_per_task = 1
+mem_per_cpu = 8gb
+covariates_file = ${common:covariates_file}
+phenotype_file = ${common:phenotype_file}
 schema = ${common:schema}
 phenotype = ${common:phenotype}
-
-[output]
-meta_prefix = ##
-header_prefix = #
 
 
 [intersect]

@@ -2,7 +2,7 @@
 
 
 
-Example:
+Typical usage example:
     init.run(config, account_numer, quality_of_service_code,
                 '/home/me/.local/bin',
                 database_name, environment_variable_for_password,
@@ -13,122 +13,124 @@ Functions:
 """
 
 import os
-import configparser
-import string
-import importlib.resources
 import logging
 
-from . import __version__
 from . import _constants
+from . import _config
+from . import _templates
 
 logger = logging.getLogger(__name__)
 
 
-def run(config: str | None, 
+def run(schema_name: str,
+        phenotype: str,
         account: str | None,
         qos: str | None,
-        bin: str | None,
-        dbname: str | None,
-        env_pw: str | None,
-        schema_name: str,
-        phenotype: str) -> None:
+        config: str | None = None, 
+        bin: str | None = None,
+        env_pw: str | None = None) -> None:
 
     
-    cfg = configparser.ConfigParser()
-    if (len(cfg.read(importlib.resources
-               .files(_constants.DEFAULT_CONFIG_PATH)
-               .joinpath('config'))) != 1):
-        raise FileNotFoundError("Default config file for package not found."
-                                " Please submit an issue on GitHub.")
+    # Use template to initialize configuration file.  A subset of
+    # these values will be initialized to those sepecied by environmental
+    # variables
+    cfg = _config.init()
 
 
-    if config is not None and os.path.isfile(config):
-        cfg.read(config)
-    elif config is not None and not os.path.isfile(config):
-        raise FileNotFoundError(f"The input file {config} is not found.")
+    # set specified parameter values to corresponding configuration
+    # option
+    if account is not None:
+        cfg.set("slurm", "account", account)
 
+    if qos is not None:
+        cfg.set("slurm", "qos", qos)
 
-    # Set up directories for results
-    path = os.path.join(os.getcwd(), schema_name)
+    if bin is not None:
+        cfg.set("common", "bin", os.path.expanduser(bin))
 
-    if not os.path.isdir(path):
-        os.mkdir(path, mode = _constants.DEFAULT_DIRMODE)
+    cfg.set("query", "env_pw",  env_pw)
 
-    path = os.path.join(path, phenotype)
+    # set up path and directories for phenotype and
+    # project (schema_name)
+
+    schema_path = os.path.join(os.path.expanduser(os.getcwd()),
+                               schema_name)
+
+    if not os.path.isdir(schema_path):
+        os.mkdir(schema_name, mode = _constants.DEFAULT_DIRMODE)
+
+    path = os.path.join(schema_path, phenotype)
 
     if os.path.isdir(path):
         raise FileExistsError(f"Analysis for {schema_name}/{phenotype}"
                          " already exists in the current directory."
                          " Either delete these data or change directories.")
 
-
     os.mkdir(path, mode = _constants.DEFAULT_DIRMODE)
-
-    log_path = os.path.join(path, _constants.DEFAULT_LOG_DIR)
-    logger.info("Made directory %s", path)
-
-    os.mkdir(log_path, mode = _constants.DEFAULT_DIRMODE)
-    logger.info("Made directory %s", log_path)
+    logger.info("Made direcotory %s", path)
 
 
-    cfg["common"]["version"] = __version__.version
-    cfg["common"]["path"] = os.path.expanduser(path)
-    cfg["common"]["schema"] = schema_name
-    cfg["common"]["phenotype"] = phenotype
-    cfg["common"]["user"] = os.environ["USER"]
-    cfg["common"]["logs"] = os.path.expanduser(log_path)
-    cfg["common"]["bin"] = os.path.expanduser(bin)
-
-
-    if account is not None:
-        cfg["slurm"]["account"] = account
-
-    if qos is not None:
-        cfg["slurm"]["qos"] = qos
-
-    cfg["query"]["user"] = _constants.DEFAULT_DB_USER
-    cfg["query"]["env_pw"] = _constants.ENV_DB_PASSWORD
-
-    if _constants.ENV_DB_USERNAME in os.environ:
-        cfg["query"]["user"] = os.environ[_constants.ENV_DB_USERNAME]
-
-    if _constants.ENV_DB_HOST in os.environ:
-        cfg["query"]["host"] = os.environ[_constants.ENV_DB_HOST]
-
-    if _constants.ENV_DB_PORT in os.environ:
-        cfg["query"]["port"] = os.environ[_constants.ENV_DB_PORT]
-
-    if _constants.ENV_DB_NAME in os.environ:
-        cfg["query"]["dbname"] = os.environ[_constants.ENV_DB_NAME]
-
-    if bin is None and _constants.ENV_BIN in os.environ:
-        bin = os.environ[_constants.ENV_BIN]
-
-    if bin is None:
-        raise FileNotFoundError("Software bin directory not found.")
-
-    cfg["common"]["bin"] = bin
-
-    cfg["output"] = dict(
-            meta_prefix = _constants.DEFAULT_META_PREFIX
-            )
-        
-    if dbname is not None:
-        cfg["query"]["dbname"] = dbname 
+    # update the configuration parameters to be consistent with the directory
+    # structure created
+    cfg.set("common", "path", path)
+    cfg.set("common", "schema", schema_name)
+    cfg.set("common", "phenotype", phenotype)
+    cfg.set("common", "phenotype_file",
+            os.path.join(path, _constants.FILENAME_PHENOTYPE))
+    cfg.set("common", "covariates_file",
+            os.path.join(path, _constants.FILENAME_COVARIATES))
 
     
+    os.mkdir(os.path.join(path, cfg.get("common","logs")),
+             mode = _constants.DEFAULT_DIRMODE)
+    logger.info("Made direcotory %s", cfg.get("common", "logs"))
 
 
-    config_filename = os.path.join(path, _constants.DEFAULT_CONFIG_FILENAME)
+
+    # if another configuration file is provided, read and and sections,
+    # options and values to the initialized configuration.
+    if config is not None and os.path.isfile(config):
+
+        user_cfg = _config.ConfigParser()
+        user_cfg.read(config)
+        _config.merge_cfg(cfg, user_cfg)
+
+    elif config is not None and not os.path.isfile(config):
+        raise FileNotFoundError(f"The input file {config} is not found.")
+
+
+    config_filename = os.path.join(path, _constants.FILENAME_CONFIG)
     with open(config_filename, "w") as fid:
         cfg.write(fid)
 
     logger.info("Wrote config file to %s", config_filename)
 
 
-    # TODO
-    # with (open(os.path.join(path, ), "r") as fin,
-    #       open(os.path.join(path, _constants.HWAS_BASH), "w") as fout):
+    try: 
 
-    #     tmp = string.Template(fin.read())
+        tname = _templates.get_template_filename(_constants.TEMPLATES_HWAS_SBATCH)
+
+    except FileNotFoundError as err:
+
+        raise FileNotFoundError(f"Template {_constants.TEMPLATES_HWAS_SBATCH}"
+                                " not found.  Please submit a GitHub issue"
+                                " at https://github.com/Palmer-Lab-UCSD/hwas") from None
+
+
+    # write out script files
+    tmp = _templates.render(tname,
+                            partition         = cfg.get("slurm","partition"),
+                            account           = cfg.get("slurm","account"),
+                            qos               = cfg.get("slurm","qos"),
+                            log_dir           = cfg.get("common","logs"),
+                            out_dir           = cfg.get("common","path"),
+                            phenotype_file    = cfg.get("query","phenotype_file"),
+                            alloc_time        = cfg.get("query", "alloc_time"),
+                            cpus_per_task     = cfg.get("query", "cpus_per_task"),
+                            mem_per_cpu       = cfg.get("query", "mem_per_cpu")
+                           )
+                                      
+
+    with open(os.path.join(cfg.get("common", "path"), "hwas.sh"), "w") as fid:
+        fid.write(tmp)
         

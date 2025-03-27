@@ -43,13 +43,13 @@ def write_to_file(filename: str,
             fid.write(meta_data)
 
         fid.write(_constants.DEFAULT_HEADER_PREFIX
-                    + _constants.OUTPUT_DELIMITER.join(colnames)
+                    + delimiter.join(colnames)
                     + "\n")
 
         for record in cur:
             s = ""
             for cname in colnames:
-                s += f"{record[cname]}{_constants.OUTPUT_DELIMITER}"
+                s += f"{record[cname]}{delimiter}"
                 
-            s = s.removesuffix(_constants.OUTPUT_DELIMITER)
+            s = s.removesuffix(delimiter)
             fid.write(f"{s}\n")
