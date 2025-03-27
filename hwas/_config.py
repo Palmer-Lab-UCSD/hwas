@@ -52,6 +52,12 @@ class ConfigParser:
     def write(self, fileobject: typing.TextIO) -> int:
         return self._cfg.write(fileobject)
 
+    def has_section(self, section: str) -> bool:
+        return self._cfg.has_section(section)
+
+    def options(self, section: str) -> list[str]:
+        return self._cfg.options(section)
+
     def get_option_interpolator(self,
                                 section: str,
                                 option: str) -> tuple[str,str] | None:
