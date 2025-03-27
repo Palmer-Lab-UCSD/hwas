@@ -1,0 +1,40 @@
+#!/env/bin/bash
+
+#SBATCH --job-name=hwas
+#SBATCH --partition=@partition
+#SBATCH --account=@account
+#SBATCH --qos=@qos
+#
+#SBATCH --time=@alloc_time
+#SBATCH --cpus-per-task=@cpus_per_task
+#SBATCH --mem-per-cpu=@mem_per_cpu
+#
+#SBATCH --output=@{log_dir}/%j_%x_stdout.log
+#SBATCH --error=@{log_dir}/%j_%x_stderr.log
+#
+
+module purge
+module load shared
+module load slurm
+module load hwas
+
+CONFIG_FILENAME="config"
+
+
+echo "Start $SLURM_JOB_START_TIME"
+
+echo "########################################################################"
+echo " Node and job information"
+echo "########################################################################"
+echo ""
+echo "SLURM_CLUSTER_NAME: $SLURM_CLUSTER_NAME"
+echo "SLURM_JOB_NODELIST: $SLURM_JOB_NODELIST"
+echo "SLURM_NODEID: $SLURM_NODEID"
+echo "SLURMD_NODENAME: $SLURMD_NODENAME"
+echo ""
+echo "SLURM_SUBMIT_DIR: $SLURM_SUBMIT_DIR"
+
+
+echo "lscpu output"
+lscpu
+

@@ -26,6 +26,9 @@ import os
 import logging
 
 
+from . import _constants
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,23 +58,22 @@ def _parse_args(args):
                              default = None,
                              help = ("If a configuration file exists, use it for default"
                                      " parameter values."))
+    parser_init.add_argument("--partition",
+                             type = str,
+                             default = os.environ.get(_constants.ENV_SLURM_PARTITION),
+                             help = "SLURM partition to schedule job.")
     parser_init.add_argument("--account",
                              type = str,
-                             default = None,
+                             default = os.environ.get(_constants.ENV_SLURM_ACCOUNT),
                              help = "SLURM account to bill the job.")
     parser_init.add_argument("--qos",
                              type = str,
-                             default = None,
+                             default = os.environ.get(_constants.ENV_SLURM_QOS),
                              help = "SLURM quality-of-service")
     parser_init.add_argument("--bin",
                              type = str,
-                             default = None,
+                             default = os.environ.get(_constants.ENV_BIN),
                              help = "Path to where program binary files are found.")
-    parser_init.add_argument("--env_pw",
-                             type = str,
-                             default = None,
-                             help = ("Environment variable that stores the"
-                                    " database password."))
 
 
     # required 
@@ -93,29 +95,26 @@ def _parse_args(args):
 
     parser_query.add_argument("--dbname",
             type=str,
-            default=None,
+            default=os.environ.get(_constants.ENV_DB_NAME),
             help="Name of data base to query from.")
     parser_query.add_argument("--host",
             type=str,
-            default=None,
+            default=os.environ.get(_constants.ENV_DB_HOST),
             help="Hostname of database")
     parser_query.add_argument("--port",
             type=str,
-            default=None,
+            default=os.environ.get(_constants.ENV_DB_PORT),
             help="Port in which to connect to db.")
-    parser_query.add_argument("--user",
+    parser_query.add_argument("--db_user",
             type=str,
-            default=None,
+            default=os.environ.get(_constants.ENV_DB_USERNAME),
             help="User name for logging into database.")
+    parser_query.add_argument("--db_pw_env",
+            type = str,
+            default = _constants.ENV_DB_PW,
+            help = ("Name of environment variable that stores the"
+                   " database password."))
 
-    parser_query.add_argument("--schema",
-            default=None,
-            type=str,
-            help="Name of schema to query from.")
-    parser_query.add_argument("--phenotype",
-            type=str,
-            default=None,
-            help="Name of phenotype to query.")
 
     # -----------------------------------------------------------------------------
     # Find the set of samples that do not have missing data 
@@ -133,9 +132,6 @@ def _parse_args(args):
 
     # -----------------------------------------------------------------------------
     # Compute the hgrm: a single chromsome, all chromosomes, or LOCO
-    
-    
-    
     
     
     
@@ -161,16 +157,21 @@ def main(input_args=None):
     
     if args.subcommand == "init":
         from . import _init
-        _init.run(args.schema, args.phenotype,
+        _init.run(args.schema,
+                  args.phenotype,
+                  args.partition,
                   args.account,
                   args.qos,
                   args.config, 
-                  args.bin,
-                  args.env_pw)
+                  args.bin)
     
     elif args.subcommand == "query":
         from . import _query
-        _query.run(args.dbname, args.host, args.port, args.user,
+        _query.run(args.dbname,
+                   args.host,
+                   args.port,
+                   args.db_user,
+                   args.db_pw_env,
                    cmd = ' '.join(input_args))
     
     elif args.subcommand == "intersect":

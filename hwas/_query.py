@@ -27,6 +27,7 @@ def run(dbname: str | None,
         host: str | None,
         port: str | int | None,
         db_user: str | None,
+        db_pw_env: str | None,
         cmd: str) -> None:
 
     if isinstance(port, int):
@@ -43,11 +44,8 @@ def run(dbname: str | None,
         pars.port = port
     if db_user is not None:
         pars.db_user = db_user
-
-    if pars.env_pw is None:
-        pw = None
-    else:
-        pw = os.environ.get(pars.env_pw)
+    if db_pw_env is not None:
+        pw = os.environ.get(pars.db_pw_env)
 
     with (_db.connect(pars.dbname,
                       pars.host,

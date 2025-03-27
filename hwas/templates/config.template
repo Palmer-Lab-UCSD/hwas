@@ -28,9 +28,6 @@ env_pw
 host
 port
 db_user
-alloc_time = 1:00:00
-cpus_per_task = 1
-mem_per_cpu = 8gb
 covariates_file = ${common:covariates_file}
 phenotype_file = ${common:phenotype_file}
 schema = ${common:schema}
@@ -46,10 +43,24 @@ rscript = ${common:rscript}
 
 
 [hgrm]
+alloc_time = 2:00:00
+cpus_per_task = 1
+mem_per_cpu = 8gb
+partition = ${slurm:partition}
+qos = ${slurm:qos}
+account = ${slurm:account}
+logs = ${slurm:logs}
 vcf = ${common:vcf}
 hgrm = ${common:bin}/hgrm
 
 
 [association]
+alloc_time = 24:00:00
+cpus_per_task = 5
+mem_per_cpu = 10gb
+partition = ${slurm:partition}
+qos = ${slurm:qos}
+account = ${slurm:account}
+logs = ${slurm:logs}
 vcf = ${common:vcf}
 

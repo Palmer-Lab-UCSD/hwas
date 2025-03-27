@@ -24,11 +24,11 @@ logger = logging.getLogger(__name__)
 
 def run(schema_name: str,
         phenotype: str,
+        partition: str | None,
         account: str | None,
         qos: str | None,
         config: str | None = None, 
-        bin: str | None = None,
-        env_pw: str | None = None) -> None:
+        bin: str | None = None) -> None:
 
     
     # Use template to initialize configuration file.  A subset of
@@ -48,7 +48,6 @@ def run(schema_name: str,
     if bin is not None:
         cfg.set("common", "bin", os.path.expanduser(bin))
 
-    cfg.set("query", "env_pw",  env_pw)
 
     # set up path and directories for phenotype and
     # project (schema_name)
