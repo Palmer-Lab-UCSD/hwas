@@ -8,7 +8,7 @@ Functions:
 import warnings
 import re
 import os
-from typing import Unpack
+import typing
 import configparser
 
 from . import _constants
@@ -16,18 +16,32 @@ from . import _templates
 
 
 
-class ConfigParser(configparser.ConfigParser):
-    def __init__(self) -> None:
-        super().__init__(interpolation = configparser.ExtendedInterpolation(),
-                         allow_no_value = True)
+class ConfigParser:
 
-    def get_option_interpolator(self, section: str, option: str) -> tuple[str]:
+    def __init__(self) -> None:
+        self._cfg = configparser.ConfigParser(
+                            interpolation = configparser.ExtendedInterpolation(),
+                            allow_no_value = True)
+
+    def read(self, object_name: typing.Any) -> None:
+        self._cfg.read(object_name)
+
+    def get_option_interpolator(self,
+                                section: str,
+                                option: str) -> tuple[str] | None:
 
         _section = section
         _option = option
+        
+        if ((option_val := self._cfg.get(section, option, raw = True)) is None):
+            return None
 
-        out = re.match("^\\${([-_\\w]+):?([-_\\w]*)}$",
-                       super().get(section, option, raw = True)).groups()
+        if ((out := re.match("^\\${([-_\\w]+):?([-_\\w]*)}$", option_val))
+            is None):
+
+            return None
+
+        out = out.groups()
 
         if len(out) != 2:
             raise RuntimeError(f"Unexpected decomposition of ({section},"
@@ -39,28 +53,35 @@ class ConfigParser(configparser.ConfigParser):
 
         return out
 
-    def is_interpolation(self, section: str, option: str) -> bool:
+    def is_interpolation(self,
+                         section: str,
+                         option: str) -> bool:
         # recall that extended interplations are $opt or ${section:option}
-        s = super().get(section, option, raw = True)
+        s = self._cfg.get(section, option, raw = True)
 
         if s is None:
             return False
 
         return re.match("^\\${[-_:\\w]+}$", s) is not None
 
-    def set(self, section: str, option: str, value: str | None) -> None:
+    def set(self,
+            section: str,
+            option: str,
+            value: str | None) -> None:
 
         while self.is_interpolation(section, option):
             section, option = self.get_option_interpolator(section, option)
 
-        super().set(section, option, value)
+        self._cfg.set(section, option, value)
 
-    def get(self, section: str, option: str, **kwargs: Unpack[str]):
+    def get(self,
+            section: str,
+            option: str) -> str:
+
         while self.is_interpolation(section, option):
             section, option = self.get_option_interpolator(section, option)
 
-        out = super(ConfigParser, self).get(section, option, **kwargs)
-        return out
+        return self._cfg.get(section, option)
 
 
 class DynamicConfigSection:
