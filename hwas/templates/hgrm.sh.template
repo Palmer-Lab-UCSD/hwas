@@ -1,6 +1,7 @@
 #!/env/bin/bash
 
-#SBATCH --job-name=hwas
+#SBATCH --job-name=hgrm
+#SBATCH --array=@range_array_jobs
 #SBATCH --partition=@partition
 #SBATCH --account=@account
 #SBATCH --qos=@qos
@@ -12,6 +13,34 @@
 #SBATCH --output=@{log_dir}/%j_%x_stdout.log
 #SBATCH --error=@{log_dir}/%j_%x_stderr.log
 #
+#
+# Compute haplotype genetic relationship matrices
+#
+#
+# This script does the following:
+#
+#   * Subset vcf by sample and specified contig, write to scratch space
+#       of the compute node for improved I/O in the hgrm program
+#   * Computes the haplotype grm for each chromosome if #       it does not already exist
+#   * Writes hgrm to file on compute node
+#   * Transfer out matrix file to its permenant location
+#
+#
+# Template parameters
+#
+#   @range_array_jobs
+#   @partition
+#   @account
+#   @qos
+#   @alloc_time
+#   @cpus_per_task
+#   @mem_per_cpu
+#   @log_dir
+#   @vcf
+#   @contig_regex
+#   @samples_file
+#   @out_dir
+#
 
 module purge
 module load shared
@@ -19,7 +48,7 @@ module load slurm
 module load hwas
 
 CONFIG_FILENAME="config"
-
+MATRIX_FILENAME="mat"
 
 echo "Start $SLURM_JOB_START_TIME"
 
@@ -37,4 +66,72 @@ echo "SLURM_SUBMIT_DIR: $SLURM_SUBMIT_DIR"
 
 echo "lscpu output"
 lscpu
+
+date
+
+echo "########################################################################"
+echo " get vcf data"
+echo "########################################################################"
+
+
+temp_dir="/scratch/${USER}/job_${SLURM_JOBID}"
+
+contig_id=$(bcftools view -h @vcf \
+        | grep 'contig' \
+        | awk -v chr_idx=$SLURM_ARRAY_TASK_ID '{
+            if (NR == chr_idx && ((o = match($0, /@{contig_regex}/, arr)) != 0))
+                print arr[0];
+            }')
+
+if [ "${contig_id}" = "" ]; then
+    echo "Didn't find a contig id for the chr_idx ${SLURM_ARRAY_TASK_ID}"
+    exit 1
+fi
+
+if [ $? != "0" ]; then
+    echo "Could not determine contig id for chr_idx ${SLURM_ARRAY_TASK_ID}."
+    exit 2
+fi
+
+output_vcf="${temp_dir}/${contig_id}.vcf"
+
+bcftools view --samples-file @samples_file \
+    -r $contig_id \
+    -o $output_vcf \
+    @vcf 
+
+if [ $? != "0" ]; then
+    echo "Could not generate vcf for contig ${contig_id}."
+    exit 3
+fi
+
+
+
+echo "########################################################################"
+echo " Compute hgrm"
+echo "########################################################################"
+
+
+if [ ! -f ${output_vcf} ]; then
+    echo "Required vcf was not generated."
+    exit 4
+fi
+
+matrix_filename="${contig_id}.${MATRIX_FILENAME}"
+matrix_file="${temp_dir}/${matrix_filename}"
+
+hgrm "${output_vcf}" > ${matrix_file}
+
+
+if [ $? != "0" ]; then
+    echo "Computing hgrm unsuccessful"
+    exit 5
+fi
+
+# transfer hgrm matrix to local storage
+rsync -avz ${matrix_file} "@{out_dir}/${matrix_filename}"
+
+
+
+
 

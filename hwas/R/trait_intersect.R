@@ -57,6 +57,14 @@ main <- function(covariates_file, phenotype_file, vcf_samples_file, samp_id, me)
 
     write_data(covariates_file, covariates)
     write_data(phenotype_file, phenotype)
+
+    # write sample ids of those in the intersection of genotypes,
+    # covariates, and phenotype values
+    write_table(covariates[,samp_id],
+                file.path(dirname(covariates_file), "samples"),
+                col.names=FALSE,
+                row.names=FALSE,
+                quote=FALSE)
 }
 
 
