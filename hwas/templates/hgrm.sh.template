@@ -28,18 +28,22 @@
 #
 # Template parameters
 #
-#   @range_array_jobs
-#   @partition
-#   @account
-#   @qos
-#   @alloc_time
-#   @cpus_per_task
-#   @mem_per_cpu
-#   @log_dir
-#   @vcf
-#   @contig_regex
-#   @samples_file
-#   @out_dir
+#   Config file:
+#       @ alloc_time
+#       @ cpus_per_task
+#       @ mem_per_cpu
+#       @ partition
+#       @ qos
+#       @ account
+#       @ log_dir
+#       @ vcf
+#       @ hgrm
+#       @ contig_regex
+#       @ samples_file
+#       @ path
+#
+#   Determined at runtime, nver set in 
+#       @ range_array_jobs
 #
 
 module purge
@@ -48,7 +52,8 @@ module load slurm
 module load hwas
 
 CONFIG_FILENAME="config"
-MATRIX_FILENAME="mat"
+MATRIX_DIRECTORY = "hgrm"
+MATRIX_SUFFIX="mat"
 
 echo "Start $SLURM_JOB_START_TIME"
 
@@ -117,10 +122,10 @@ if [ ! -f ${output_vcf} ]; then
     exit 4
 fi
 
-matrix_filename="${contig_id}.${MATRIX_FILENAME}"
+matrix_filename="${contig_id}.${MATRIX_SUFFIX}"
 matrix_file="${temp_dir}/${matrix_filename}"
 
-hgrm "${output_vcf}" > ${matrix_file}
+@hgrm "${output_vcf}" > ${matrix_file}
 
 
 if [ $? != "0" ]; then
@@ -129,7 +134,7 @@ if [ $? != "0" ]; then
 fi
 
 # transfer hgrm matrix to local storage
-rsync -avz ${matrix_file} "@{out_dir}/${matrix_filename}"
+rsync -avz ${matrix_file} "${@{path}%/}/$MATRIX_DIRECTORY/${matrix_filename}"
 
 
 

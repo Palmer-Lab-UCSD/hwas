@@ -130,6 +130,15 @@ class ConfigParser:
 
         return (section, option)
 
+    def section_to_dict(self, section: str) -> dict[str,str]:
+        option_dict = {}
+
+        for w in self.options(section):
+            option_dict[w] = self.get(section, w)
+
+        return option_dict
+
+
     def set(self,
             section: str,
             option: str,

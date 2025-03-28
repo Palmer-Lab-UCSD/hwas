@@ -117,19 +117,13 @@ def run(schema_name: str,
 
 
     # write out script files
-    tmp = _templates.render(tname,
-                            partition         = cfg.get("slurm","partition"),
-                            account           = cfg.get("slurm","account"),
-                            qos               = cfg.get("slurm","qos"),
-                            log_dir           = cfg.get("common","logs"),
-                            out_dir           = cfg.get("common","path"),
-                            phenotype_file    = cfg.get("query","phenotype_file"),
-                            alloc_time        = cfg.get("query", "alloc_time"),
-                            cpus_per_task     = cfg.get("query", "cpus_per_task"),
-                            mem_per_cpu       = cfg.get("query", "mem_per_cpu")
-                           )
-                                      
+    hwas_tmp = _templates.render(tname, cfg.section_to_dict("query"))
+
+    with open(os.path.join(cfg.get("common", "path"), "hwas.sh"), "w") as fid:
+        fid.write(hwas_tmp)
+        
+
+    hgrm_tmp = _templates.render(tname, cfg.section_to_dict("hgrm"))
 
     with open(os.path.join(cfg.get("common", "path"), "hwas.sh"), "w") as fid:
         fid.write(tmp)
-        

@@ -1,7 +1,6 @@
 """Interface with templates
 """
 
-from typing import Unpack, TypedDict
 import string
 import pathlib
 import os
@@ -9,14 +8,6 @@ import importlib.resources
 
 from . import _constants
 
-
-class UpdateConfigPars(TypedDict):
-    partition         : str | None 
-    account           : str | None 
-    qos               : str | None 
-    log_dir           : str | None 
-    out_dir           : str | None 
-    phenotype_file    : str | None 
 
 
 class HwasTemplate(string.Template):
@@ -36,7 +27,7 @@ def get_template_filename(template_name: str) -> str:
 
 
 def render(template_path: str, 
-           **kwargs: Unpack[UpdateConfigPars]) -> str:
+           options: dict[str,str]) -> str:
 
     if (os.path.isfile(template_path) is None):
         raise FileNotFoundError(f"Template {template_path} not found.")
@@ -44,11 +35,15 @@ def render(template_path: str,
     with open(template_path, 'r') as fid:
         output = HwasTemplate(fid.read())
 
-    # not inputs
-    if len(kwargs) == 0:
-        return output.template
 
-    return output.substitute(**kwargs)
+    for identifier in output.get_identifiers():
+
+        if identifier not in options:
+            raise KeyError(f"Template file, {template_path}, identifier is"
+                           " not found among the provided option values.")
+
+
+    return output.substitute(**options)
 
 
 # def write_templated_string() -> None:
