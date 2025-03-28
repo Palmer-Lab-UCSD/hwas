@@ -62,12 +62,12 @@ echo "########################################################################"
 echo " Query phenotypic data"
 echo "########################################################################"
 
-if [ ! -f "@{out_dir}/${CONFIG_FILENAME}" ]; then
-    echo "FileNotFoundError: Configuration file, @{out_dir}/${CONFIG_FILENAME},"
+if [ ! -f "@{path}/${CONFIG_FILENAME}" ]; then
+    echo "FileNotFoundError: Configuration file, @{path}/${CONFIG_FILENAME},"
     echo " not found."
     exit
 fi
-echo "@{out_dir}/${CONFIG_FILENAME} ok"
+echo "@{path}/${CONFIG_FILENAME} ok"
 
 
 if [ ! -d "@log_dir" ]; then
@@ -77,19 +77,19 @@ fi
 echo "@{log_dir} ok"
 
 
-if [ ! -d "@out_dir" ]; then
-    echo "DirectoryNotFoundError: Output directory, @{out_dir}, not found."
+if [ ! -d "@path" ]; then
+    echo "DirectoryNotFoundError: Output directory, @{path}, not found."
     exit
 fi
-echo "@{out_dir} ok"
+echo "@{path} ok"
 
 
 
-hwas validate "@{out_dir}/${CONFIG_FILENAME}"
+hwas validate "@{path}/${CONFIG_FILENAME}"
 
 
-if [ -f "@{phenotype_file}" ] && [ -f "@{covariate_file}/"; then
-    echo "Phenotype file exists, @{out_dir}/@{phenotype_file}, skipping to"
+if [ -f "@{phenotype_file}" ] && [ -f "@{covariate_file}" ]; then
+    echo "Phenotype file exists, @{path}/@{phenotype_file}, skipping to"
     echo "next task."
 else
     hwas query 
@@ -109,4 +109,4 @@ echo "########################################################################"
 echo " Launch association job"
 echo "########################################################################"
 
-sbatch -d afterok:${hgrm_jobid} "@{out_dir}/${SBATCH_ASSOCIATION}"
+sbatch -d afterok:${hgrm_jobid} "@{path}/${SBATCH_ASSOCIATION}"

@@ -125,5 +125,5 @@ def run(schema_name: str,
 
     hgrm_tmp = _templates.render(tname, cfg.section_to_dict("hgrm"))
 
-    with open(os.path.join(cfg.get("common", "path"), "hwas.sh"), "w") as fid:
-        fid.write(tmp)
+    with open(os.path.join(cfg.get("common", "path"), "hgrm.sh"), "w") as fid:
+        fid.write(hgrm_tmp)

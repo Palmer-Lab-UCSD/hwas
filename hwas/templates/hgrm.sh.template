@@ -52,7 +52,7 @@ module load slurm
 module load hwas
 
 CONFIG_FILENAME="config"
-MATRIX_DIRECTORY = "hgrm"
+MATRIX_DIRECTORY="hgrm"
 MATRIX_SUFFIX="mat"
 
 echo "Start $SLURM_JOB_START_TIME"
