@@ -64,4 +64,6 @@ FILENAME_CONFIG = "config"
 TEMPLATES_HWAS_SBATCH="hwas.sh.template"
 FILENAME_HWAS_SBATCH="hwas.sh"
 
+TEMPLATES_HGRM_SBATCH="hgrm.sh.template"
+FILENAME_HWAS_SBATCH="hgrm.sh"
 

@@ -9,8 +9,8 @@
 #SBATCH --cpus-per-task=@cpus_per_task
 #SBATCH --mem-per-cpu=@mem_per_cpu
 #
-#SBATCH --output=@{log_dir}/%j_%x_stdout.log
-#SBATCH --error=@{log_dir}/%j_%x_stderr.log
+#SBATCH --output=@{logs}/%j_%x_stdout.log
+#SBATCH --error=@{logs}/%j_%x_stderr.log
 #
 #
 # Query data and launch pipeline
@@ -70,11 +70,11 @@ fi
 echo "@{path}/${CONFIG_FILENAME} ok"
 
 
-if [ ! -d "@log_dir" ]; then
-    echo "DirectoryNotFoundError: Log directory, @{log_dir}, not found."
+if [ ! -d "@{logs}" ]; then
+    echo "DirectoryNotFoundError: Log directory, @{logs}, not found."
     exit
 fi
-echo "@{log_dir} ok"
+echo "@{logs} ok"
 
 
 if [ ! -d "@path" ]; then
@@ -85,10 +85,10 @@ echo "@{path} ok"
 
 
 
-hwas validate "@{path}/${CONFIG_FILENAME}"
+# hwas validate "@{path}/${CONFIG_FILENAME}"
 
 
-if [ -f "@{phenotype_file}" ] && [ -f "@{covariate_file}" ]; then
+if [ -f "@{phenotype_file}" ] && [ -f "@{covariates_file}" ]; then
     echo "Phenotype file exists, @{path}/@{phenotype_file}, skipping to"
     echo "next task."
 else
