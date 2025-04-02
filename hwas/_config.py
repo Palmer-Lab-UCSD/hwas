@@ -4,11 +4,14 @@ Functions:
     init: load template configuration file and apply environment variables
     merge_cfg: add or replace sections, options and values from one 
                 configuration file to another.
+    interface: entry point for command line manipulation and reporting of
+        config file
 """
 import warnings
 import re
 import os
 import typing
+import shutil
 import configparser
 
 from . import _constants
@@ -49,14 +52,23 @@ class ConfigParser:
         """Read in data from a configuation file."""
         self._cfg.read(filename)
 
-    def write(self, fileobject: typing.TextIO) -> int:
-        return self._cfg.write(fileobject)
+    def write(self, fileobject: typing.TextIO) -> None:
+        self._cfg.write(fileobject)
+
+    def has_option(self, section: str, option: str) -> bool:
+        return self._cfg.has_option(section, option)
 
     def has_section(self, section: str) -> bool:
         return self._cfg.has_section(section)
 
+    def add_section(self, section: str) -> None:
+        self._cfg.add_section(section)
+
     def options(self, section: str) -> list[str]:
         return self._cfg.options(section)
+
+    def sections(self) -> list[str]:
+        return self._cfg.sections()
 
     def get_option_interpolator(self,
                                 section: str,
@@ -87,17 +99,17 @@ class ConfigParser:
 
             return None
 
-        out = out.groups()
+        captured_groups = out.groups()
 
-        if len(out) != 2:
+        if len(captured_groups) != 2:
             raise RuntimeError(f"Unexpected decomposition of ({section},"
                                f" {option}), please submit an issue on GitHub"
                                f" at {_constants.GITHUB_URL}")
 
-        if out.count('') == 1:
-            return (_section, out[0])
+        if captured_groups.count('') == 1:
+            return (_section, captured_groups[0])
 
-        return out
+        return captured_groups
 
     def is_interpolation(self,
                          section: str,
@@ -138,7 +150,6 @@ class ConfigParser:
 
         return option_dict
 
-
     def set(self,
             section: str,
             option: str,
@@ -151,12 +162,19 @@ class ConfigParser:
 
     def get(self,
             section: str,
-            option: str) -> str:
+            option: str,
+            raw: bool = False) -> str:
         """Retrieve value set to (section, option)."""
+
+        if raw:
+            return self._cfg.get(section, option, raw=raw)
 
         section, option = self._traverse_interpolators(section, option)
 
-        return self._cfg.get(section, option)
+        try:
+            return self._cfg.get(section, option)
+        except TypeError:
+            return self._cfg.get(section, option, raw=True)
 
 
 class DynamicConfigSection:
@@ -210,7 +228,7 @@ class DynamicConfigSection:
         instance.
     """
     def __init__(self, section: str) -> None:
-        self._section: str = section
+        self.name: str = section
         self._dynamic_option_names: list[str] = []
 
     def __iter__(self):
@@ -227,7 +245,7 @@ class DynamicConfigSection:
     @staticmethod
     def _opt_to_attr(option: str) -> str:
         return f"_{option}"
-
+    
     def add_option(self, option: str, value: str) -> None:
         setattr(self, self._opt_to_attr(option), value)
         self._set_property(option)
@@ -251,6 +269,17 @@ def get_config_section(config_filename: str,
     return pars
 
 
+def update_config_section(section_obj: DynamicConfigSection,
+                          config_file: str = _constants.FILENAME_CONFIG) -> None:
+    cfg = ConfigParser()
+    cfg.read(config_file)
+
+    for option, value in section_obj:
+        cfg.set(section_obj.name, option, value)
+
+    with open(config_file, "w") as fid:
+        cfg.write(fid)
+
 def _load_default_config() -> ConfigParser:
 
     cfg = ConfigParser()
@@ -270,14 +299,14 @@ def init() -> ConfigParser:
 
     # Set up directories for results
     cfg.set("common", "user",           os.environ.get("USER"))
-    cfg.set("common", "bin",            os.environ.get(_constants.ENV_BIN))
     cfg.set("query", "dbname",          os.environ.get(_constants.ENV_DB_NAME))
     cfg.set("query", "host",            os.environ.get(_constants.ENV_DB_HOST))
     cfg.set("query", "port",            os.environ.get(_constants.ENV_DB_PORT))
+    # cfg.set("query", "db_pw_env",       _constants.ENV_DB_PW)
+
     cfg.set("slurm", "qos",      os.environ.get(_constants.ENV_SLURM_QOS))
     cfg.set("slurm", "account",  os.environ.get(_constants.ENV_SLURM_ACCOUNT))
     cfg.set("slurm", "partition",os.environ.get(_constants.ENV_SLURM_PARTITION))
-
 
     cfg.set("common", "version", _constants.VERSION)
     cfg.set("common", "meta_prefix", _constants.DEFAULT_META_PREFIX)
@@ -308,4 +337,61 @@ def merge_cfg(opt_receiver: ConfigParser,
 
             opt_receiver.set(s, option, opt_donator.get(s, option))
 
+
+def interface(option: str | None = None,
+              value: str | None = None,
+              section: str = "common",
+              subcommand: str | None = None) -> None:
+
+
+    if not os.path.isfile(_constants.FILENAME_CONFIG):
+        raise FileNotFoundError("No configuration file in current directory")
+
+    cfg = ConfigParser()
+    cfg.read(_constants.FILENAME_CONFIG)
+
+    # set section.option = value
+    if (section is not None 
+        and option is not None
+        and value is not None):
+
+        cfg.set(section, option, value)
+
+        shutil.move(_constants.FILENAME_CONFIG,
+                    f".{_constants.FILENAME_CONFIG}")
+
+        with open(_constants.FILENAME_CONFIG, "w") as fid:
+            cfg.write(fid)
+
+
+    # get the value of section.option
+    if section is not None and option is not None:
+        print(f"{section}.{option} = {cfg.get(section, option)}")
+        return
+
+    # enumerate options and sections
+    if section is not None:
+
+        print(f"[{section}]")
+        max_word = 0
+
+        for opt in cfg.options(section):
+            if len(opt) > max_word:
+                max_word = len(opt)
+
+        col_num = max_word + 4
+        for opt in cfg.options(section):
+            end_word = 2 + len(opt)
+            num_spaces = col_num - end_word
+            s = f"  {opt}"
+            for w in range(num_spaces):
+                s = f"{s} "
+            print(f"{s}{cfg.get(section, opt)}")
+
+        return
+
+    if section is None:
+        print("Sections:")
+        for sec in cfg.sections():
+            print(f"  {sec}")
 

@@ -26,7 +26,7 @@ from . import _constants
 
 
 
-def is_schema_unique(cur: pg.Cursor,
+def is_schema_unique(cur: pg.Cursor[dict[str,str]],
                      schema_name: str) -> bool:
 
     out = cur.execute(("SELECT 1 FROM information_schema.schemata"
@@ -39,7 +39,7 @@ def is_schema_unique(cur: pg.Cursor,
     return False
 
 
-def is_table_unique(cur: pg.Cursor,
+def is_table_unique(cur: pg.Cursor[dict[str,str]],
                     schema_name: str,
                     table_name: str) -> bool:
 
@@ -57,7 +57,7 @@ def is_table_unique(cur: pg.Cursor,
     return False
 
 
-def is_covariate(cur: pg.Cursor,
+def is_covariate(cur: pg.Cursor[dict[str,str]],
                  schema_name: str,
                  measurement: str) -> bool:
 
@@ -82,7 +82,7 @@ def is_covariate(cur: pg.Cursor,
     return False
 
 
-def get_covariate_names(cur: pg.Cursor,
+def get_covariate_names(cur: pg.Cursor[dict[str,str]],
                         schema: str,
                         phenotype: str) -> list[str]:
 
@@ -99,17 +99,18 @@ def get_covariate_names(cur: pg.Cursor,
             raise ValueError((f"Phenotype, {phenotype}, is not uniquely defined"
                     f" in {schema}.{_constants.METADATA_TABLENAME}."))
 
-        metadata = metadata.fetchone()
+        if (record := metadata.fetchone()) is None:
+            raise ValueError("No record found")
 
         # make sure phenotype is not a covariate
-        if _constants.IS_COVARIATE.match(metadata["trait_covariate"]) is not None:
+        if _constants.IS_COVARIATE.match(record["trait_covariate"]) is not None:
             raise ValueError("Input phenotype is a covariate.")
 
 
         # Check that specified covariate is a covariate and that a
         # column for that covariate exists in the PHENOTYPE_TABLENAME
         # table.
-        covariate_names = metadata["covariates"].split(_constants.COVARIATE_DELIMITER)
+        covariate_names = record["covariates"].split(_constants.COVARIATE_DELIMITER)
 
         for w in covariate_names:
 
@@ -123,11 +124,11 @@ def get_covariate_names(cur: pg.Cursor,
         return covariate_names
 
 
-def get_records(cur: pg.Cursor,
+def get_records(cur: pg.Cursor[dict[str,str]],
                 schema_name: str,
                 table_name: str,
                 colnames: list[str],
-                sample_colname: str | None) -> tuple[Iterable[str], pg.Cursor]:
+                sample_colname: str | None) -> tuple[Iterable[str], pg.Cursor[dict[str,str]]]:
 
     if not isinstance(sample_colname, str) and sample_colname is not None:
         raise ValueError("{sample_colname} must be either type str or None")
@@ -177,6 +178,6 @@ def connect(dbname: str,
     return pg.connect(connection_name) 
 
 
-def data_cur(conn: pg.Connection) -> pg.Cursor:
+def data_cur(conn: pg.Connection) -> pg.Cursor[dict[str,str]]:
     return conn.cursor(row_factory = pg.rows.dict_row)
 

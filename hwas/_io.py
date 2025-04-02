@@ -16,8 +16,8 @@ def make_output_metadata(dbname: str,
     date = datetime.datetime.now(datetime.UTC)
     
     return (f"{_constants.DEFAULT_META_PREFIX}date"
-              f"={date.year}-{date.month:02}-{date.day:02}"
-              f"-{date.hour:02}:{date.minute:02}:{date.second:02}\n"
+        f"={date.year}-{date.month:02}-{date.day:02}"
+        f"-{date.hour:02}:{date.minute:02}:{date.second:02}\n"
         f"{_constants.DEFAULT_META_PREFIX}timezone={date.tzinfo}\n"
         f"{_constants.DEFAULT_META_PREFIX}user={os.environ['USER']}\n"
         f"{_constants.DEFAULT_META_PREFIX}database={dbname}\n"
@@ -28,7 +28,7 @@ def make_output_metadata(dbname: str,
 
 
 def write_to_file(filename: str,
-                  cur: pg.Cursor,
+                  cur: pg.Cursor[dict[str,str]],
                   colnames: Iterable[str],
                   meta_data: str | None = None,
                   delimiter: str = _constants.OUTPUT_DELIMITER) -> None:

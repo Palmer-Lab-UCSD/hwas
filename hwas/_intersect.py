@@ -18,36 +18,54 @@ from . import _constants
 
 logger = logging.getLogger(__name__)
 
-def run(vcf: str) -> None:
+def interface(vcf: str) -> None:
 
     args = _config.get_config_section(_constants.FILENAME_CONFIG,
-                                         "intersect")
+                                      "intersect")
 
-    args.vcf = vcf
+    if not os.path.isabs(vcf):
+        vcf = os.path.abspath(vcf)
+    args.vcf = vcf                                          # type: ignore[attr-defined]
+
+    _config.update_config_section(args)
 
     with tempfile.NamedTemporaryFile(delete_on_close=False) as ftmp:
 
-        out = subprocess.run([args.bcftools,"query","--list-samples", args.vcf],
+        out = subprocess.run(["bcftools","query",
+                              "--list-samples", args.vcf],  # type: ignore[attr-defined]
                              check = True,
+                             text = True,
                              stdout=ftmp,
                              stderr=subprocess.PIPE)
+
+        if out.returncode != 0:
+            raise subprocess.CalledProcessError(returncode = out.returncode,
+                                                cmd = out.args,
+                                                output = out.stdout,
+                                                stderr = out.stderr)
+
         ftmp.close()
 
         rscript_path = importlib.resources.files('hwas.R').joinpath('trait_intersect.R')
 
-        if not os.path.isfile(rscript_path):
+        if not os.path.isfile(str(rscript_path)):
             raise FileNotFoundError(rscript_path)
 
-        out = subprocess.run([args.rscript, rscript_path,
-                              "--covariate", args.covariates_file,
-                              "--phenotype", args.phenotype_file,
+        out = subprocess.run(["Rscript", str(rscript_path),
+                              "--covariate", args.covariates_file,  # type: ignore[attr-defined]
+                              "--phenotype", args.phenotype_file,   # type: ignore[attr-defined]
                               "--vcf", ftmp.name,
                               "--id", _constants.SAMPLE_COLNAME],
-                              check = True,
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
+                              text = True,
+                              capture_output = True)
 
-        for w in out.stdout.decode('utf-8').strip().split('\n'):
+        if out.returncode != 0:
+            raise subprocess.CalledProcessError(returncode = out.returncode,
+                                                cmd = out.args,
+                                                output = out.stdout,
+                                                stderr = out.stderr)
+
+        for w in out.stdout.strip().split('\n'):
             logging.info(w)
 
 

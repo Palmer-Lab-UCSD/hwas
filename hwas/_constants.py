@@ -5,6 +5,7 @@ import re
 from . import __version__
 
 
+MAX_PHENOTYPE_VERSIONS = 1000
 
 # environmental variables to check value
 ENV_BIN = "PALMER_BIN"
@@ -67,3 +68,10 @@ FILENAME_HWAS_SBATCH="hwas.sh"
 TEMPLATES_HGRM_SBATCH="hgrm.sh.template"
 FILENAME_HWAS_SBATCH="hgrm.sh"
 
+
+
+# hgrm computation
+
+HGRM_CPUS_PER_TASK="1"
+HGRM_ALLOC_TIME="4:00:00"
+HGRM_CONTIG_FILE="contigs"

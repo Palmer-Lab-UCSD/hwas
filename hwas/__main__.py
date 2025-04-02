@@ -11,15 +11,8 @@ any system as it makes some assumptions that are specific to the Palmer
 Lab data organization.
 
 
-Typical usage example:
-    # Let us assume the `$` denote a `bash` prompt
-
-    $ hwas init --dbname my_database \
-                --bin path_to_binaries \
-                --
-                data_schema \
-                phenotype_measurement_name
 """
+
 import sys
 import argparse
 import os
@@ -52,12 +45,23 @@ def _parse_args(args):
     parser_init = subparser.add_parser("init",
                                         help = "Initialize current directory for pipeline.")
     
+    # required 
+    parser_init.add_argument("schema",
+                            type = str,
+                            help = ("Name of schema / project for which phenotype"
+                                     " are stored."))
+    parser_init.add_argument("phenotype",
+                            type = str,
+                            help = ("Name of the phenotype/measurement to compute"
+                                    " genetic associations."))
+    
+    # -----------------------------------------------------------------------------
+    # pipeline: generate scripts from templates and specified configuration
+    
     # options
-    parser_init.add_argument("--config",
-                             type = str,
-                             default = None,
-                             help = ("If a configuration file exists, use it for default"
-                                     " parameter values."))
+    parser_pipeline = subparser.add_parser("pipeline",
+                                help = "Generate scripts from templates.")
+
     parser_init.add_argument("--partition",
                              type = str,
                              default = os.environ.get(_constants.ENV_SLURM_PARTITION),
@@ -74,18 +78,12 @@ def _parse_args(args):
                              type = str,
                              default = os.environ.get(_constants.ENV_BIN),
                              help = "Path to where program binary files are found.")
+    parser_init.add_argument("--vcf",
+                             type = str,
+                             default = None,
+                             help = "Path to the VCF file")
 
 
-    # required 
-    parser_init.add_argument("schema",
-                             type = str,
-                             help = ("Name of schema / project for which phenotype"
-                                     " are stored."))
-    parser_init.add_argument("phenotype",
-                             type = str,
-                             help = ("Name of the phenotype/measurement to compute"
-                                     " genetic associations."))
-    
     # -----------------------------------------------------------------------------
     # Query database
     
@@ -114,6 +112,16 @@ def _parse_args(args):
             default = _constants.ENV_DB_PW,
             help = ("Name of environment variable that stores the"
                    " database password."))
+    parser_query.add_argument("--phenotype_file",
+            type = str,
+            default = _constants.FILENAME_PHENOTYPE,
+            help = ("Filename to write phenotype data queried from database"
+                   f" , default {_constants.FILENAME_PHENOTYPE}."))
+    parser_query.add_argument("--covariates_file",
+            type = str,
+            default = _constants.FILENAME_COVARIATES,
+            help = ("Filename to write covariate data queried from database"
+                   f" , default {_constants.FILENAME_PHENOTYPE}."))
 
 
     # -----------------------------------------------------------------------------
@@ -131,11 +139,54 @@ def _parse_args(args):
 
 
     # -----------------------------------------------------------------------------
+    # set and get configuration values
+
+    parser_config = subparser.add_parser("config",
+                        help = "Get and set configuration parameters")
+
+    parser_config.add_argument("-s", "--section",
+            type = str,
+            default = None,
+            help = ("Specify section for options to print, if None print"
+                    " enumerate sections."))
+
+    parser_config.add_argument("-o", "--option",
+            type = str,
+            default = None,
+            help = ("Specify the option to set or print.  If None,"
+                    " enumerate all options in section."))
+    
+    parser_config.add_argument("-v", "--value",
+            type = str,
+            default = None,
+            help = "Set section.option to value")
+
+
+    # -----------------------------------------------------------------------------
     # Compute the hgrm: a single chromsome, all chromosomes, or LOCO
+
+    parser_hgrm = subparser.add_parser("hgrm",
+                        help = ("Compute the GRM from expected haplotype"
+                                " counts and write to file."))
+
     
-    
-    
-    
+    parser_hgrm.add_argument("--chrm",
+            type = str,
+            default = None,
+            help = "Chromosome to compute hgrm")
+    parser_hgrm.add_argument("--hgrm",
+            type = str,
+            default = None,
+            help = "Path to `hgrm` binary if not on path.")
+    parser_hgrm.add_argument("--tempdir",
+            type = str,
+            default = None,
+            help = "Temporary directory for intermediate vcf and matrix file")
+    parser_hgrm.add_argument("--vcf",
+            type = str,
+            default = None,
+            help = ("Filename of vcf to be analyzed for which genotypes are"
+                    " extracted."))
 
     return parser.parse_args(args)
     
@@ -143,6 +194,40 @@ def _parse_args(args):
     
 def main(input_args=None):
 
+
+    if input_args is None:
+        input_args = sys.argv[1:]
+
+    args = _parse_args(input_args)
+
+    if args.subcommand == "config":
+        from . import _config
+        print(args)
+        _config.interface(**args.__dict__)
+        sys.exit(0)
+
+    elif args.subcommand == "init":
+        from . import _init
+        _init.interface(args.schema, args.phenotype) 
+        sys.exit(0)
+
+    elif args.subcommand == "query":
+        from . import _query
+        args.cmd = ' '.join(input_args)
+        _query.interface(**args.__dict__)
+        sys.exit(0)
+    
+    elif args.subcommand == "intersect":
+        from . import _intersect
+        _intersect.interface(args.vcf)
+        sys.exit(0)
+
+    elif args.subcommand == "hgrm":
+        from . import _hgrm
+        _hgrm.interface(**args.__dict__)
+        sys.exit(0)
+
+    # TODO Think carefully about when I want to activate the logger
     logging.basicConfig(format = ("%(asctime)s\t%(levelname)s"
                                   "\t%(filename)s"
                                   "\t%(message)s"),
@@ -150,35 +235,12 @@ def main(input_args=None):
 
     logger.info(' '.join(sys.argv))
 
-    if input_args is None:
-        input_args = sys.argv[1:]
 
-    args = _parse_args(input_args)
-    
-    if args.subcommand == "init":
-        from . import _init
-        _init.run(args.schema,
-                  args.phenotype,
-                  args.partition,
-                  args.account,
-                  args.qos,
-                  args.config, 
-                  args.bin)
-    
-    elif args.subcommand == "query":
-        from . import _query
-        _query.run(args.dbname,
-                   args.host,
-                   args.port,
-                   args.db_user,
-                   args.db_pw_env,
-                   cmd = ' '.join(input_args))
-    
-    elif args.subcommand == "intersect":
-        from . import _intersect
-        _intersect.run(args.vcf)
+    if args.subcommand == "pipeline":
+        from . import _pipeline
+        _pipeline.interface(**args.__dict__)
 
-    elif args.subcommand == "hgrm":
-        raise NotImplementedError
+    sys.exit(0)
+
 
 

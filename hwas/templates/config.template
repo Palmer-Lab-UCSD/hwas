@@ -1,7 +1,6 @@
 [common]
 version
 user
-bin
 path
 schema
 phenotype
@@ -10,67 +9,86 @@ phenotype_file
 vcf
 meta_prefix
 header_prefix
-samples_filename = samples
-logs = ${path}/logs
-rscript = ${bin}/Rscript
-bcftools = ${bin}/bcftools
+contig_file
+samples_filename    = samples
+logs                = ${path}/logs
 
 
 [slurm]
 qos
 account
 partition
-logs = ${common:logs}
+logs                = ${common:logs}
+
+
+[init]
+cpus_per_task       = 1
+mem_per_cpu         = 8gb
+alloc_time          = 1:00:00
+dbname              = ${query:dbname}
+env_pw              = ${query:env_pw}
+host                = ${query:host}
+port                = ${query:port}
+db_user             = ${query:db_user}
+partition           = ${slurm:partition}
+qos                 = ${slurm:qos}
+account             = ${slurm:account}
+logs                = ${slurm:logs}
+contig_file         = ${common:contig_file}
+path                = ${common:path}
+covariates_file     = ${common:covariates_file}
+phenotype_file      = ${common:phenotype_file}
+schema              = ${common:schema}
+phenotype           = ${common:phenotype}
+samples_filename    = ${common:samples_filename}
+vcf                 = ${common:vcf}
 
 
 [query]
 dbname
-env_pw
+db_pw_env
 host
 port
 db_user
-path = ${common:path}
-partition = ${slurm:partition}
-qos = ${slurm:qos}
-account = ${slurm:account}
-logs = ${slurm:logs}
-covariates_file = ${common:covariates_file}
-phenotype_file = ${common:phenotype_file}
-schema = ${common:schema}
-phenotype = ${common:phenotype}
+path                = ${common:path}
+partition           = ${slurm:partition}
+qos                 = ${slurm:qos}
+account             = ${slurm:account}
+logs                = ${slurm:logs}
+covariates_file     = ${common:covariates_file}
+phenotype_file      = ${common:phenotype_file}
+schema              = ${common:schema}
+phenotype           = ${common:phenotype}
 
 
 [intersect]
-samples_filename = ${common:samples_filename}
-vcf = ${common:vcf}
-covariates_file = ${query:covariates_file}
-phenotype_file = ${query:phenotype_file}
-bcftools = ${common:bcftools}
-rscript = ${common:rscript}
+samples_filename    = ${common:samples_filename}
+vcf                 = ${common:vcf}
+covariates_file     = ${common:covariates_file}
+phenotype_file      = ${common:phenotype_file}
 
 
 [hgrm]
-config_regex
-hgrm
-alloc_time = 2:00:00
-cpus_per_task = 1
-mem_per_cpu = 8gb
-samples_filename = ${common:samples_filename}
-path = ${common:path}
-partition = ${slurm:partition}
-qos = ${slurm:qos}
-account = ${slurm:account}
-logs = ${slurm:logs}
-vcf = ${common:vcf}
+contig_file         = ${common:contig_file}
+alloc_time          = 4:00:00
+cpus_per_task       = 1
+mem_per_cpu         = 8gb
+samples_filename    = ${common:samples_filename}
+path                = ${common:path}
+vcf                 = ${common:vcf}
+partition           = ${slurm:partition}
+qos                 = ${slurm:qos}
+account             = ${slurm:account}
+logs                = ${slurm:logs}
 
 
 [association]
-alloc_time = 24:00:00
-cpus_per_task = 5
-mem_per_cpu = 10gb
-partition = ${slurm:partition}
-qos = ${slurm:qos}
-account = ${slurm:account}
-logs = ${slurm:logs}
-vcf = ${common:vcf}
+alloc_time          = 24:00:00
+cpus_per_task       = 5
+mem_per_cpu         = 10gb
+vcf                 = ${common:vcf}
+partition           = ${slurm:partition}
+qos                 = ${slurm:qos}
+account             = ${slurm:account}
+logs                = ${slurm:logs}
 
