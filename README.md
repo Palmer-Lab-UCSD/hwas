@@ -96,9 +96,10 @@ This command will produce two files, let's assume that the current
 working directory is `path_to_data/schema_name/phenotype/001`,
 
 ```
-- config
-- covariates.csv
-- phenotype.csv
+./
+|- config
+|- covariates.csv
+|- phenotype.csv
 ```
 
 The data queried from the database consists of all relevant samples, 
@@ -114,10 +115,11 @@ This will create a file `samples` and will subset the samples
 in the data tables `covariates.csv` and `phenotype.csv`
 
 ```
-- config
-- covariates.csv
-- phenotype.csv
-- samples
+./
+|- config
+|- covariates.csv
+|- phenotype.csv
+|- samples
 ```
 
 
