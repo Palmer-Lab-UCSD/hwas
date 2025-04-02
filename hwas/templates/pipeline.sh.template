@@ -1,0 +1,112 @@
+#!/env/bin/bash
+
+#SBATCH --job-name=hwas
+#SBATCH --partition=@partition
+#SBATCH --account=@account
+#SBATCH --qos=@qos
+#
+#SBATCH --time=@alloc_time
+#SBATCH --cpus-per-task=@cpus_per_task
+#SBATCH --mem-per-cpu=@mem_per_cpu
+#
+#SBATCH --output=@{logs}/%j_%x_stdout.log
+#SBATCH --error=@{logs}/%j_%x_stderr.log
+#
+#
+# Query data and launch pipeline
+#
+# This script does the following:
+#
+#   * Queries covariate and phenotypic data from the database
+#   * Finds the set of sample rfids that have genotype data,
+#       valid phenotype values, and valid covariate values.
+#       - phenotype table written to a csv file
+#       - covariate table written to a csv file
+#       - sample rfid written to file
+#   * Launches code for computing haplotype grm
+#   Computes the haplotype based grm if not already available
+#       - files written to hgrm directory
+#       - 
+#   * Perform association analysis on available data
+#       - write to file expected count matrix using bcftools to file
+#       - load expected count matrix
+
+module purge
+module load shared
+module load slurm
+module load hwas
+
+CONFIG_FILENAME="config"
+
+
+echo "Start $SLURM_JOB_START_TIME"
+
+echo "########################################################################"
+echo " Node and job information"
+echo "########################################################################"
+echo ""
+echo "SLURM_CLUSTER_NAME: $SLURM_CLUSTER_NAME"
+echo "SLURM_JOB_NODELIST: $SLURM_JOB_NODELIST"
+echo "SLURM_NODEID: $SLURM_NODEID"
+echo "SLURMD_NODENAME: $SLURMD_NODENAME"
+echo ""
+echo "SLURM_SUBMIT_DIR: $SLURM_SUBMIT_DIR"
+
+
+echo "lscpu output"
+lscpu
+date
+
+
+echo "########################################################################"
+echo " Query phenotypic data"
+echo "########################################################################"
+
+if [ ! -f "@{path}/${CONFIG_FILENAME}" ]; then
+    echo "FileNotFoundError: Configuration file, @{path}/${CONFIG_FILENAME},"
+    echo " not found."
+    exit
+fi
+echo "@{path}/${CONFIG_FILENAME} ok"
+
+
+if [ ! -d "@{logs}" ]; then
+    echo "DirectoryNotFoundError: Log directory, @{logs}, not found."
+    exit
+fi
+echo "@{logs} ok"
+
+
+if [ ! -d "@path" ]; then
+    echo "DirectoryNotFoundError: Output directory, @{path}, not found."
+    exit
+fi
+echo "@{path} ok"
+
+
+
+# hwas validate "@{path}/${CONFIG_FILENAME}"
+
+
+if [ -f "@{phenotype_file}" ] && [ -f "@{covariates_file}" ]; then
+    echo "Phenotype file exists, @{path}/@{phenotype_file}, skipping to"
+    echo "next task."
+else
+    hwas query 
+fi
+
+
+
+echo "########################################################################"
+echo " Launch hgrm job"
+
+hgrm_jobid=$(sbatch --parsable hwas hgrm)
+
+
+
+
+echo "########################################################################"
+echo " Launch association job"
+echo "########################################################################"
+
+sbatch -d afterok:${hgrm_jobid} "@{path}/${SBATCH_ASSOCIATION}"
