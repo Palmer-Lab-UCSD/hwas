@@ -149,7 +149,7 @@ class TestConfigParser(TestCase):
 class TestDynamicConfigSection(TestCase):
     def test_init(self):
         tmp = _config.DynamicConfigSection("common")
-        self.assertEqual(tmp._section, "common")
+        self.assertEqual(tmp.name, "common")
 
         self.assertListEqual(tmp._dynamic_option_names, [])
 
