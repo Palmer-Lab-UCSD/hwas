@@ -55,11 +55,13 @@ def interface(vcf: str) -> None:
                               "--covariate", args.covariates_file,  # type: ignore[attr-defined]
                               "--phenotype", args.phenotype_file,   # type: ignore[attr-defined]
                               "--vcf", ftmp.name,
-                              "--id", _constants.SAMPLE_COLNAME],
+                              "--id", _constants.SAMPLE_COLNAME,
+                              "--sample_filename", _constants.FILENAME_SAMPLES],
                               text = True,
                               capture_output = True)
 
         if out.returncode != 0:
+            print(out.stdout)
             raise subprocess.CalledProcessError(returncode = out.returncode,
                                                 cmd = out.args,
                                                 output = out.stdout,

@@ -60,6 +60,9 @@ def interface(schema_name: str,
     cfg.set("common", "path", path)
     cfg.set("common", "schema", schema_name)
     cfg.set("common", "phenotype", phenotype)
+    cfg.set("common", "covariates_file", _constants.FILENAME_COVARIATES)
+    cfg.set("common", "phenotype_file", _constants.FILENAME_PHENOTYPE)
+    cfg.set("query", "db_pw_env", _constants.ENV_DB_PW)
 
 
     # # if another configuration file is provided, read and and sections,

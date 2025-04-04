@@ -109,7 +109,7 @@ def _parse_args(args):
             help="User name for logging into database.")
     parser_query.add_argument("--db_pw_env",
             type = str,
-            default = _constants.ENV_DB_PW,
+            default = None,
             help = ("Name of environment variable that stores the"
                    " database password."))
     parser_query.add_argument("--phenotype_file",
@@ -174,10 +174,6 @@ def _parse_args(args):
             type = str,
             default = None,
             help = "Chromosome to compute hgrm")
-    parser_hgrm.add_argument("--hgrm",
-            type = str,
-            default = None,
-            help = "Path to `hgrm` binary if not on path.")
     parser_hgrm.add_argument("--tempdir",
             type = str,
             default = None,
@@ -203,7 +199,7 @@ def main(input_args=None):
     if args.subcommand == "config":
         from . import _config
         print(args)
-        _config.interface(**args.__dict__)
+        _config.interface(**vars(args))
         sys.exit(0)
 
     elif args.subcommand == "init":
@@ -214,7 +210,7 @@ def main(input_args=None):
     elif args.subcommand == "query":
         from . import _query
         args.cmd = ' '.join(input_args)
-        _query.interface(**args.__dict__)
+        _query.interface(**vars(args))
         sys.exit(0)
     
     elif args.subcommand == "intersect":
@@ -224,7 +220,7 @@ def main(input_args=None):
 
     elif args.subcommand == "hgrm":
         from . import _hgrm
-        _hgrm.interface(**args.__dict__)
+        _hgrm.interface(args.vcf, args.chrm, tempdir = args.tempdir)
         sys.exit(0)
 
     # TODO Think carefully about when I want to activate the logger

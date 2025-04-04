@@ -22,39 +22,17 @@ logs                = ${common:logs}
 
 
 [init]
-cpus_per_task       = 1
-mem_per_cpu         = 8gb
-alloc_time          = 1:00:00
-dbname              = ${query:dbname}
-env_pw              = ${query:env_pw}
-host                = ${query:host}
-port                = ${query:port}
-db_user             = ${query:db_user}
-partition           = ${slurm:partition}
-qos                 = ${slurm:qos}
-account             = ${slurm:account}
-logs                = ${slurm:logs}
-contig_file         = ${common:contig_file}
-path                = ${common:path}
-covariates_file     = ${common:covariates_file}
-phenotype_file      = ${common:phenotype_file}
 schema              = ${common:schema}
 phenotype           = ${common:phenotype}
-samples_filename    = ${common:samples_filename}
-vcf                 = ${common:vcf}
 
 
 [query]
 dbname
-db_pw_env
 host
 port
 db_user
+db_pw_env
 path                = ${common:path}
-partition           = ${slurm:partition}
-qos                 = ${slurm:qos}
-account             = ${slurm:account}
-logs                = ${slurm:logs}
 covariates_file     = ${common:covariates_file}
 phenotype_file      = ${common:phenotype_file}
 schema              = ${common:schema}
@@ -62,24 +40,17 @@ phenotype           = ${common:phenotype}
 
 
 [intersect]
-samples_filename    = ${common:samples_filename}
 vcf                 = ${common:vcf}
+samples_filename    = ${common:samples_filename}
 covariates_file     = ${common:covariates_file}
 phenotype_file      = ${common:phenotype_file}
 
 
 [hgrm]
 contig_file         = ${common:contig_file}
-alloc_time          = 4:00:00
-cpus_per_task       = 1
-mem_per_cpu         = 8gb
 samples_filename    = ${common:samples_filename}
 path                = ${common:path}
 vcf                 = ${common:vcf}
-partition           = ${slurm:partition}
-qos                 = ${slurm:qos}
-account             = ${slurm:account}
-logs                = ${slurm:logs}
 
 
 [association]
@@ -87,8 +58,26 @@ alloc_time          = 24:00:00
 cpus_per_task       = 5
 mem_per_cpu         = 10gb
 vcf                 = ${common:vcf}
-partition           = ${slurm:partition}
+
+
+[pipeline]
+cpus_per_task       = 1
+mem_per_cpu         = 8gb
+alloc_time          = 1:00:00
 qos                 = ${slurm:qos}
 account             = ${slurm:account}
-logs                = ${slurm:logs}
-
+partition           = ${slurm:partition}
+dbname              = ${query:dbname}
+env_pw              = ${query:env_pw}
+host                = ${query:host}
+port                = ${query:port}
+db_user             = ${query:db_user}
+logs                = ${common:logs}
+contig_file         = ${common:contig_file}
+path                = ${common:path}
+covariates_file     = ${common:covariates_file}
+phenotype_file      = ${common:phenotype_file}
+schema              = ${common:schema}
+phenotype           = ${common:phenotype}
+samples_filename    = ${common:samples_filename}
+vcf                 = ${common:vcf}
