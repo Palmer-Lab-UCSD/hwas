@@ -183,49 +183,6 @@ class DynamicConfigSection:
     Args:
         section: the section of the configuration file in which
             we want to store option keys and values.
-
-    
-    Note:
-        This class dynamically sets properties using a classmethod.
-        Class methods will carry out changes to all existing and subsequent
-        class instances.  To understand how this manifests in this class
-        consider the following example. Suppose that I have two class
-        instances of DynamicConfigSection
-        
-          a = DynamicConfigSection("common")
-          b = DynamicConfigSection("arbitrary")
-        
-        and suppose that I set the property for a as follows
-        
-          a._x = 25
-          a._set_property("x")
-          print(a.x)
-              --> 25
-        
-        No suprise here.  Now let's consider class instance b
-        
-          hasattr(b, _x)
-              --> False
-          'x' in b.__dir__()
-              --> True
-        
-        This is a bit odd.  Despite not defining `x` for instance `b`
-        it does exist.  Now suppose we try to query `x` from `b`
-        
-          print(b.x)
-              --> AttributeError, _x not defined
-        
-        Interesting, the error doesn't say that `x` isn't defined by instead
-        the attribute that the property `x` references.
-        
-          b._x = 10
-          print(b.x)
-              --> 10
-        
-        Once we define `_x` attribute, the property defined in instance `a`
-        works.  This is because `_x` is defined on the class instance, but
-        not the class, meanwhile `x` is defined on the class, not just the
-        instance.
     """
     def __init__(self, section: str) -> None:
         super().__setattr__("name", section)

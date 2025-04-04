@@ -7,7 +7,8 @@ library(argparse)
 
 
 
-main <- function(covariates_file, phenotype_file, vcf_samples_file, samp_id, me) {
+main <- function(covariates_file, phenotype_file, vcf_samples_file,
+                 samp_id, me, sample_filename) {
 
     if (!is.null(me)) {
         source(file.path(dirname(me),"trait_io.R"))
@@ -61,7 +62,7 @@ main <- function(covariates_file, phenotype_file, vcf_samples_file, samp_id, me)
     # write sample ids of those in the intersection of genotypes,
     # covariates, and phenotype values
     write.table(covariates$data[,samp_id],
-                file.path(dirname(covariates_file), "samples"),
+                file.path(dirname(covariates_file), sample_filename),
                 col.names=FALSE,
                 row.names=FALSE,
                 quote=FALSE)
@@ -85,7 +86,11 @@ parser <- argparse::argument_parser(
         argparse::argument_def(
             ref = "--id",
             type = "character",
-            help = "Column name that represents sample identifiers.")
+            help = "Column name that represents sample identifiers."),
+        argparse::argument_def(
+            ref = "--sample_filename",
+            type = "character",
+            help = "Name of file that enumerate sample ids.")
 )
 
 
@@ -94,5 +99,6 @@ if (!interactive())
 {
     out <- parser(commandArgs(), return_program_name=TRUE)
     args <- out$args
-    main(args$covariate, args$phenotype, args$vcf, args$id, out$program)
+    main(args$covariate, args$phenotype, args$vcf, args$id, 
+         out$program, args$sample_filename)
 }

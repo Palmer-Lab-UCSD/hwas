@@ -9,8 +9,6 @@ The pipeline uses a combination of custom tools and those commonly used
 by the statistical genetics community.  It is not fully generalizable to
 any system as it makes some assumptions that are specific to the Palmer
 Lab data organization.
-
-
 """
 
 import sys
@@ -107,21 +105,6 @@ def _parse_args(args):
             type=str,
             default=os.environ.get(_constants.ENV_DB_USERNAME),
             help="User name for logging into database.")
-    parser_query.add_argument("--db_pw_env",
-            type = str,
-            default = None,
-            help = ("Name of environment variable that stores the"
-                   " database password."))
-    parser_query.add_argument("--phenotype_file",
-            type = str,
-            default = _constants.FILENAME_PHENOTYPE,
-            help = ("Filename to write phenotype data queried from database"
-                   f" , default {_constants.FILENAME_PHENOTYPE}."))
-    parser_query.add_argument("--covariates_file",
-            type = str,
-            default = _constants.FILENAME_COVARIATES,
-            help = ("Filename to write covariate data queried from database"
-                   f" , default {_constants.FILENAME_PHENOTYPE}."))
 
 
     # -----------------------------------------------------------------------------
@@ -170,19 +153,28 @@ def _parse_args(args):
                                 " counts and write to file."))
 
     
-    parser_hgrm.add_argument("--chrm",
+    parser_hgrm.add_argument("chrm",
             type = str,
             default = None,
             help = "Chromosome to compute hgrm")
-    parser_hgrm.add_argument("--tempdir",
-            type = str,
-            default = None,
-            help = "Temporary directory for intermediate vcf and matrix file")
     parser_hgrm.add_argument("--vcf",
             type = str,
             default = None,
             help = ("Filename of vcf to be analyzed for which genotypes are"
                     " extracted."))
+    parser_hgrm.add_argument("--temp_dir",
+            type = str,
+            default = None,
+            help = "Temporary directory for intermediate vcf and matrix file")
+    parser_hgrm.add_argument("--hgrm_dir",
+            type = str,
+            default = _constants.HGRM_MATRIX_DIR,
+            help = "Directory for hgrm matrices to be writeen.")
+    parser_hgrm.add_argument("--samples_file",
+            type = str,
+            default = _constants.FILENAME_SAMPLES,
+            help = "Filname of text file with one sample id written per line.")
+
 
     return parser.parse_args(args)
     
@@ -220,7 +212,7 @@ def main(input_args=None):
 
     elif args.subcommand == "hgrm":
         from . import _hgrm
-        _hgrm.interface(args.vcf, args.chrm, tempdir = args.tempdir)
+        _hgrm.interface(**vars(args))
         sys.exit(0)
 
     # TODO Think carefully about when I want to activate the logger
