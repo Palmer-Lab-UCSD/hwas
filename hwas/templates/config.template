@@ -10,7 +10,8 @@ vcf
 meta_prefix
 header_prefix
 contig_file
-samples_filename    = samples
+hgrm_dir
+samples_filename
 logs                = ${path}/logs
 
 
@@ -47,16 +48,14 @@ phenotype_file      = ${common:phenotype_file}
 
 
 [hgrm]
-contig_file         = ${common:contig_file}
-samples_filename    = ${common:samples_filename}
+tmpdir
+hgrm_dir            = ${common:hgrm_dir}
 path                = ${common:path}
+samples_filename    = ${common:samples_filename}
 vcf                 = ${common:vcf}
 
 
 [association]
-alloc_time          = 24:00:00
-cpus_per_task       = 5
-mem_per_cpu         = 10gb
 vcf                 = ${common:vcf}
 
 
