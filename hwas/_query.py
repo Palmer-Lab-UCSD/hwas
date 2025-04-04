@@ -22,37 +22,16 @@ from . import _io
 logger = logging.getLogger(__name__)
 
 
-def interface(dbname: str | None,
-              host: str | None,
-              port: str | int | None,
-              db_user: str | None,
-              db_pw_env: str | None,
-              phenotype_file: str | None,
-              covariates_file: str | None,
-              cmd: str,
-              subcommand: str | None = None) -> None:
-
-    if isinstance(port, int):
-        port = str(port)
+def interface(**kwargs) -> None:
 
     pars = _config.get_config_section(_constants.FILENAME_CONFIG,
                                     "query")
 
+    pars.update(**kwargs)
 
-    if dbname is not None:
-        pars.dbname = dbname                    # type: ignore[attr-defined]
-    if host is not None:
-        pars.host = host                        # type: ignore[attr-defined]
-    if port is not None:
-        pars.port = port                        # type: ignore[attr-defined]
-    if db_user is not None:
-        pars.db_user = db_user                  # type: ignore[attr-defined]
-    if phenotype_file is not None:
-        pars.phenotype_file = phenotype_file    # type: ignore[attr-defined]
-    if covariates_file is not None:
-        pars.covariates_file = covariates_file  # type: ignore[attr-defined]
-    if db_pw_env is not None:
-        pars.db_pw_env = db_pw_env     # type: ignore[attr-defined]
+    if not pars.is_specification_complete():
+        print(pars)
+        raise ValueError("A required value wasn't specified, see above list.")
 
     _config.update_config_section(pars)
 
@@ -106,7 +85,7 @@ def interface(dbname: str | None,
         meta_data = _io.make_output_metadata(pars.dbname,           # type: ignore[attr-defined]
                                              pars.schema,           # type: ignore[attr-defined]
                                              pars.phenotype,        # type: ignore[attr-defined]
-                                             cmd)
+                                             kwargs["cmd"])
 
         _io.write_to_file(pars.covariates_file,                     # type: ignore[attr-defined]
                           cov_out,

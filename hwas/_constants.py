@@ -27,6 +27,9 @@ FILENAME_PHENOTYPE="phenotype.csv"
 FILENAME_COVARIATES="covariates.csv"
 DEFAULT_LOG_DIR = "logs"
 
+HGRM_MATRIX_DIR = "hgrm"
+MATRIX_SUFFIX = "mat"
+
 
 # Directory setup, file information 
 DEFAULT_META_PREFIX = "##"
@@ -36,6 +39,7 @@ DEFAULT_DIRMODE = 0o770
 OUTPUT_DELIMITER = ','
 
 
+FILENAME_SAMPLES = "samples"
 
 # VCF file pars
 CONTIG_REGEX  = "chr[0-9]+"

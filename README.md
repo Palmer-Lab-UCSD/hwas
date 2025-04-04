@@ -50,7 +50,7 @@ hwas config
 ```
 
 which will list the sections.  To see the option and value pairs in
-a sectino
+a section
 
 ```
 hwas config -s section_name
@@ -80,19 +80,8 @@ hwas query --dbname my_db_name \
 ```
 
 if the database requires a password you'll need to set the password
-in an enivronmental variable.
-
-```
-export password_env_var=my_password_to_db
-
-hwas query --dbname my_db_name \
-    --host hostname \
-    --port port_number \
-    --db_user me \
-    --db_pw_env password_env_var
-```
-
-This command will produce two files, let's assume that the current
+in the enivronmental variable `PALMER_DB_PW` prior to querying the data.
+The query subcommand will produce two files, let's assume that the current
 working directory is `path_to_data/schema_name/phenotype/001`,
 
 ```
@@ -103,7 +92,7 @@ working directory is `path_to_data/schema_name/phenotype/001`,
 ```
 
 The data queried from the database consists of all relevant samples, 
-which may or may not be identical to that which we have genotypes.
+in which any one sample may or may not be genotyped.
 To find the samples with covariates, phenotype, and genotypes 
 available run
 
@@ -111,8 +100,9 @@ available run
 hwas intersect path_to_vcf/genotypes.vcf
 ```
 
-This will create a file `samples` and will subset the samples
-in the data tables `covariates.csv` and `phenotype.csv`
+This command will overwrite the 
+`covariates.csv` and `phenotype.csv` files with the data of 
+samples specified in the `samples` file.  
 
 ```
 ./
@@ -122,7 +112,48 @@ in the data tables `covariates.csv` and `phenotype.csv`
 |- samples
 ```
 
+The `samples` file
+is critical, as it is repeatedly used in subsequent steps,
+so please do not modify or delete.
 
+Next we can compute the genetic relationship matrix `G` of each
+sample $i$ and $j$ using the expected haplotype counts $X_{ih}$ 
+and defined as
+
+$$
+G_{ij} = \sum_{m=1}^{M_\text{loci}} \sum_{h = 1}^{N_\text{founders}} X_{imh} X_{jmh}
+$$
+
+with $h$ and $m$ being the indices over $N_\text{founders}$ ancestral 
+founder haplotypes and $M_\text{loci}$ genetic loci.  To compute
+this hgrm for `chr12` we would use the `hgrm` submodule as follows
+
+```
+hwas hgrm chr12
+```
+
+This command makes the direcotry `hgrm`, if it doesn't already exist, and
+writes $G$ to file `chr12.mat`.  This is a comma delimited text file with
+$N_\text{samples}$ rows and $N_\text{samples}$ columns.  The order of samples
+is that in the `samples` file.  Now suppose we next compute the `hgrm` of
+`chr1`
+
+```
+hwas hgrm chr1
+```
+
+would result in the directory structure
+
+```
+./
+|- config
+|- covariates.csv
+|- phenotype.csv
+|- samples
+|- hgrm/
+    |- chr1.mat
+    |- chr12.mat
+```
 
 
 ## Pipeline use of `hwas` on hpc system with `SLURM`

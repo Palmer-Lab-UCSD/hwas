@@ -149,58 +149,10 @@ class TestConfigParser(TestCase):
 class TestDynamicConfigSection(TestCase):
     def test_init(self):
         tmp = _config.DynamicConfigSection("common")
-        self.assertEqual(tmp._section, "common")
+        self.assertEqual(tmp.name, "common")
 
         self.assertListEqual(tmp._dynamic_option_names, [])
 
-    def test_set_property(self):
-        tmp = _config.DynamicConfigSection("common")
-        tmp._x = 0
-        tmp._set_property("x")
-        self.assertEqual(tmp.x, tmp._x)
-
-        tmp.x = 25
-        self.assertEqual(tmp.x, 25)
-        self.assertEqual(tmp._x, 25)
-
-        with self.assertRaises(TypeError):
-            tmp._set_property(None)
-
-
-        # because I use a classmethod to setup the property, the
-        # property will be defined at the class level.  Meaning
-        # that it will be applied to all existing and subsequent
-        # instances of the class.  
-        tmp_2 = _config.DynamicConfigSection("query")
-        self.assertTrue("x" in tmp_2.__dir__())
-        tmp_2._x = 45
-        self.assertEqual(tmp_2.x, 45)
-
-        tmp_2._y = "a"
-        tmp_2._set_property("y")
-        self.assertEqual(tmp_2.y, tmp_2._y)
-
-        # Here we see that the `tmp` class instance now has property
-        # y without having explicity made the property in the 
-        # instance `tmp`
-
-        self.assertTrue("y" in tmp.__dir__())
-        with self.assertRaises(AttributeError):
-            a = tmp.y
-
-        tmp._y = "Weird behavior"
-        self.assertEqual(tmp.y, "Weird behavior")
-
-
-    def test_opt_to_attr(self):
-        tmp = _config.DynamicConfigSection("common")
-        self.assertEqual(tmp._opt_to_attr("x"), "_x")
-        self.assertEqual(tmp._opt_to_attr("_x"), "__x")
-
-        self.assertEqual(tmp._opt_to_attr(None), "_None")
-        self.assertEqual(tmp._opt_to_attr(False), "_False")
-
-        self.assertEqual(tmp._opt_to_attr(1235.3422), "_1235.3422")
 
 
 # TODO

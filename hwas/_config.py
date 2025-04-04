@@ -183,77 +183,60 @@ class DynamicConfigSection:
     Args:
         section: the section of the configuration file in which
             we want to store option keys and values.
-
-    
-    Note:
-        This class dynamically sets properties using a classmethod.
-        Class methods will carry out changes to all existing and subsequent
-        class instances.  To understand how this manifests in this class
-        consider the following example. Suppose that I have two class
-        instances of DynamicConfigSection
-        
-          a = DynamicConfigSection("common")
-          b = DynamicConfigSection("arbitrary")
-        
-        and suppose that I set the property for a as follows
-        
-          a._x = 25
-          a._set_property("x")
-          print(a.x)
-              --> 25
-        
-        No suprise here.  Now let's consider class instance b
-        
-          hasattr(b, _x)
-              --> False
-          'x' in b.__dir__()
-              --> True
-        
-        This is a bit odd.  Despite not defining `x` for instance `b`
-        it does exist.  Now suppose we try to query `x` from `b`
-        
-          print(b.x)
-              --> AttributeError, _x not defined
-        
-        Interesting, the error doesn't say that `x` isn't defined by instead
-        the attribute that the property `x` references.
-        
-          b._x = 10
-          print(b.x)
-              --> 10
-        
-        Once we define `_x` attribute, the property defined in instance `a`
-        works.  This is because `_x` is defined on the class instance, but
-        not the class, meanwhile `x` is defined on the class, not just the
-        instance.
     """
     def __init__(self, section: str) -> None:
-        self.name: str = section
-        self._dynamic_option_names: list[str] = []
+        super().__setattr__("name", section)
+        super().__setattr__("_dynamic_option_names", [])
 
     def __iter__(self):
         for w in self._dynamic_option_names:
             yield (w, getattr(self, w))
 
-    @classmethod
-    def _set_property(self, option: str) -> None:
-        setattr(self,
-                option,
-                property(lambda self: getattr(self, self._opt_to_attr(option)),
-                         lambda self, val: setattr(self, self._opt_to_attr(option), val)))
+    def __contains__(self, option: str) -> bool:
+        return option in self._dynamic_option_names
 
-    @staticmethod
-    def _opt_to_attr(option: str) -> str:
-        return f"_{option}"
-    
-    def add_option(self, option: str, value: str) -> None:
-        setattr(self, self._opt_to_attr(option), value)
-        self._set_property(option)
-        self._dynamic_option_names.append(option)
+    def __getattr__(self, option: str) -> typing.Any:
+        if option not in self.__dict__:
+            raise AttributeError(f"{option} is not a valid attribute")
+
+        if (val := self.__dict__[option]) == "None":
+            return None
+
+        return val
+
+    def __str__(self) -> str:
+        s = ""
+        for option in self._dynamic_option_names:
+            s = f"{s}\n{option} = {self.__getattr__(option)}"
+        return s
+
+    def __setattr__(self, option, val):
+        if option not in self:
+            self._dynamic_option_names.append(option)
+
+        self.__dict__[option] = val
+
+    def update(self, 
+               **kwargs: typing.Mapping[str, str | None]) -> None:
+
+        if kwargs is None:
+            return 
+
+        for option in self._dynamic_option_names:
+            if option in kwargs and kwargs[option] is not None:
+                self.__setattr__(option, kwargs[option])
+
+    def is_specification_complete(self) -> bool:
+        for option in self._dynamic_option_names:
+            if self.__getattr__(option) is None:
+                return False
+
+        return True
 
 
 def get_config_section(config_filename: str,
                        section_name: str) -> DynamicConfigSection:
+    """Factory function of DynamicConfigSection class"""
 
     cfg = ConfigParser()
     cfg.read(config_filename)
@@ -264,7 +247,7 @@ def get_config_section(config_filename: str,
     pars = DynamicConfigSection(section_name)
 
     for opt in cfg.options(section_name):
-        pars.add_option(opt, cfg.get(section_name, opt))
+        setattr(pars, opt, cfg.get(section_name, opt))
 
     return pars
 
@@ -279,6 +262,7 @@ def update_config_section(section_obj: DynamicConfigSection,
 
     with open(config_file, "w") as fid:
         cfg.write(fid)
+
 
 def _load_default_config() -> ConfigParser:
 
