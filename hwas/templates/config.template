@@ -48,7 +48,7 @@ phenotype_file      = ${common:phenotype_file}
 
 
 [hgrm]
-tmpdir
+temp_dir
 hgrm_dir            = ${common:hgrm_dir}
 path                = ${common:path}
 samples_filename    = ${common:samples_filename}

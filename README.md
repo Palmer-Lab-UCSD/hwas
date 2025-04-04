@@ -50,7 +50,7 @@ hwas config
 ```
 
 which will list the sections.  To see the option and value pairs in
-a sectin
+a section
 
 ```
 hwas config -s section_name
@@ -154,8 +154,6 @@ would result in the directory structure
     |- chr1.mat
     |- chr12.mat
 ```
-
-
 
 
 ## Pipeline use of `hwas` on hpc system with `SLURM`

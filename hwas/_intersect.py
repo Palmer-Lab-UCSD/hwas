@@ -61,7 +61,6 @@ def interface(vcf: str) -> None:
                               capture_output = True)
 
         if out.returncode != 0:
-            print(out.stdout)
             raise subprocess.CalledProcessError(returncode = out.returncode,
                                                 cmd = out.args,
                                                 output = out.stdout,
