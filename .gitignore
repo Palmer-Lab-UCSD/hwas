@@ -4,4 +4,7 @@ scratch/
 *.swo
 *~
 *.DS_Store
+*.tar
+*.tar.gz
+*Rcheck*
 

@@ -5,7 +5,8 @@ Title: bcf reader for R
 Author: Robert Vogel [aut,cre]
 Maintainer: Robert Vogel <rmvogel@ucsd.edu>
 Depends: R (> 4.0)
-Imports: Rcpp (>= 1.1)
+Imports: Rcpp (>= 1.1), RcppEigen
 LinkingTo: Rcpp, RcppEigen
 Description: Reading genetic data can be tough.
 License: GPL-3
+SystemRequirements: htslib (>= 1.23), GNU make, pkg-config

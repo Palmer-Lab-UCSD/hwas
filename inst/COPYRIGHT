@@ -1,0 +1,4 @@
+Portions from the linear mixed model fitting code are:
+* Copyright (C) 2020 Karl Browman
+* Copyright (C) 1995, 1996 Robert Gentleman and Ross Ihaka,
+* Copyright (C) 1998-2014 The R Core Team
