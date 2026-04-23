@@ -1,4 +1,4 @@
-Package: bcfio
+Package: hwas
 Version: 0.0.1
 Date: 2026-04-23
 Title: bcf reader for R
@@ -8,4 +8,4 @@ Depends: R (> 4.0)
 Imports: Rcpp (>= 1.1)
 LinkingTo: Rcpp, RcppEigen
 Description: Reading genetic data can be tough.
-License: MIT
+License: GPL-3
