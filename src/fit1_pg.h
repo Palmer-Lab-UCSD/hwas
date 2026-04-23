@@ -40,6 +40,10 @@
 
 #include <Rcpp.h>
 
+// Robert Vogel April 2026
+// Created the rqtl namespace to separate my code and libraries
+// from qtl2's code.
+namespace rqtl {
 
 // fit single-QTL model at a single position
 //
@@ -82,4 +86,5 @@ Rcpp::List fit1_pg_intcovar(const Rcpp::NumericMatrix& genoprobs,
                             const bool se,
                             const double tol);
 
+}
 #endif // FIT1_PG_H

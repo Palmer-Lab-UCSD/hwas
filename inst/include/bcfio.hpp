@@ -56,8 +56,8 @@ struct BcfHdrAttr { uint64_t number : 20, vl_type : 4, type : 4, coltype : 4; };
 
 // @title: Interface and manager of htslib bcf_hdr_t
 // @description: The bcf header C-struct requires manual allocation 
-//  and release of memory.  This class manages applies RAII, reducing 
-//  the chance of a memory leak.  
+//  and release of memory.  This class applies RAII, for easy
+//  maintenance.
 class BcfHeader {
 public:
     BcfHeader() 
