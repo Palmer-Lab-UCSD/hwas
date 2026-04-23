@@ -1,0 +1,7 @@
+data/
+scratch/
+*.swp
+*.swo
+*~
+*.DS_Store
+

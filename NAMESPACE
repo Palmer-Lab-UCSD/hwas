@@ -1,0 +1,3 @@
+useDynLib(bcfio)
+exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)

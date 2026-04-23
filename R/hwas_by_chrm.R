@@ -1,0 +1,5 @@
+
+
+assoc <- function(bcfname, outputname) {
+
+}
