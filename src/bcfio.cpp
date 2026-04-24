@@ -171,20 +171,6 @@ int bcfio::next_record(bcfio::Bcf* bid, bcfio::BcfFloatRecord *ptr, const char *
     return ptr->load_data_(&(bid->hdr_), id);
 }
 
-// 
-// bcfio::Bcf bcfio::open(const char* filename, const char* mode) {
-//     htslib::htsFile* fid = htslib::hts_open(filename, mode);
-//     if (!fid)
-//         return bcfio::Bcf();
-// 
-//     return bcfio::Bcf(filename, fid);
-// }
-
-
-// [[Rcpp::export]]
-double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
-    return static_cast<double>(bid->hdr_.k_fmt(id));
-}
 
 // [[Rcpp::export]]
 Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode) {
@@ -194,6 +180,17 @@ Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode) {
 
     return Rcpp::XPtr<bcfio::Bcf>(new bcfio::Bcf(filename, fid), true);
 }
+
+// [[Rcpp::export]]
+double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
+    return static_cast<double>(bid->hdr_.k_fmt(id));
+}
+
+// [[Rcpp::export]]
+uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid) {
+    return bid->hdr_.n_samples();
+}
+
 
 // [[Rcpp::export]]
 Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {

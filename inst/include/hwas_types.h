@@ -1,3 +1,4 @@
+/* -*- C++ -*- */
 // Parse STITCH vcf file
 //
 // By: Robert Vogel
@@ -8,15 +9,21 @@
 // Acknowledgment
 //
 //
-#ifndef HEADER_BCFIO_H
-#define HEADER_BCFIO_H
+#ifndef HEADER_HWAS_H
+#define HEADER_HWAS_H
 
+#include <cstdio>
+#include <cstddef>
+#include <cstring>
+#include <cctype>
 #include <cstdlib>
 #include <cstdint>
 #include <optional>
 #include <memory>
 #include <string>
 #include <Rcpp.h>
+
+#include <utility>
 
 namespace htslib {
 extern "C" {
@@ -25,8 +32,18 @@ extern "C" {
 }
 }
 
-// samples are separated by white space
-// const char HAP_CODE[] { "HD" };
+
+// TODO: SUBSET BY SAMPLES,
+// TODO: SPECIFY POSITIONS
+// TODO: GET R FRONT END FRO ASSOCATION AND 
+//  COMPUTE FOR A SINGLE LOCUS
+//
+
+
+/////////////////////////////////////////////////////////////////////
+/// NAMESPACE BCFIO
+/////////////////////////////////////////////////////////////////////
+
 
 namespace bcfio {
 
@@ -255,5 +272,24 @@ double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode);
 
 Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
+
+uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid);
+
+
+/////////////////////////////////////////////////////////////////////
+/// GRM
+/////////////////////////////////////////////////////////////////////
+
+
+// @param instance of bcf file handle 
+// @param format id for measurment to use for grm
+// @return R_NilValue if err otherwise an n sample by n sample
+//  Rcpp::NumericMatrix
+Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
+
+
+/////////////////////////////////////////////////////////////////////
+/// 
+/////////////////////////////////////////////////////////////////////
 
 #endif

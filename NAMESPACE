@@ -1,4 +1,10 @@
 useDynLib(hwas)
+
+# bcfio
 export(bopen)
 export(k_fmt)
+export(num_samples)
 export(query_next)
+
+# grm
+export(calc_grm)

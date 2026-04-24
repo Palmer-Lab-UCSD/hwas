@@ -12,6 +12,18 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// bopen
+Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode);
+RcppExport SEXP _hwas_bopen(SEXP filenameSEXP, SEXP modeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type filename(filenameSEXP);
+    Rcpp::traits::input_parameter< const char* >::type mode(modeSEXP);
+    rcpp_result_gen = Rcpp::wrap(bopen(filename, mode));
+    return rcpp_result_gen;
+END_RCPP
+}
 // k_fmt
 double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 RcppExport SEXP _hwas_k_fmt(SEXP bidSEXP, SEXP idSEXP) {
@@ -24,15 +36,14 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// bopen
-Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode);
-RcppExport SEXP _hwas_bopen(SEXP filenameSEXP, SEXP modeSEXP) {
+// num_samples
+uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid);
+RcppExport SEXP _hwas_num_samples(SEXP bidSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const char* >::type filename(filenameSEXP);
-    Rcpp::traits::input_parameter< const char* >::type mode(modeSEXP);
-    rcpp_result_gen = Rcpp::wrap(bopen(filename, mode));
+    Rcpp::traits::input_parameter< Rcpp::XPtr<bcfio::Bcf> >::type bid(bidSEXP);
+    rcpp_result_gen = Rcpp::wrap(num_samples(bid));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -80,6 +91,18 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const bool >::type se(seSEXP);
     Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
     rcpp_result_gen = Rcpp::wrap(fit1_pg_intcovar(genoprobs, pheno, addcovar, intcovar, eigenvec, weights, se, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+// calc_grm
+Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
+RcppExport SEXP _hwas_calc_grm(SEXP bidSEXP, SEXP idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::XPtr<bcfio::Bcf> >::type bid(bidSEXP);
+    Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
+    rcpp_result_gen = Rcpp::wrap(calc_grm(bid, id));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -553,11 +576,13 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_hwas_k_fmt", (DL_FUNC) &_hwas_k_fmt, 2},
     {"_hwas_bopen", (DL_FUNC) &_hwas_bopen, 2},
+    {"_hwas_k_fmt", (DL_FUNC) &_hwas_k_fmt, 2},
+    {"_hwas_num_samples", (DL_FUNC) &_hwas_num_samples, 1},
     {"_hwas_query_next", (DL_FUNC) &_hwas_query_next, 2},
     {"_hwas_fit1_pg_addcovar", (DL_FUNC) &_hwas_fit1_pg_addcovar, 7},
     {"_hwas_fit1_pg_intcovar", (DL_FUNC) &_hwas_fit1_pg_intcovar, 8},
+    {"_hwas_calc_grm", (DL_FUNC) &_hwas_calc_grm, 2},
     {"_hwas_calc_rss_linreg", (DL_FUNC) &_hwas_calc_rss_linreg, 3},
     {"_hwas_calc_coef_linreg", (DL_FUNC) &_hwas_calc_coef_linreg, 3},
     {"_hwas_calc_coefSE_linreg", (DL_FUNC) &_hwas_calc_coefSE_linreg, 3},
