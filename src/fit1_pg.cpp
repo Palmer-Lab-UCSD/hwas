@@ -56,7 +56,7 @@ using namespace Rcpp;
 // output    = list with a bunch of stuff
 //
 // [[Rcpp::export]]
-List rqtl::fit1_pg_addcovar(const NumericMatrix& genoprobs,
+List fit1_pg_addcovar(const NumericMatrix& genoprobs,
                       const NumericVector& pheno,
                       const NumericMatrix& addcovar,
                       const NumericMatrix& eigenvec,
@@ -123,7 +123,7 @@ List rqtl::fit1_pg_addcovar(const NumericMatrix& genoprobs,
 // output    = list of a bunch of stuff
 //
 // [[Rcpp::export]]
-List rqtl::fit1_pg_intcovar(const NumericMatrix& genoprobs,
+List fit1_pg_intcovar(const NumericMatrix& genoprobs,
                       const NumericVector& pheno,
                       const NumericMatrix& addcovar,
                       const NumericMatrix& intcovar,

@@ -16,6 +16,7 @@
 #include <optional>
 #include <memory>
 #include <string>
+#include <Rcpp.h>
 
 namespace htslib {
 extern "C" {
@@ -148,7 +149,7 @@ public:
     bool is_snp() const { return htslib::bcf_is_snp(rec_); }
 
 private:
-    friend class ReadBcf;
+    friend class Bcf;
 
     htslib::bcf1_t *rec_;
 
@@ -188,53 +189,56 @@ private:
 // @param sample_fname: the path and filename of the text file listing
 //  samples id's of records to be retreived.  If this is not included
 //  all sample records are retrieved.
-class ReadBcf
+class Bcf
 {
-public:
-    ReadBcf();
-    ReadBcf(const char* filename, htslib::htsFile* fid);
-
-    ReadBcf(const ReadBcf&)=delete;
-    ReadBcf& operator=(const ReadBcf&)=delete;
-
-    ReadBcf(ReadBcf&&)=delete;
-    ReadBcf& operator=(ReadBcf&&)=delete;
-
-    ~ReadBcf();
-
-    bool isopen() const;
-
-    // @title: The number of values stored in format id
-    // @description: Each bcf format field is able to hold unique
-    //  number of values per sample.  This function provides a 
-    //  simple interface to the bcf file to retrieve that number.
-    // @param id: the format field id
-    // @return if an error occured that value returned is < 0, 
-    //  otherwise the number of values of fmt field id recorded per
-    //  sample is returned.
-    int32_t k_fmt(const char *id) const { return hdr_.k_fmt(id); };
-
-    // See htslib/vcf.h line 649
-    // Remember that n is the number of entries in the triplet of 
-    // dictionaries in the VCF.  BCF_DT_SAMPLE, provides the index of n
-    // that correspondes to the number of samples.
-    size_t n_samples() const { return hdr_.n_samples(); };
-
-    int set_samples(const char *filename);
-    
-    // TODO: sample_names
-    const std::unique_ptr<std::string[]> sample_names() const { 
-        return hdr_.sample_names();
-    }
-
-    int next_record(BcfFloatRecord *rec, const char *id);
-
 private:
     const std::string fname_;
     htslib::htsFile *fid_;
-    BcfHeader hdr_;
+public:
+    Bcf();
+    Bcf(const char* filename, htslib::htsFile* fid);
 
+    Bcf(const Bcf&)=delete;
+    Bcf& operator=(const Bcf&)=delete;
+
+    Bcf(Bcf&&)=delete;
+    Bcf& operator=(Bcf&&)=delete;
+
+    ~Bcf();
+
+    bool isopen() const;
+
+    BcfHeader hdr_;
 };
+
+
+// @title: The number of values stored in format id
+// @description: Each bcf format field is able to hold unique
+//  number of values per sample.  This function provides a 
+//  simple interface to the bcf file to retrieve that number.
+// @param Rcpp::SEXP for an Rcpp::XPtr<Bcf> instantiated object
+//  for the vcf file to be queried
+// @param id: the format field id
+// @return if an error occured that value returned is < 0, 
+//  otherwise the number of values of fmt field id recorded per
+//  sample is returned.
+double k_fmt(Rcpp::XPtr<Bcf> bcf, const char* id);
+
+// See htslib/vcf.h line 649
+// Remember that n is the number of entries in the triplet of 
+// dictionaries in the VCF.  BCF_DT_SAMPLE, provides the index of n
+// that correspondes to the number of samples.
+// size_t n_samples() const { return hdr_.n_samples(); };
+// 
+// int set_samples(const char *filename);
+// 
+// // TODO: sample_names
+// const std::unique_ptr<std::string[]> sample_names() const { 
+//     return hdr_.sample_names();
+// }
+// 
+// int next_record(BcfFloatRecord *rec, const char *id);
+
 
 // mode according to htslib: quoting from htslib/hts.h line 608
 //
@@ -246,8 +250,8 @@ private:
 //
 // End quote
 //
-ReadBcf open(const char* filename, const char* mode);
-
+Rcpp::XPtr<Bcf> bopen(const char* filename, const char* mode);
+    
 }
 
 #endif
