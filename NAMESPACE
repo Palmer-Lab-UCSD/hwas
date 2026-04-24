@@ -1,2 +1,4 @@
 useDynLib(hwas)
 export(bopen)
+export(k_fmt)
+export(query_next)

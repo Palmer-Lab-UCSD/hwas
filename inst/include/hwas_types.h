@@ -95,7 +95,7 @@ public:
     // @return if an error occured that value returned is < 0,
     //  otherwise the number of values of fmt field id recorded per
     //  sample is returned.
-    int32_t k_fmt(const char *id) const;
+    int32_t k_fmt(const char* id) const;
 
     uint32_t n_samples() const { return hdr_->n[BCF_DT_SAMPLE]; };
 
@@ -126,8 +126,7 @@ private:
 //  memory management using C++ RAII idiom and provides a simplified,
 //  albeit non-comprehensive, interface for loading and querying data
 //  stored in the bcf1_t struct.
-class BcfFloatRecord {
-public:
+struct BcfFloatRecord {
 
     BcfFloatRecord(): rec_(htslib::bcf_init()) {};
     ~BcfFloatRecord();
@@ -136,7 +135,8 @@ public:
     float operator[](const size_t idx) const { return *(dst_ + idx); };
 
     // provide index checked access to data.
-    std::optional<float> get(const size_t row_idx, const size_t col_idx) const;
+    std::optional<float> get(const uint64_t row_idx, 
+            const uint64_t col_idx) const;
 
 
     // the total amount of values per record, n_samples * k_founders
@@ -147,9 +147,6 @@ public:
     htslib::bcf1_t *cur_rec() const { return rec_; }; 
 
     bool is_snp() const { return htslib::bcf_is_snp(rec_); }
-
-private:
-    friend class Bcf;
 
     htslib::bcf1_t *rec_;
 
@@ -189,12 +186,8 @@ private:
 // @param sample_fname: the path and filename of the text file listing
 //  samples id's of records to be retreived.  If this is not included
 //  all sample records are retrieved.
-class Bcf
+struct Bcf
 {
-private:
-    const std::string fname_;
-    htslib::htsFile *fid_;
-public:
     Bcf();
     Bcf(const char* filename, htslib::htsFile* fid);
 
@@ -208,9 +201,19 @@ public:
 
     bool isopen() const;
 
+    const std::string fname_;
+    htslib::htsFile *fid_;
     BcfHeader hdr_;
 };
 
+// @title Query the next record
+// @param the pointer to open htslib file
+// @param the pointer to the location in memory that data are loaded
+// @param the format id for data to be loaded into record.
+// @return: 0 for success otherwise non-zero
+int next_record(Bcf* bid, BcfFloatRecord *rec, const char *id);
+
+}
 
 // @title: The number of values stored in format id
 // @description: Each bcf format field is able to hold unique
@@ -222,7 +225,7 @@ public:
 // @return if an error occured that value returned is < 0, 
 //  otherwise the number of values of fmt field id recorded per
 //  sample is returned.
-double k_fmt(Rcpp::XPtr<Bcf> bcf, const char* id);
+double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 
 // See htslib/vcf.h line 649
 // Remember that n is the number of entries in the triplet of 
@@ -237,7 +240,6 @@ double k_fmt(Rcpp::XPtr<Bcf> bcf, const char* id);
 //     return hdr_.sample_names();
 // }
 // 
-// int next_record(BcfFloatRecord *rec, const char *id);
 
 
 // mode according to htslib: quoting from htslib/hts.h line 608
@@ -250,8 +252,8 @@ double k_fmt(Rcpp::XPtr<Bcf> bcf, const char* id);
 //
 // End quote
 //
-Rcpp::XPtr<Bcf> bopen(const char* filename, const char* mode);
-    
-}
+Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode);
+
+Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 
 #endif
