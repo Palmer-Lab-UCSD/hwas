@@ -34,7 +34,7 @@ extern "C" {
 
 
 // TODO: SUBSET BY SAMPLES,
-// TODO: SPECIFY POSITIONS
+// TODO: SPECIFY POSITION SPEC
 // TODO: GET R FRONT END FRO ASSOCATION AND 
 //  COMPUTE FOR A SINGLE LOCUS
 //
@@ -150,7 +150,7 @@ struct BcfFloatRecord {
 
     // provide check-free fast, but unsafe, access to loaded data
     float operator[](const size_t idx) const { return *(dst_ + idx); };
-
+    float* array() const;
     // provide index checked access to data.
     std::optional<float> get(const uint64_t row_idx, 
             const uint64_t col_idx) const;
@@ -173,7 +173,7 @@ struct BcfFloatRecord {
     // *dst_: an array of length ndst_ with float values of the
     //  current record
     int ndst_ = 0;
-    float *dst_ = nullptr;
+    float* dst_ = nullptr;
 
     // data that dst_ point to are stored in row major order, with 
     // columns being k_fmt and rows being n_samples.
@@ -280,6 +280,45 @@ uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid);
 /// GRM
 /////////////////////////////////////////////////////////////////////
 
+// Grm class manages storage and access of GRM matrix
+// 
+// The GRM as an n_sample by n_sample symmetric, positive semi-definite
+// matrix.  Let Z represent the n_sample by m_marker data genetic data.  
+// From these data the GRM is computed as GRM = ZZ^T.
+//
+// @param n_samples of the GRM.
+//
+
+namespace grm {
+struct Grm {
+    // 
+    Grm();
+    Grm(uint64_t n_samps);
+
+    Grm(const Grm&)=delete;                          
+    Grm& operator=(const Grm&)=delete;
+
+    Grm(Grm&&);
+    Grm& operator=(Grm&&);
+                                            
+    // Unchecked indexes when setting and getting of matrix values
+    float operator()(const uint64_t i, const uint64_t j) const;
+    float& operator()(const uint64_t i, const uint64_t j);
+
+    // Checked indexes when setting and getting of matrix values
+    int set(const uint64_t i, const uint64_t j, const float val); 
+    int get(const uint64_t i, const uint64_t j, float *val) const; 
+
+    uint64_t size() const;
+
+    int midx_to_arr(const uint64_t i, 
+            const uint64_t j, uint64_t* idx) const;
+
+    uint64_t n_samples;
+    std::unique_ptr<float[]> data;
+};
+
+}
 
 // @param instance of bcf file handle 
 // @param format id for measurment to use for grm

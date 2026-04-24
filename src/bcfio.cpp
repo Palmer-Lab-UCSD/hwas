@@ -88,6 +88,10 @@ bcfio::BcfFloatRecord::~BcfFloatRecord() {
     dst_ = nullptr;
 }
 
+float* bcfio::BcfFloatRecord::array() const {
+    return dst_; 
+}
+
 std::optional<float> bcfio::BcfFloatRecord::get(const uint64_t row_idx,
         const uint64_t col_idx) const {
     size_t idx = row_idx * col_num_ + col_idx;
