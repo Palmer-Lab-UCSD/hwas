@@ -88,7 +88,7 @@ bcfio::BcfFloatRecord::~BcfFloatRecord() {
     dst_ = nullptr;
 }
 
-float* bcfio::BcfFloatRecord::array() const {
+const float* bcfio::BcfFloatRecord::array() const {
     return dst_; 
 }
 

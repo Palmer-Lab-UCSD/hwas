@@ -3,8 +3,6 @@
 #include <hwas_types.h>
 
 
-#define MATRIX_IDX_TO_ARRAY(i, j, n)   ((i)*(n) - (i)*((i)-1)/2 + (j) - (i))
-
 ////////////////////////////////////////////////////////////////////
 // GRM CLASS
 ////////////////////////////////////////////////////////////////////
@@ -55,9 +53,9 @@ int grm::Grm::midx_to_arr(const uint64_t i, const uint64_t j,
 
     // remember that by symmetry, the matrix is equal to its transpose
     if (i <= j)
-        *idx = MATRIX_IDX_TO_ARRAY(i, j, n_samples);
+        *idx = SYMMATRIX_IDX_TO_ARRAY(i, j, n_samples);
     else 
-        *idx = MATRIX_IDX_TO_ARRAY(j, i, n_samples);
+        *idx = SYMMATRIX_IDX_TO_ARRAY(j, i, n_samples);
 
     return 0;
 }
@@ -65,15 +63,15 @@ int grm::Grm::midx_to_arr(const uint64_t i, const uint64_t j,
 
 float grm::Grm::operator()(const uint64_t i, const uint64_t j) const {
     if (i > j)
-        return data[MATRIX_IDX_TO_ARRAY(j, i, n_samples)];
-    return data[MATRIX_IDX_TO_ARRAY(i, j, n_samples)];
+        return data[SYMMATRIX_IDX_TO_ARRAY(j, i, n_samples)];
+    return data[SYMMATRIX_IDX_TO_ARRAY(i, j, n_samples)];
 }
 
 
 float& grm::Grm::operator()(const uint64_t i, const uint64_t j) {
     if (i > j)
-        return data[MATRIX_IDX_TO_ARRAY(j, i, n_samples)];
-    return data[MATRIX_IDX_TO_ARRAY(i, j, n_samples)];
+        return data[SYMMATRIX_IDX_TO_ARRAY(j, i, n_samples)];
+    return data[SYMMATRIX_IDX_TO_ARRAY(i, j, n_samples)];
 }
 
 
@@ -106,46 +104,46 @@ int grm::Grm::set(const uint64_t i, const uint64_t j, const float val) {
 ////////////////////////////////////////////////////////////////////
 
 // @return -1 on error and 0 or success
-static int update(grm::Grm* gmat, bcfio::BcfFloatRecord* rec) {
+static int update(grm::Grm* grmat, bcfio::BcfFloatRecord* rec) {
 
     // instantiate indexing variables used in for loops
     // use static to prevent construction and destruction of variables
     // between function calls
-    static uint64_t grow = 0;
-    static uint64_t gcol = 0;
-    static uint64_t k_hap = 0;
+    uint64_t i = 0;
+    uint64_t j = 0;
+    uint64_t k_hap = 0;
 
-    static float val = 0;
-    static uint64_t n_samples = 0;
-    static uint64_t k_haps = 0;
-
-    val = 0;
-    k_haps = rec->ncols();
-    n_samples = rec->nrows();
-    if (n_samples != gmat->n_samples)
+    float val = 0;
+    uint64_t k_haps = rec->ncols();
+    uint64_t n_samples = rec->nrows();
+    if (n_samples != grmat->n_samples)
         return -1;
 
     // Remember we are using pointer over the n individual
     // by k haplotype data matrix
-    float* geno_data_ptr = rec->array();
-    float* row_ptr = nullptr;
-    float* col_ptr = nullptr;
+    const float* rec_arr = rec->array();
 
+    // get the address of the first position of data
+    const float* grm_arr = grmat->data.get();
+
+    float* samp_i = nullptr;
+    float* samp_j = nullptr;
 
     // only iterate over upper triangle
     // remember that record data is an n_sample by k haplotype matrix 
-    for (grow = 0; grow < n_samples; grow++) {
+    for (i = 0; i < n_samples; i++) {
 
-        row_ptr = geno_data_ptr + grow * k_haps;
+        samp_i = rec_arr + MATRIX_IDX_TO_ARRAY(i, 0, k_haps);
 
-        for (gcol = grow; gcol < n_samples; gcol++) {
+        for (j = i; j < n_samples; j++) {
 
-            col_ptr = geno_data_ptr + gcol * k_haps;
+            val = 0;
+            samp_j = rec_arr + MATRIX_IDX_TO_ARRAY(j, 0, k_haps);
 
             for (k_hap = 0; k_hap < k_haps; k_hap++)
-                val += *(row_ptr + k_hap) * (*(col_ptr + k_hap));
+                val += samp_i[k_hap] * samp_j[k_hap];
 
-            (*gmat)(grow, gcol) += val;
+            grm_arr[SYMMATRIX_IDX_TO_ARRAY(i, j, n_samples)] += val;
         }
     }
 
@@ -163,13 +161,13 @@ Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
     }
     uint64_t nsamps = num_samples(bid);
 
-    grm::Grm gmat { nsamps };
+    grm::Grm grmat { nsamps };
     bcfio::BcfFloatRecord rec {};
 
     size_t rec_count = 0;
     while (bcfio::next_record(bid.get(), &rec, id) == 0) {
 
-        if (update(&gmat, &rec) != 0) {
+        if (update(&grmat, &rec) != 0) {
             return R_NilValue;
         }
 
@@ -183,7 +181,7 @@ Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
     // fill in lower diagonal elements
     for (uint64_t i = 0; i < nsamps; i++)
         for (uint64_t j = 0; j < nsamps; j++)
-            grmatrix(i, j) = gmat(j, i);
+            grmatrix(i, j) = grmat(j, i);
             
     Rprintf("Done\n");
     return grmatrix;

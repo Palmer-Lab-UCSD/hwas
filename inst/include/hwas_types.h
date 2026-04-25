@@ -25,6 +25,13 @@
 
 #include <utility>
 
+// Symmetri matrix
+// n is the number of columns in the matrix
+#define SYMMATRIX_IDX_TO_ARRAY(i, j, n)   ((i)*(n) - (i)*((i)-1)/2 + (j) - (i))
+
+// n is the number of columns in the matrix
+#define MATRIX_IDX_TO_ARRAY(i, j, n)         ((i)*(n) + (j))
+
 namespace htslib {
 extern "C" {
 #include <htslib/vcf.h>
@@ -150,7 +157,7 @@ struct BcfFloatRecord {
 
     // provide check-free fast, but unsafe, access to loaded data
     float operator[](const size_t idx) const { return *(dst_ + idx); };
-    float* array() const;
+    const float* array() const;
     // provide index checked access to data.
     std::optional<float> get(const uint64_t row_idx, 
             const uint64_t col_idx) const;
