@@ -1,4 +1,5 @@
 useDynLib(hwas)
+import(Rcpp)
 
 # bcfio
 export(bopen)

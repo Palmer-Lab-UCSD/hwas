@@ -1,3 +1,0 @@
-
-PKG_CPPFLAGS = -std=c++17 -Wall -isystem/home/dev/local/include -I../inst/include
-PKG_LIBS     = -L/home/dev/local/libs

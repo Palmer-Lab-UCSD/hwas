@@ -104,7 +104,7 @@ int grm::Grm::set(const uint64_t i, const uint64_t j, const float val) {
 ////////////////////////////////////////////////////////////////////
 
 // @return -1 on error and 0 or success
-static int update(grm::Grm* grmat, bcfio::BcfFloatRecord* rec) {
+static int update(grm::Grm* grmat, const bcfio::BcfFloatRecord* rec) {
 
     // instantiate indexing variables used in for loops
     // use static to prevent construction and destruction of variables
@@ -124,10 +124,10 @@ static int update(grm::Grm* grmat, bcfio::BcfFloatRecord* rec) {
     const float* rec_arr = rec->array();
 
     // get the address of the first position of data
-    const float* grm_arr = grmat->data.get();
+    float* grm_arr = grmat->data.get();
 
-    float* samp_i = nullptr;
-    float* samp_j = nullptr;
+    const float* samp_i = nullptr;
+    const float* samp_j = nullptr;
 
     // only iterate over upper triangle
     // remember that record data is an n_sample by k haplotype matrix 
