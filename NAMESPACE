@@ -6,6 +6,8 @@ export(bopen)
 export(k_fmt)
 export(num_samples)
 export(query_next)
+export(subset_samples)
+export(set_threads)
 
 # grm
 export(calc_grm)

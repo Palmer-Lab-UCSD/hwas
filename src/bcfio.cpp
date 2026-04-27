@@ -21,12 +21,12 @@ int bcfio::BcfHeader::decode_hts_idinfo_(const char *name,
 
     // BCF_DT_ID is the C macro for the ID dictionary index defined 
     // by htslib see htslib/vcf.h line 86
-    int idx = htslib::bcf_hdr_id2int(hdr_, BCF_DT_ID, name);
+    int idx = htslib::bcf_hdr_id2int(hts_hdr_, BCF_DT_ID, name);
 
     if (idx < 0)
         return idx;
 
-    uint64_t val = hdr_->id[BCF_DT_ID][idx].val->info[bcf_dt_type];
+    uint64_t val = hts_hdr_->id[BCF_DT_ID][idx].val->info[bcf_dt_type];
 
     ptr->number = val >> 12 & 0xfffff;
     ptr->vl_type = val >> 8 & 0xf;
@@ -62,10 +62,7 @@ int32_t bcfio::BcfHeader::k_fmt(const char *id) const {
     return static_cast<int32_t>(fmt.number);
 }
 
-// int bcfio::BcfHeader::subset_samples(const char *filename) {
-//     return htslib::bcf_hdr_set_samples(hdr_, filename, 1);
-// }
-// 
+
 // const std::unique_ptr<std::string[]> bcfio::BcfHeader::sample_names() const {
 // 
 //     std::unique_ptr<std::string[]> samp_names = 
@@ -104,7 +101,7 @@ int bcfio::BcfFloatRecord::load_data_(bcfio::BcfHeader *hdr, const char *id) {
     int status { 0 };
     col_num_ = row_num_ = 0;
 
-    status = htslib::bcf_get_format_values(hdr->hts_hdr(), 
+    status = htslib::bcf_get_format_values(hdr->hts_hdr_, 
             rec_, 
             id, 
             (void**)(&dst_),
@@ -164,12 +161,12 @@ bool bcfio::Bcf::isopen() const {
 // 
 // title: load next record
 int bcfio::next_record(bcfio::Bcf* bid, bcfio::BcfFloatRecord *ptr, const char *id) {
-    int status = htslib::bcf_read(bid->fid_, bid->hdr_.hts_hdr(), ptr->cur_rec());
+    int status = htslib::bcf_read(bid->fid_, bid->hdr_.hts_hdr_, ptr->cur_rec());
     if (status != 0)
         return status;
 
     // Unpacking options defined in htslib/vcf.h line 419
-    if (htslib::bcf_unpack(ptr->cur_rec(), BCF_UN_ALL) < 0)
+    if (htslib::bcf_unpack(ptr->cur_rec(), BCF_UN_FMT) < 0)
         return -1;
 
     return ptr->load_data_(&(bid->hdr_), id);
@@ -217,3 +214,12 @@ Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
     return expect_hap_counts;
 }
 
+// [[Rcpp::export]]
+int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename) {
+    return htslib::bcf_hdr_set_samples(bid->hdr_.hts_hdr_, filename, 1);
+}
+
+// [[Rcpp::export]]
+int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n) {
+    return htslib::hts_set_threads(bid->fid_, n);
+}

@@ -17,6 +17,14 @@ query_next <- function(bid, id) {
     .Call('_hwas_query_next', PACKAGE = 'hwas', bid, id)
 }
 
+subset_samples <- function(bid, filename) {
+    .Call('_hwas_subset_samples', PACKAGE = 'hwas', bid, filename)
+}
+
+set_threads <- function(bid, n) {
+    .Call('_hwas_set_threads', PACKAGE = 'hwas', bid, n)
+}
+
 fit1_pg_addcovar <- function(genoprobs, pheno, addcovar, eigenvec, weights, se = FALSE, tol = 1e-12) {
     .Call('_hwas_fit1_pg_addcovar', PACKAGE = 'hwas', genoprobs, pheno, addcovar, eigenvec, weights, se, tol)
 }

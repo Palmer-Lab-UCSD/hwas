@@ -83,17 +83,16 @@ struct BcfHdrAttr { uint64_t number : 20, vl_type : 4, type : 4, coltype : 4; };
 // @description: The bcf header C-struct requires manual allocation 
 //  and release of memory.  This class applies RAII, for easy
 //  maintenance.
-class BcfHeader {
-public:
+struct BcfHeader {
     BcfHeader() 
-        : hdr_(nullptr) {};
+        : hts_hdr_(nullptr) {};
 
     BcfHeader(htslib::htsFile *fid)
-        : hdr_(fid ? htslib::bcf_hdr_read(fid) : nullptr) {};
+        : hts_hdr_(fid ? htslib::bcf_hdr_read(fid) : nullptr) {};
 
-    ~BcfHeader() { if (hdr_) htslib::bcf_hdr_destroy(hdr_); };
+    ~BcfHeader() { if (hts_hdr_) htslib::bcf_hdr_destroy(hts_hdr_); };
 
-    bool isnull() const { return hdr_ == nullptr; };
+    bool isnull() const { return hts_hdr_ == nullptr; };
 
 
     // @title: Retreive the set of smaple names
@@ -109,7 +108,7 @@ public:
     int get_info_attr(const char *id, BcfHdrAttr *ptr) const;
     int get_filter_attr(const char *id, BcfHdrAttr *ptr) const;
 
-    int subset_samples(const char *filename);
+    int subset_samples(const char* filename);
 
     // @title: The number of values stored in format id
     // @description: Each bcf format field is able to hold unique
@@ -121,13 +120,9 @@ public:
     //  sample is returned.
     int32_t k_fmt(const char* id) const;
 
-    uint32_t n_samples() const { return hdr_->n[BCF_DT_SAMPLE]; };
+    uint32_t n_samples() const { return hts_hdr_->n[BCF_DT_SAMPLE]; };
 
-    // TODO: what unit test should I do for this?
-    const htslib::bcf_hdr_t *hts_hdr() const { return hdr_; };
-
-private:
-    htslib::bcf_hdr_t *hdr_;
+    htslib::bcf_hdr_t *hts_hdr_;
     // BcfHdrAttr attr_ {};
 
     // @title: 
@@ -281,6 +276,9 @@ Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode);
 Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 
 uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid);
+
+int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename);
+int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n);
 
 
 /////////////////////////////////////////////////////////////////////

@@ -59,6 +59,30 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// subset_samples
+int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename);
+RcppExport SEXP _hwas_subset_samples(SEXP bidSEXP, SEXP filenameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::XPtr<bcfio::Bcf> >::type bid(bidSEXP);
+    Rcpp::traits::input_parameter< const char* >::type filename(filenameSEXP);
+    rcpp_result_gen = Rcpp::wrap(subset_samples(bid, filename));
+    return rcpp_result_gen;
+END_RCPP
+}
+// set_threads
+int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n);
+RcppExport SEXP _hwas_set_threads(SEXP bidSEXP, SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::XPtr<bcfio::Bcf> >::type bid(bidSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(set_threads(bid, n));
+    return rcpp_result_gen;
+END_RCPP
+}
 // fit1_pg_addcovar
 List fit1_pg_addcovar(const NumericMatrix& genoprobs, const NumericVector& pheno, const NumericMatrix& addcovar, const NumericMatrix& eigenvec, const NumericVector& weights, const bool se, const double tol);
 RcppExport SEXP _hwas_fit1_pg_addcovar(SEXP genoprobsSEXP, SEXP phenoSEXP, SEXP addcovarSEXP, SEXP eigenvecSEXP, SEXP weightsSEXP, SEXP seSEXP, SEXP tolSEXP) {
@@ -580,6 +604,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_hwas_k_fmt", (DL_FUNC) &_hwas_k_fmt, 2},
     {"_hwas_num_samples", (DL_FUNC) &_hwas_num_samples, 1},
     {"_hwas_query_next", (DL_FUNC) &_hwas_query_next, 2},
+    {"_hwas_subset_samples", (DL_FUNC) &_hwas_subset_samples, 2},
+    {"_hwas_set_threads", (DL_FUNC) &_hwas_set_threads, 2},
     {"_hwas_fit1_pg_addcovar", (DL_FUNC) &_hwas_fit1_pg_addcovar, 7},
     {"_hwas_fit1_pg_intcovar", (DL_FUNC) &_hwas_fit1_pg_intcovar, 8},
     {"_hwas_calc_grm", (DL_FUNC) &_hwas_calc_grm, 2},

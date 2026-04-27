@@ -1,6 +1,7 @@
 // Palmer Lab at UCSD 2026
 //
 #include <hwas_types.h>
+#include <chrono>
 
 
 ////////////////////////////////////////////////////////////////////
@@ -164,18 +165,42 @@ Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
     grm::Grm grmat { nsamps };
     bcfio::BcfFloatRecord rec {};
 
-    size_t rec_count = 0;
-    while (bcfio::next_record(bid.get(), &rec, id) == 0) {
+    using clock = std::chrono::steady_clock;
+    auto t_io = clock::duration::zero();
+    auto t_compute = clock::duration::zero();
 
-        if (update(&grmat, &rec) != 0) {
-            return R_NilValue;
-        }
+    auto start_interval = clock::now();
+    auto end_interval= clock::now();
+    int s = 0;
+
+    size_t rec_count = 0;
+    while (true) {
+        
+        start_interval = clock::now();
+        s = bcfio::next_record(bid.get(), &rec, id);
+        end_interval = clock::now();
+        t_io += end_interval - start_interval;
+
+        if (s != 0) break; 
+
+        start_interval = clock::now();
+        if(update(&grmat, &rec) != 0) return R_NilValue;
+        end_interval = clock::now();
+        t_compute += end_interval - start_interval;
 
         if (++rec_count % 1000 == 0)
             Rprintf("Processed %zu records\n", rec_count);
     }
 
+    Rcpp::Rcout 
+        << "I/O time: " 
+        << std::chrono::duration_cast<std::chrono::seconds>(t_io).count()
+        << std::endl;
 
+    Rcpp::Rcout 
+        << "Compute time: " 
+        << std::chrono::duration_cast<std::chrono::seconds>(t_compute).count()
+        << std::endl;
 
     Rcpp::NumericMatrix grmatrix(nsamps, nsamps);
     // fill in lower diagonal elements
