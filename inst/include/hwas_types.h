@@ -197,6 +197,55 @@ struct BcfFloatRecord {
 };
 
 
+struct CharBuffer {
+    
+    CharBuffer(uint8_t buff_size)
+        : buf_size_(buff_size), buf_(new char[buf_size_]) {};
+    ~CharBuffer() {
+        if (buf_) delete[] buf_;
+    }
+
+    int append(char c) {
+        if (buf_idx_ >= buf_size_-1)
+            return -1;
+
+        buf_[buf_idx_++] = c;
+        return 0;
+    }
+    void reset() {
+        std::memset(buf_, '\0', sizeof(char) * buf_size_);
+        buf->buf_idx_ = 0;
+    }
+
+    uint64_t buf_size_;
+    char* buf_;
+    uint64_t buf_idx_ = 0;
+};
+
+
+struct Position {
+    std::string chrom;
+    int64_t pos;
+};
+
+
+struct Positions {
+    Positions(FILE* fid);
+    ~Positions();
+
+    FILE* fid_;
+
+    uint64_t size = 0;
+    Position* pos = nullptr;
+};
+
+//
+// @return  0: success
+//          -1: 
+int parse(bcfio::Positions* pos);
+Rcpp::XPtr<Positions> popen(const char* filename, const char* mode);
+
+
 // @title Interface with htslib bcf
 // @description ReadBCF manages the lifetime of an open htslib file
 //      and organizes the bcf file header and any one record for easy
@@ -223,6 +272,7 @@ struct Bcf
     const std::string fname_;
     htslib::htsFile *fid_;
     BcfHeader hdr_;
+    Positions* pos_ = nullptr;
 };
 
 // @title Query the next record
