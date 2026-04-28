@@ -3,15 +3,60 @@
 // Affiliation: Palmer Lab at UCSD
 // Date: 2025-01-09
 //
-// Input argument
-//    filename: vcf with haplotpye
-//
-//
 //
 
 #include <hwas_types.h>
 
-constexpr uint8_t POSIT_BUFF_SIZE = 100
+
+
+////////////////////////////////////////////////////////////////////
+// Postions: load positions file
+////////////////////////////////////////////////////////////////////
+ 
+constexpr uint8_t POSIT_BUFF_SIZE = 100;
+
+bcfio::Positions::Positions(uint64_t n) 
+    : size(n), pos(size > 0 ? new Position[size] : nullptr) {};
+
+bcfio::Positions::~Positions() { 
+    if (pos) delete[] pos;
+};
+
+// @title parse the positions file
+// @description The postion file is a tab delimited text file
+//      with two columns.  The first column is the chromosome/
+//      contig string, the second column is the locus of interest,
+//      i.e. genomic position.
+// @param posits 
+// @return  bcfio::Positions*   success
+//          nullptr             error
+std::unique_ptr<bcfio::Positions> bcfio::parse_posits(textio::FileIO* fio) {
+
+    // lc = line count
+    uint64_t lc = 0;
+    if (textio::count_lines(fio, &lc) < 0)
+        return nullptr;
+
+    std::unique_ptr<bcfio::Positions> posits = std::make_unique<bcfio::Positions>(lc);
+    textio::Buffer<char> cbuf { bcfio::MAX_POSIT_BUFF };
+    textio::Buffer<uint64_t> ibuf { bcfio::MAX_COL_NUM };
+    
+    int status = -1;
+    while (textio::get_line(fid, cbuf) != 0) {
+        status = parse_line(cbuf, ibuf, delimiter = '\t');
+
+        if (status < 0)
+            return nullptr;
+
+        if (ibuf->buf_idx_ != 2)
+            return nullptr 
+
+        posits[i] = bcfio::Position(std::string(cbuf->buf_ + ibuf->buf_[0]),
+                                    std::atoll(cbuf->buf_ + ibuf->buf_[1]));
+    }
+
+    return std::move(posits);
+}
 
 ///////////////////////////////////////////////////////////////////
 // BcfHeader
@@ -125,129 +170,6 @@ int bcfio::BcfFloatRecord::load_data_(bcfio::BcfHeader *hdr, const char *id) {
     return 0;
 }
 
-////////////////////////////////////////////////////////////////////
-// Postions: load positions file
-////////////////////////////////////////////////////////////////////
- 
-bcfio::Positions::Positions(FILE* fid)
-    : fid_(fid) {
-    if (fid_) {
-        buffer = new char[buffsize+1];
-        std::memset(buffer, '\0', sizeof(char) * (buffsize+1));
-    }
-}
-
-bcfio::Positions::~Positions() { 
-    if (fid) fclose(fid); 
-    if (buffer) delete[] buffer;
-    if (pos) delete[] pos;
-};
-
-
-//@return   0       success
-//          -1      error: file stream ended on value != EOF
-//          -2      error: failed to return to file handle origin
-int bcfio::count_lines(bcfio::Positions* posits) {
-    uint64_t counter = 0;
-    int prev_char = '\0';
-    int c = '\0';
-    FILE* fid = posits->fid_;
-
-    // don't count empty lines
-    while ((c = getchar(fid)) != EOF) {
-        if (c == '\n' && prev_char != '\n') counter++;
-        prev_char = c;
-    }
-
-    // EOF is serving as a end of line character
-    // that is why we need to increment
-    if (c == EOF && prev_char != '\n')
-        counter++;
-
-    // return file handle to the beginning of file for parsing
-    if (std::fseek(fid, 0, SEEK_SET) != 0) return -2;
-    if (c != EOF) return -1;
-
-    posits->size = counter;
-    return 0;
-}
-
-
-// @title parse the positions file
-// @description The postion file is a tab delimited text file
-//      with two columns.  The first column is the chromosome/
-//      contig string, the second column is the locus of interest,
-//      i.e. genomic position.
-// @param posits 
-// @return  0       success
-//          -1      error: counting lines
-//          -2      error: column mismatch
-int bcfio::parse(bcfio::Positions* posits) {
-
-    if (bcfio::count_lines(posits) < 0)
-        return -1;
-
-    uint64_t num_pos = posits->size;
-    bcfio::Position* posit_array = new Position[posits->size];
-
-    CharBuffer cbuf { POSIT_BUFF_SIZE };
-
-    std::string chromosome {};
-    bool has_read_chrom_col = false;
-    uint64_t lc = 0;// line counter
-    int c = '\0';
-    while ((c = getchar(fid)) != EOF && lc < num_pos) {
-
-        // this means that we have more than two columns
-        if (c == '\t' && has_read_chrom_col) {
-            Rprintf("[Warning]\tIs there more than two columns at"
-                    "%s\n?", cbuf.buf_);
-            continue;
-        }
-
-        if (c == '\t') {
-            cbuf.append('\0');
-            chromosome = std::string(cbuf.buf_);
-            cbuf.reset();
-            has_read_chrom_col = true;
-        }
-
-        if (c == '\n' && !has_read_chrom_col) {
-            Rprintf("[Warning]\tMissing field with buffer %s.\n",
-                    cbuf.buf_);
-            continue;
-        }
-
-        if (c == '\n') {
-            cbuf.append('\0');
-            posit_array[] = Position{ chromosome, 
-                                    std::atoll(cbuf.buf_)};
-            cbuf.reset();
-            has_read_chrom_col = false;
-        }
-
-        if (cbuf.append(c) < 0) 
-            Rcpp::stop("[ERROR]\tbuffer overflow\n");
-    }
-
-    return 0;
-}
-
-// [[Rcpp::export]]
-Rcpp::XPtr<bcfio::Positions> popen(const char* filename, 
-                                const char* mode) {
-    FILE* fid = fopen(filename, mode);
-    if (!fid)
-        return R_NilValue;
-
-    bcfio::Positions* posits = new bcfio::Positions(fid);
-    if (parse(posits) < 0) {
-        delete posits;
-        return R_NilValue;
-    }
-
-    return Rcpp::XPtr<bcfio::Position>(pos);
-}
  
 // ///////////////////////////////////////////////////////////////////
 // // Bcf
@@ -295,10 +217,7 @@ bool bcfio::Bcf::isopen() const {
 //      -3 error: record retrieval
 //      -4 error: include position is out of order
 //      -5 error: bcf positions out of order
-//      -6 error: unpack error
-int bcfio::next_record(bcfio::Bcf* bid, 
-        bcfio::BcfFloatRecord *ptr, 
-        const char *id) {
+int bcfio::next_record(bcfio::Bcf* bid, bcfio::BcfFloatRecord *ptr) {
 
     if (!bid || !ptr || !id)
         return -2;
@@ -345,9 +264,18 @@ int bcfio::next_record(bcfio::Bcf* bid,
 
     // Unpacking options defined in htslib/vcf.h line 419
     if (htslib::bcf_unpack(ptr->cur_rec(), BCF_UN_ALL) < 0)
-        return -6;
+        return -1;
 
     return ptr->load_data_(&(bid->hdr_), id);
+}
+
+
+//      -1 error: file 
+//      -2 error: unpack error
+int bcfio::unpack(bcfio::Bcf* bid, bcfio::BcfFloatRecord* ptr, const char* id) {
+    if (!bid || !prt || !id)
+        return -1;
+
 }
 
 
@@ -375,7 +303,7 @@ uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid) {
 Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
     bcfio::BcfFloatRecord rec {};
 
-    int status = bcfio::next_record(bid.get(), &rec, id);
+    int status = bcfio::next_record(bid.get(), &rec);
     if (status != 0)
         return R_NilValue;
 
@@ -403,8 +331,17 @@ int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n) {
 }
 
 // [[Rcpp::export]]
-int subset_posits(Rcpp::XPtr<bcfio::Bcf> bid, 
-                    Rcpp::XPtr<bcfio::Positions> posits) {
-    bid.pos_ = posits.get();
+uint64_t num_samples(Rcpp::XPtr<bcfio::Bcf>) {
+    if (bid->hdr_->pos_)
+        return bid->hdr_->pos_->size;
+    
+    uint64_t n = 0; 
+    while ();
+}
+
+// [[Rcpp::export]]
+int subset_posits(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename) {
+    FileIO fio = textio::fiopen(filename, "r");
+    bid->hdr_->pos_ = parse_posits(fio);
     return 0;
 }

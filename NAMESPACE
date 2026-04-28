@@ -11,7 +11,7 @@ export(subset_posits)
 export(subset_samples)
 
 # Positions file
-export(popen)
+export(pload)
 
 # grm
 export(calc_grm)

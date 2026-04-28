@@ -48,11 +48,104 @@ extern "C" {
 
 
 /////////////////////////////////////////////////////////////////////
+/// NAMESPACE TEXTIO
+/////////////////////////////////////////////////////////////////////
+
+namespace textio {
+
+constexpr char END_OF_LINE = '\n';
+constexpr int END_OF_FILE = 1;
+
+
+
+template <class T>
+struct Buffer {
+    Buffer(uint64_t buff_size)
+        : buf_size_(buff_size), buf_(new T[buf_size_]) {};
+    ~CharBuffer() { if (buf_) delete[] buf_; }
+
+    // @return  0       success
+    //          -1      error: end of buffer
+    int append(T c);
+    void reset();
+
+    bool isopen() const;
+
+    uint64_t buf_size_;
+    T* buf_;
+
+    uint64_t buf_idx_ = 0;
+};
+
+struct FileIO {
+    FileIO(FILE* fid) : fid_(!fid ? nullptr : fid) {};
+    ~FileIO() { if (fid) std::fclose(fid); }
+
+    FILE* fid_;
+}
+
+int isopen(FileIO* fio) {
+    return fio->fid_ == nullptr;
+}
+
+FileIO fiopen(const char* filename, const char* mode) {
+    FILE* fid = std::fopen(filename, mode);
+    return FileIO { fid };
+}
+
+int count_lines(FileIO* fio, uint64_t* count);
+
+int get_line(FileIO* fio, CharBuffer* cbuf);
+
+int parse_line(Buffer<char>* cbuf, Buffer<uint64_t>* ibuf, const char* delimiter);
+
+}
+
+
+/////////////////////////////////////////////////////////////////////
 /// NAMESPACE BCFIO
 /////////////////////////////////////////////////////////////////////
 
 
 namespace bcfio {
+
+/////////////////////////////////////////////////////////////////////
+// POSITION
+/////////////////////////////////////////////////////////////////////
+///
+
+const uint64_t MAX_POSIT_BUFF = 10000;
+const uint64_t MAX_COL_NUM = 5;
+
+struct Position {
+    std::string chrom;
+    int64_t pos;
+};
+
+
+struct Positions {
+    Positions(uint64_t n);
+    ~Positions();
+
+    FILE* fid_;
+
+    uint64_t size;
+    Position* pos = nullptr;
+};
+
+// @title parse positions files
+// @description A positions file is a tab delimited text file with
+//      two columns.  The first being chromosome/contig id and the
+//      second are the interger genomic positions.
+// @param pointer to file handle
+// @return  0       success
+//          -1      error: 
+std::unique_ptr<Positions> parse_posits(textio::FileIO* fio);
+
+
+/////////////////////////////////////////////////////////////////////
+/// BCFHDRATTR
+/////////////////////////////////////////////////////////////////////
 
 
 // @title The meta data on a BCF attribute
@@ -108,7 +201,8 @@ struct BcfHeader {
     int get_info_attr(const char *id, BcfHdrAttr *ptr) const;
     int get_filter_attr(const char *id, BcfHdrAttr *ptr) const;
 
-    int subset_samples(const char* filename);
+    // int subset_samples(const char* filename);
+    // int subset_pos(const char* filename);
 
     // @title: The number of values stored in format id
     // @description: Each bcf format field is able to hold unique
@@ -122,9 +216,6 @@ struct BcfHeader {
 
     uint32_t n_samples() const { return hts_hdr_->n[BCF_DT_SAMPLE]; };
 
-    htslib::bcf_hdr_t *hts_hdr_;
-    // BcfHdrAttr attr_ {};
-
     // @title: 
     // @description decoder based upon htslib/vcf.h line 100 in the
     //  typedef struct bcf_idinfo_t. 
@@ -135,9 +226,18 @@ struct BcfHeader {
     int decode_hts_idinfo_(const char *name, 
             const int bcf_dt_type, 
             BcfHdrAttr *ptr) const;
+
+    htslib::bcf_hdr_t *hts_hdr_;
+    std::unique_ptr<Positions> pos_ = nullptr;
+
 };
 
 
+/////////////////////////////////////////////////////////////////////
+/// BCFFLOATRECORD
+/////////////////////////////////////////////////////////////////////
+///
+///
 // @title: Interface and manage htslib bcf1_t
 // @description: The htslib bcf1_t data structure requires manual memory
 //  management, knowledge of several bit-packed values, knowledge of
@@ -163,7 +263,7 @@ struct BcfFloatRecord {
     uint64_t ncols() const { return col_num_; };
     uint64_t nrows() const { return row_num_; };
 
-    htslib::bcf1_t *cur_rec() const { return rec_; }; 
+    htslib::bcf1_t* cur_rec() const { return rec_; }; 
 
     bool is_snp() const { return htslib::bcf_is_snp(rec_); }
 
@@ -197,53 +297,9 @@ struct BcfFloatRecord {
 };
 
 
-struct CharBuffer {
-    
-    CharBuffer(uint8_t buff_size)
-        : buf_size_(buff_size), buf_(new char[buf_size_]) {};
-    ~CharBuffer() {
-        if (buf_) delete[] buf_;
-    }
-
-    int append(char c) {
-        if (buf_idx_ >= buf_size_-1)
-            return -1;
-
-        buf_[buf_idx_++] = c;
-        return 0;
-    }
-    void reset() {
-        std::memset(buf_, '\0', sizeof(char) * buf_size_);
-        buf->buf_idx_ = 0;
-    }
-
-    uint64_t buf_size_;
-    char* buf_;
-    uint64_t buf_idx_ = 0;
-};
-
-
-struct Position {
-    std::string chrom;
-    int64_t pos;
-};
-
-
-struct Positions {
-    Positions(FILE* fid);
-    ~Positions();
-
-    FILE* fid_;
-
-    uint64_t size = 0;
-    Position* pos = nullptr;
-};
-
-//
-// @return  0: success
-//          -1: 
-int parse(bcfio::Positions* pos);
-Rcpp::XPtr<Positions> popen(const char* filename, const char* mode);
+/////////////////////////////////////////////////////////////////////
+/// BCF
+/////////////////////////////////////////////////////////////////////
 
 
 // @title Interface with htslib bcf
@@ -272,7 +328,6 @@ struct Bcf
     const std::string fname_;
     htslib::htsFile *fid_;
     BcfHeader hdr_;
-    Positions* pos_ = nullptr;
 };
 
 // @title Query the next record
@@ -328,6 +383,8 @@ Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid);
 
 int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename);
+int subset_pos(<Rcpp::XPtr<bcfio::Bcf> bid, const char* filename);
+
 int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n);
 
 
