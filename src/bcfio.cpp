@@ -9,7 +9,8 @@
 //
 //
 
-#include <hwas_types.h>
+#include <bcfio.h>
+
 
 ///////////////////////////////////////////////////////////////////
 // BcfHeader
@@ -62,6 +63,11 @@ int32_t bcfio::BcfHeader::k_fmt(const char *id) const {
     return static_cast<int32_t>(fmt.number);
 }
 
+void bcfio::BcfHeader::close() noexcept {
+    if (!isnull())
+        htslib::bcf_hdr_destroy(hts_hdr_);
+    hts_hdr_ = nullptr;
+}
 
 // const std::unique_ptr<std::string[]> bcfio::BcfHeader::sample_names() const {
 // 
@@ -75,21 +81,24 @@ int32_t bcfio::BcfHeader::k_fmt(const char *id) const {
 // }
 // 
 // ///////////////////////////////////////////////////////////////////
-// // BcfFloatRecord
+// // template <typename T> BcfRecord
 // ///////////////////////////////////////////////////////////////////
 // 
-bcfio::BcfFloatRecord::~BcfFloatRecord() {
+template <typename T>
+bcfio::BcfRecord<T>::~BcfRecord() {
     if (rec_) htslib::bcf_destroy(rec_);
     if (dst_) free(dst_);
     rec_ = nullptr;
     dst_ = nullptr;
 }
 
-const float* bcfio::BcfFloatRecord::array() const {
+template <typename T>
+const T* bcfio::BcfRecord<T>::array() const {
     return dst_; 
 }
 
-std::optional<float> bcfio::BcfFloatRecord::get(const uint64_t row_idx,
+template<typename T>
+std::optional<T> bcfio::BcfRecord<T>::get(const uint64_t row_idx,
         const uint64_t col_idx) const {
     size_t idx = row_idx * col_num_ + col_idx;
     if (idx >= size()) return std::nullopt;
@@ -97,8 +106,9 @@ std::optional<float> bcfio::BcfFloatRecord::get(const uint64_t row_idx,
     return *(dst_ + idx);
 }
 
-int bcfio::BcfFloatRecord::load_data_(bcfio::BcfHeader *hdr, const char *id) {
-    int status { 0 };
+template <typename T>
+int bcfio::BcfRecord<T>::load_data_(bcfio::BcfHeader *hdr, const char *id) {
+    int status = -1;
     col_num_ = row_num_ = 0;
 
     status = htslib::bcf_get_format_values(hdr->hts_hdr_, 
@@ -106,7 +116,7 @@ int bcfio::BcfFloatRecord::load_data_(bcfio::BcfHeader *hdr, const char *id) {
             id, 
             (void**)(&dst_),
             &ndst_, 
-            BCF_HT_REAL);
+            bcf_record_type);
 
     if (status < 0)
         return status;
@@ -116,18 +126,16 @@ int bcfio::BcfFloatRecord::load_data_(bcfio::BcfHeader *hdr, const char *id) {
         col_num_ = row_num_ = 0;
         return k;
     }
-
     col_num_ = static_cast<uint64_t>(k);
     row_num_ = hdr->n_samples();
 
     return 0;
 }
-// 
-// 
-// ///////////////////////////////////////////////////////////////////
-// // BcfRead
-// ///////////////////////////////////////////////////////////////////
-// ///
+
+ 
+/////////////////////////////////////////////////////////////////////
+//// Bcf
+/////////////////////////////////////////////////////////////////////
 // 
 //
 bcfio::Bcf::Bcf()
@@ -139,29 +147,27 @@ bcfio::Bcf::Bcf(const char *filename, htslib::htsFile* fid)
     hdr_(fid_) {};
 
 bcfio::Bcf::~Bcf() {
-    if (fid_) htslib::hts_close(fid_);
+    close();
 }
 
 bool bcfio::Bcf::isopen() const {
     return fid_ != nullptr;
 }
-// 
-// // TODO: subset samples by those in sample_fname file
-// int bcfio::ReadBcf::set_samples(const char *sample_fname) {
-// 
-//     // Subset samples with those found in the file sample_fname 
-//     if (!sample_fname || *sample_fname == '\0') {
-//         fprintf(stdout, "No file with sample names detected, retreiving"
-//                 " records for all samples.\n");
-//         return -1;
-//     }
-// 
-//     return hdr_.subset_samples(sample_fname);
-// };
-// 
+
+void bcfio::Bcf::close() noexcept {
+    hdr_.close();
+    if (isopen())
+        htslib::hts_close(fid_);
+    fid_ = nullptr;
+}
+
+
 // title: load next record
-int bcfio::next_record(bcfio::Bcf* bid, bcfio::BcfFloatRecord *ptr, const char *id) {
-    int status = htslib::bcf_read(bid->fid_, bid->hdr_.hts_hdr_, ptr->cur_rec());
+template <typename T>
+int bcfio::next_record(bcfio::Bcf* bid, bcfio::BcfRecord<T> *ptr, const char *id) {
+    int status = htslib::bcf_read(bid->fid_, 
+            bid->hdr_.hts_hdr_,
+            ptr->cur_rec());
     if (status != 0)
         return status;
 
@@ -173,53 +179,3 @@ int bcfio::next_record(bcfio::Bcf* bid, bcfio::BcfFloatRecord *ptr, const char *
 }
 
 
-// [[Rcpp::export]]
-Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode) {
-    htslib::htsFile* fid = htslib::hts_open(filename, mode);
-    if (!fid)
-        Rcpp::stop("File was not found");
-
-    return Rcpp::XPtr<bcfio::Bcf>(new bcfio::Bcf(filename, fid), true);
-}
-
-// [[Rcpp::export]]
-double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
-    return static_cast<double>(bid->hdr_.k_fmt(id));
-}
-
-// [[Rcpp::export]]
-uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid) {
-    return bid->hdr_.n_samples();
-}
-
-
-// [[Rcpp::export]]
-Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
-    bcfio::BcfFloatRecord rec {};
-
-    int status = bcfio::next_record(bid.get(), &rec, id);
-    if (status != 0)
-        return R_NilValue;
-
-    std::optional<float> datum = std::nullopt;
-    Rcpp::NumericMatrix expect_hap_counts(rec.nrows(), rec.ncols());
-
-    for (uint64_t i = 0; i < rec.nrows(); i++)
-        for (uint64_t j = 0; j < rec.ncols(); j++) {
-            if (!(datum = rec.get(i, j)))
-                Rcpp::stop("Data retrieval error.");
-            expect_hap_counts(i, j) = datum.value();
-        }
-
-    return expect_hap_counts;
-}
-
-// [[Rcpp::export]]
-int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename) {
-    return htslib::bcf_hdr_set_samples(bid->hdr_.hts_hdr_, filename, 1);
-}
-
-// [[Rcpp::export]]
-int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n) {
-    return htslib::hts_set_threads(bid->fid_, n);
-}

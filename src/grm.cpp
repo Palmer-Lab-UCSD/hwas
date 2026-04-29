@@ -1,7 +1,6 @@
 // Palmer Lab at UCSD 2026
 //
-#include <hwas_types.h>
-#include <chrono>
+#include <grm.h>
 
 
 ////////////////////////////////////////////////////////////////////
@@ -54,9 +53,9 @@ int grm::Grm::midx_to_arr(const uint64_t i, const uint64_t j,
 
     // remember that by symmetry, the matrix is equal to its transpose
     if (i <= j)
-        *idx = SYMMATRIX_IDX_TO_ARRAY(i, j, n_samples);
+        *idx = grm::sym_matrix_idx_to_array(i, j, n_samples);
     else 
-        *idx = SYMMATRIX_IDX_TO_ARRAY(j, i, n_samples);
+        *idx = grm::sym_matrix_idx_to_array(j, i, n_samples);
 
     return 0;
 }
@@ -64,15 +63,15 @@ int grm::Grm::midx_to_arr(const uint64_t i, const uint64_t j,
 
 float grm::Grm::operator()(const uint64_t i, const uint64_t j) const {
     if (i > j)
-        return data[SYMMATRIX_IDX_TO_ARRAY(j, i, n_samples)];
-    return data[SYMMATRIX_IDX_TO_ARRAY(i, j, n_samples)];
+        return data[grm::sym_matrix_idx_to_array(j, i, n_samples)];
+    return data[grm::sym_matrix_idx_to_array(i, j, n_samples)];
 }
 
 
 float& grm::Grm::operator()(const uint64_t i, const uint64_t j) {
     if (i > j)
-        return data[SYMMATRIX_IDX_TO_ARRAY(j, i, n_samples)];
-    return data[SYMMATRIX_IDX_TO_ARRAY(i, j, n_samples)];
+        return data[grm::sym_matrix_idx_to_array(j, i, n_samples)];
+    return data[grm::sym_matrix_idx_to_array(i, j, n_samples)];
 }
 
 
@@ -105,7 +104,7 @@ int grm::Grm::set(const uint64_t i, const uint64_t j, const float val) {
 ////////////////////////////////////////////////////////////////////
 
 // @return -1 on error and 0 or success
-static int update(grm::Grm* grmat, const bcfio::BcfFloatRecord* rec) {
+int grm::hap_update_kernel(grm::Grm* grmat, const bcfio::BcfRecord<float>* rec) {
 
     // instantiate indexing variables used in for loops
     // use static to prevent construction and destruction of variables
@@ -134,17 +133,17 @@ static int update(grm::Grm* grmat, const bcfio::BcfFloatRecord* rec) {
     // remember that record data is an n_sample by k haplotype matrix 
     for (i = 0; i < n_samples; i++) {
 
-        samp_i = rec_arr + MATRIX_IDX_TO_ARRAY(i, 0, k_haps);
+        samp_i = rec_arr + grm::matrix_idx_to_array(i, 0, k_haps);
 
         for (j = i; j < n_samples; j++) {
 
             val = 0;
-            samp_j = rec_arr + MATRIX_IDX_TO_ARRAY(j, 0, k_haps);
+            samp_j = rec_arr + grm::matrix_idx_to_array(j, 0, k_haps);
 
             for (k_hap = 0; k_hap < k_haps; k_hap++)
                 val += samp_i[k_hap] * samp_j[k_hap];
 
-            grm_arr[SYMMATRIX_IDX_TO_ARRAY(i, j, n_samples)] += val;
+            grm_arr[grm::sym_matrix_idx_to_array(i, j, n_samples)] += val;
         }
     }
 
@@ -152,62 +151,3 @@ static int update(grm::Grm* grmat, const bcfio::BcfFloatRecord* rec) {
 }
 
 
-// [[Rcpp::export]]
-Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
-
-    // instantiate matrices to hold calculations
-    int32_t k { 0 };
-    if ((k = k_fmt(bid, id)) < 0) {
-        return R_NilValue;
-    }
-    uint64_t nsamps = num_samples(bid);
-
-    grm::Grm grmat { nsamps };
-    bcfio::BcfFloatRecord rec {};
-
-    using clock = std::chrono::steady_clock;
-    auto t_io = clock::duration::zero();
-    auto t_compute = clock::duration::zero();
-
-    auto start_interval = clock::now();
-    auto end_interval= clock::now();
-    int s = 0;
-
-    size_t rec_count = 0;
-    while (true) {
-        
-        start_interval = clock::now();
-        s = bcfio::next_record(bid.get(), &rec, id);
-        end_interval = clock::now();
-        t_io += end_interval - start_interval;
-
-        if (s != 0) break; 
-
-        start_interval = clock::now();
-        if(update(&grmat, &rec) != 0) return R_NilValue;
-        end_interval = clock::now();
-        t_compute += end_interval - start_interval;
-
-        if (++rec_count % 1000 == 0)
-            Rprintf("Processed %zu records\n", rec_count);
-    }
-
-    Rcpp::Rcout 
-        << "I/O time: " 
-        << std::chrono::duration_cast<std::chrono::seconds>(t_io).count()
-        << std::endl;
-
-    Rcpp::Rcout 
-        << "Compute time: " 
-        << std::chrono::duration_cast<std::chrono::seconds>(t_compute).count()
-        << std::endl;
-
-    Rcpp::NumericMatrix grmatrix(nsamps, nsamps);
-    // fill in lower diagonal elements
-    for (uint64_t i = 0; i < nsamps; i++)
-        for (uint64_t j = 0; j < nsamps; j++)
-            grmatrix(i, j) = grmat(j, i);
-            
-    Rprintf("Done\n");
-    return grmatrix;
-}

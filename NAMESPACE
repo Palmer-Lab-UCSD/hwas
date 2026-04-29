@@ -8,6 +8,11 @@ export(num_samples)
 export(query_next)
 export(subset_samples)
 export(set_threads)
+export(bclose)
 
 # grm
 export(calc_grm)
+
+# qtl2
+export(fit1_pg)
+export(est_herit)
