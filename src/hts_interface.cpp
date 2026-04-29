@@ -16,6 +16,7 @@ void bclose(Rcpp::XPtr<bcfio::Bcf> bid) {
     bid->close();
 }
 
+// [[Rcpp::export]]
 bool isopen(Rcpp::XPtr<bcfio::Bcf> bid) {
     return bid->isopen();
 }
@@ -29,7 +30,6 @@ double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
 uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid) {
     return bid->hdr_.n_samples();
 }
-
 
 // [[Rcpp::export]]
 Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {

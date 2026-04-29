@@ -3,16 +3,17 @@ import(Rcpp)
 
 # bcfio
 export(bopen)
-export(k_fmt)
-export(num_samples)
+export(bclose)
 export(query_next)
+export(num_samples)
 export(subset_samples)
 export(set_threads)
-export(bclose)
+export(k_fmt)
+
 
 # grm
 export(calc_grm)
 
 # qtl2
-export(fit1_pg)
-export(est_herit)
+# export(fit1_pg)
+# export(est_herit)

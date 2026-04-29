@@ -1,4 +1,3 @@
-/* -*- C++ -*- */
 // Parse STITCH vcf file
 //
 // By: Robert Vogel
@@ -18,12 +17,14 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstdint>
+#include <csignal>
+
 #include <optional>
 #include <memory>
 #include <string>
-#include <Rcpp.h>
-
 #include <utility>
+
+#include <Rcpp.h>
 
 #include <bcfio.h>
 #include <grm.h>
@@ -50,7 +51,6 @@
 // @return if an error occured that value returned is < 0, 
 //  otherwise the number of values of fmt field id recorded per
 //  sample is returned.
-double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 // 
 // See htslib/vcf.h line 649
 // Remember that n is the number of entries in the triplet of 
@@ -58,7 +58,6 @@ double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 // that correspondes to the number of samples.
 // size_t n_samples() const { return hdr_.n_samples(); };
 // 
-int set_samples(const char *filename);
 // 
 // // TODO: sample_names
 // const std::unique_ptr<std::string[]> sample_names() const { 
@@ -86,6 +85,7 @@ uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid);
 
 int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename);
 int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n);
+double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 
 
 /////////////////////////////////////////////////////////////////////
@@ -100,8 +100,5 @@ int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n);
 Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 
 
-/////////////////////////////////////////////////////////////////////
-/// 
-/////////////////////////////////////////////////////////////////////
 
 #endif
