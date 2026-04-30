@@ -97,7 +97,7 @@ const T* bcfio::BcfRecord<T>::array() const {
     return dst_; 
 }
 
-template<typename T>
+template <typename T>
 std::optional<T> bcfio::BcfRecord<T>::get(const uint64_t row_idx,
         const uint64_t col_idx) const {
     size_t idx = row_idx * col_num_ + col_idx;
@@ -107,7 +107,8 @@ std::optional<T> bcfio::BcfRecord<T>::get(const uint64_t row_idx,
 }
 
 template <typename T>
-int bcfio::BcfRecord<T>::load_data_(bcfio::BcfHeader *hdr, const char *id) {
+int bcfio::BcfRecord<T>::load_data_(bcfio::BcfHeader *hdr, 
+        const char *id) {
     int status = -1;
     col_num_ = row_num_ = 0;
 
@@ -164,7 +165,10 @@ void bcfio::Bcf::close() noexcept {
 
 // title: load next record
 template <typename T>
-int bcfio::next_record(bcfio::Bcf* bid, bcfio::BcfRecord<T> *ptr, const char *id) {
+int bcfio::next_record<T>(bcfio::Bcf* bid,
+        bcfio::BcfRecord<T>* ptr, 
+        const char* id) {
+
     int status = htslib::bcf_read(bid->fid_, 
             bid->hdr_.hts_hdr_,
             ptr->cur_rec());
@@ -179,3 +183,7 @@ int bcfio::next_record(bcfio::Bcf* bid, bcfio::BcfRecord<T> *ptr, const char *id
 }
 
 
+template struct bcfio::BcfRecord<float>;
+template int bcfio::next_record<float> (bcfio::Bcf* bid,
+        bcfio::BcfRecord<float>* ptr,
+        const char* id);

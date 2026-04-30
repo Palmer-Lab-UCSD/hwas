@@ -212,7 +212,7 @@ struct Bcf
 // @param the format id for data to be loaded into record.
 // @return: 0 for success otherwise non-zero
 template <typename T>
-int next_record(Bcf* bid, BcfRecord<T>* rec, const char* id);
+int next_record<T>(Bcf* bid, BcfRecord<T>* rec, const char* id);
 
 
 }
