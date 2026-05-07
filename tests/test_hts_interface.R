@@ -1,9 +1,17 @@
 
 library(hwas)
 
-RESULTS <- list(failed = vector(mode="character", length=0),
-                warning = vector(mode="character", length=0),
-                success = vector(mode="character", length=0))
+######################################################################
+# AI CONTRIBUTION
+# CLAUDE Opus 4.7 suggested using an environment for this global
+# acculator variable.  Previously, I was using a list, which did
+# not update correctly.
+RESULTS <- new.env(parent = emptyenv())
+RESULTS$failed <- vector(mode="character", length=0)
+RESULTS$warning <- vector(mode="character", length=0)
+RESULTS$success <- vector(mode="character", length=0)
+# END AI CONTRIBUTION
+######################################################################
 
 
 
