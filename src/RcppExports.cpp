@@ -69,6 +69,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// isopen
+bool isopen(Rcpp::XPtr<bcfio::Bcf> bid);
+RcppExport SEXP _hwas_isopen(SEXP bidSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::XPtr<bcfio::Bcf> >::type bid(bidSEXP);
+    rcpp_result_gen = Rcpp::wrap(isopen(bid));
+    return rcpp_result_gen;
+END_RCPP
+}
 // k_fmt
 double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 RcppExport SEXP _hwas_k_fmt(SEXP bidSEXP, SEXP idSEXP) {
@@ -92,15 +103,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// query_next
-Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
-RcppExport SEXP _hwas_query_next(SEXP bidSEXP, SEXP idSEXP) {
+// num_positions
+int64_t num_positions(Rcpp::XPtr<bcfio::Bcf> bid);
+RcppExport SEXP _hwas_num_positions(SEXP bidSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::XPtr<bcfio::Bcf> >::type bid(bidSEXP);
-    Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
-    rcpp_result_gen = Rcpp::wrap(query_next(bid, id));
+    rcpp_result_gen = Rcpp::wrap(num_positions(bid));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sample_names
+Rcpp::RObject sample_names(Rcpp::XPtr<bcfio::Bcf> bid);
+RcppExport SEXP _hwas_sample_names(SEXP bidSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::XPtr<bcfio::Bcf> >::type bid(bidSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_names(bid));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -125,6 +146,18 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::XPtr<bcfio::Bcf> >::type bid(bidSEXP);
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     rcpp_result_gen = Rcpp::wrap(set_threads(bid, n));
+    return rcpp_result_gen;
+END_RCPP
+}
+// query_next
+Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
+RcppExport SEXP _hwas_query_next(SEXP bidSEXP, SEXP idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::XPtr<bcfio::Bcf> >::type bid(bidSEXP);
+    Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
+    rcpp_result_gen = Rcpp::wrap(query_next(bid, id));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -614,11 +647,14 @@ static const R_CallMethodDef CallEntries[] = {
     {"_hwas_fit1_pg_intcovar", (DL_FUNC) &_hwas_fit1_pg_intcovar, 8},
     {"_hwas_bopen", (DL_FUNC) &_hwas_bopen, 2},
     {"_hwas_bclose", (DL_FUNC) &_hwas_bclose, 1},
+    {"_hwas_isopen", (DL_FUNC) &_hwas_isopen, 1},
     {"_hwas_k_fmt", (DL_FUNC) &_hwas_k_fmt, 2},
     {"_hwas_num_samples", (DL_FUNC) &_hwas_num_samples, 1},
-    {"_hwas_query_next", (DL_FUNC) &_hwas_query_next, 2},
+    {"_hwas_num_positions", (DL_FUNC) &_hwas_num_positions, 1},
+    {"_hwas_sample_names", (DL_FUNC) &_hwas_sample_names, 1},
     {"_hwas_subset_samples", (DL_FUNC) &_hwas_subset_samples, 2},
     {"_hwas_set_threads", (DL_FUNC) &_hwas_set_threads, 2},
+    {"_hwas_query_next", (DL_FUNC) &_hwas_query_next, 2},
     {"_hwas_calc_grm", (DL_FUNC) &_hwas_calc_grm, 2},
     {"_hwas_calc_rss_linreg", (DL_FUNC) &_hwas_calc_rss_linreg, 3},
     {"_hwas_calc_coef_linreg", (DL_FUNC) &_hwas_calc_coef_linreg, 3},

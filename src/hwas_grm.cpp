@@ -1,14 +1,21 @@
 
 #include <hwas_types.h>
 
+
+// For signal handling see
+// https://en.cppreference.com/cpp/utility/program/signal
+// I need to review this more closely.  The use of atomic
+// indicates that this is using mutex free concurrency.
 volatile std::sig_atomic_t signal_received = 0;
 
 void signal_handler(int signal) {
     signal_received = 1;
 }
-
 // [[Rcpp::export]]
 Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
+
+    // reset signal for subsequent usage.
+    signal_received = 0;
 
     std::signal(SIGINT, signal_handler);
 
@@ -33,7 +40,7 @@ Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
     size_t rec_count = 0;
     while (!signal_received) {
         start_interval = clock::now();
-        s = bcfio::next_record(bid.get(), &rec, id);
+        s = bcfio::next_record(bid.checked_get(), &rec, id);
         end_interval = clock::now();
         t_io += end_interval - start_interval;
 
@@ -47,6 +54,9 @@ Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
         if (++rec_count % 1000 == 0)
             Rprintf("Processed %zu records\n", rec_count);
     }
+
+    if (signal_received)
+        return R_NilValue;
 
     Rcpp::Rcout 
         << "I/O time: " 

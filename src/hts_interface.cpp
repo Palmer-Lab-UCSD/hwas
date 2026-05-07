@@ -32,24 +32,23 @@ uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid) {
 }
 
 // [[Rcpp::export]]
-Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
-    bcfio::BcfRecord<float> rec {};
+int64_t num_positions(Rcpp::XPtr<bcfio::Bcf> bid) {
+    return bcfio::num_records(bid.get());
+}
 
-    int status = bcfio::next_record(bid.get(), &rec, id);
-    if (status != 0)
+
+// [[Rcpp::export]]
+Rcpp::RObject sample_names(Rcpp::XPtr<bcfio::Bcf> bid) {
+    if (!bid.get())
         return R_NilValue;
 
-    std::optional<float> datum = std::nullopt;
-    Rcpp::NumericMatrix expect_hap_counts(rec.nrows(), rec.ncols());
+    uint32_t nsamples = bid->hdr_.n_samples();
+    Rcpp::CharacterVector samp_names(nsamples);
 
-    for (uint64_t i = 0; i < rec.nrows(); i++)
-        for (uint64_t j = 0; j < rec.ncols(); j++) {
-            if (!(datum = rec.get(i, j)))
-                Rcpp::stop("Data retrieval error.");
-            expect_hap_counts(i, j) = datum.value();
-        }
+    for (uint32_t i = 0; i < nsamples; i++)
+        samp_names[i] = std::string(bid->hdr_.hts_hdr_->samples[i]);
 
-    return expect_hap_counts;
+    return samp_names;
 }
 
 // [[Rcpp::export]]
@@ -61,3 +60,32 @@ int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename) {
 int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n) {
     return htslib::hts_set_threads(bid->fid_, n);
 }
+
+// [[Rcpp::export]]
+Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
+    bcfio::BcfRecord<float> rec {};
+
+    int status = bcfio::next_record(bid.checked_get(), &rec, id);
+    if (status != 0)
+        return R_NilValue;
+
+    std::optional<float> datum = std::nullopt;
+    Rcpp::NumericMatrix data(rec.nrows(), rec.ncols());
+
+    for (uint64_t i = 0; i < rec.nrows(); i++)
+        for (uint64_t j = 0; j < rec.ncols(); j++) {
+            if (!(datum = rec.get(i, j)))
+                Rcpp::stop("Data retrieval error.");
+            data(i, j) = datum.value();
+        }
+
+    data.attr("chrom") = std::string(rec.chrom(bid->hdr_.hts_hdr_));
+    data.attr("pos") = rec.pos();
+    //data.attr("qual") = rec.qual();
+    //data.attr(
+
+    return data;
+}
+
+
+

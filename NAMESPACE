@@ -7,13 +7,18 @@ export(bclose)
 export(query_next)
 export(num_samples)
 export(subset_samples)
+export(sample_names)
 export(set_threads)
 export(k_fmt)
+export(num_positions)
 
 
 # grm
 export(calc_grm)
 
 # qtl2
+export(est_herit)
+export(batch_cols)
+export(get_common_ids)
+export(decomp_kinship)
 # export(fit1_pg)
-# export(est_herit)

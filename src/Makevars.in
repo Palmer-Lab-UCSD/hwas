@@ -1,2 +1,2 @@
-PKG_CPPFLAGS = @HTSLIB_CFLAGS@ -I../inst/include -Wextra -Wpedantic
+PKG_CPPFLAGS = @HTSLIB_CFLAGS@ -I../inst/include
 PKG_LIBS     = @HTSLIB_LIBS@ -lhts

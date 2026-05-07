@@ -140,6 +140,15 @@ struct BcfRecord {
     uint64_t size() const { return static_cast<uint64_t>(ndst_); };
     uint64_t ncols() const { return col_num_; };
     uint64_t nrows() const { return row_num_; };
+    float qual() const { return rec_->qual; };
+
+    const char* chrom(htslib::bcf_hdr_t* hdr) const { 
+        return htslib::bcf_hdr_id2name(hdr, rec_->rid); 
+    };
+
+    // store position with respect to vcf 1-based coordintates
+    int64_t pos() const { return rec_->pos + 1; };
+    
 
     htslib::bcf1_t *cur_rec() const { return rec_; }; 
 
@@ -198,7 +207,7 @@ struct Bcf
 
     ~Bcf();
 
-    bool isopen() const;
+    bool isopen();
     void close() noexcept;
 
     const std::string fname_;
@@ -212,7 +221,10 @@ struct Bcf
 // @param the format id for data to be loaded into record.
 // @return: 0 for success otherwise non-zero
 template <typename T>
-int next_record<T>(Bcf* bid, BcfRecord<T>* rec, const char* id);
+int next_record(Bcf* bid, BcfRecord<T>* rec, const char* id);
+
+int64_t num_records(Bcf* bid);
+
 
 
 }

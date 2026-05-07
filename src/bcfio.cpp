@@ -64,9 +64,10 @@ int32_t bcfio::BcfHeader::k_fmt(const char *id) const {
 }
 
 void bcfio::BcfHeader::close() noexcept {
-    if (!isnull())
+    if (!isnull()) {
         htslib::bcf_hdr_destroy(hts_hdr_);
-    hts_hdr_ = nullptr;
+        hts_hdr_ = nullptr;
+    }
 }
 
 // const std::unique_ptr<std::string[]> bcfio::BcfHeader::sample_names() const {
@@ -151,23 +152,37 @@ bcfio::Bcf::~Bcf() {
     close();
 }
 
-bool bcfio::Bcf::isopen() const {
-    return fid_ != nullptr;
+bool bcfio::Bcf::isopen() {
+    if (!fid_)
+        return false;
+
+    // if, for some reason the hdr_ is closed but the file handle
+    // isn't, then close the file handle before return false
+    if (hdr_.isnull()) {
+        close();
+        return false;
+    }
+
+    return true;
 }
 
 void bcfio::Bcf::close() noexcept {
     hdr_.close();
-    if (isopen())
+    if (isopen()) {
         htslib::hts_close(fid_);
-    fid_ = nullptr;
+        fid_ = nullptr;
+    }
 }
 
 
 // title: load next record
 template <typename T>
-int bcfio::next_record<T>(bcfio::Bcf* bid,
+int bcfio::next_record(bcfio::Bcf* bid,
         bcfio::BcfRecord<T>* ptr, 
         const char* id) {
+
+    if (!bid->isopen())
+        return -1;
 
     int status = htslib::bcf_read(bid->fid_, 
             bid->hdr_.hts_hdr_,
@@ -175,8 +190,15 @@ int bcfio::next_record<T>(bcfio::Bcf* bid,
     if (status != 0)
         return status;
 
-    // Unpacking options defined in htslib/vcf.h line 419
-    if (htslib::bcf_unpack(ptr->cur_rec(), BCF_UN_FMT) < 0)
+    // Unpacking options defined in htslib/vcf.h line 429
+    // BCF_UN_STR:      unpack up to ALT, inclusive
+    // BCF_UN_FLT:      unpack up to FILTER 
+    // BCF_UN_INFO:     unpack up to INFO
+    // BCF_UN_FMT:      unpaack FORMAT for each sample
+    //
+    // BCF_UN_SHR ==> (BCF_UN_STR | BCF_UN_FLT | BCF_UN_INFO)
+    // BCF_UN_ALL ==> (BCF_UN_SHR | BCF_UN_FMT)
+    if (htslib::bcf_unpack(ptr->cur_rec(), BCF_UN_ALL) < 0)
         return -1;
 
     return ptr->load_data_(&(bid->hdr_), id);
@@ -187,3 +209,41 @@ template struct bcfio::BcfRecord<float>;
 template int bcfio::next_record<float> (bcfio::Bcf* bid,
         bcfio::BcfRecord<float>* ptr,
         const char* id);
+
+int64_t bcfio::num_records(bcfio::Bcf* bid) {
+    if (!bid)
+        return -1;
+    // open a new file handle, then I can iterate without affecting
+    // the current position of bid
+    htslib::htsFile* fid = htslib::hts_open(bid->fname_.c_str(), "r");
+    if (!fid)
+        return -2;
+
+    htslib::bcf_hdr_t* hdr = htslib::bcf_hdr_read(fid);
+    if (!hdr) {
+        htslib::hts_close(fid);
+        return -2;
+    }
+
+    // dummy record
+    htslib::bcf1_t* brec = htslib::bcf_init();
+    if (!brec) {
+        htslib::bcf_hdr_destroy(hdr);
+        htslib::hts_close(fid);
+        return -2;
+    }
+
+    uint64_t n = 0;
+    int status;
+    for (n = 0; status == 0; n++)
+        status = htslib::bcf_read(fid, hdr, brec);
+
+    htslib::bcf_destroy(brec);
+    htslib::bcf_hdr_destroy(hdr);
+    htslib::hts_close(fid);
+    
+    // report error occured while parsing
+    if (status == -2) return status;
+
+    return n-1;
+}

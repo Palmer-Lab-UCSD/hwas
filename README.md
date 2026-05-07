@@ -1,5 +1,9 @@
 # hwas
 
+## TODO
+
+* Fix, C stack overflow with hwas::bclose(bid)
+
 
 ## Installation and Compiling
 
@@ -27,6 +31,7 @@ code, architectural recommendations / discussions, and
 in very few cases contributed code.  Any code contributed
 by Claude will be made known in the code comments or
 in the git logs.
+
 
 ## Copyright notice
 

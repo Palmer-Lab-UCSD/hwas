@@ -1,2 +1,2 @@
-PKG_CPPFLAGS = -isystem/home/dev/local/include -I../inst/include
+PKG_CPPFLAGS = -isystem/home/dev/local/include -I../inst/include -Wall -Wextra -Wpedantic
 PKG_LIBS     = -L/home/dev/local/lib -lhts

@@ -83,6 +83,8 @@ Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 
 uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid);
 
+Rcpp::RObject sample_names(Rcpp::XPtr<bcfio::Bcf>);
+
 int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename);
 int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n);
 double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
