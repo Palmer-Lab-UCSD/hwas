@@ -48,7 +48,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // bopen
-Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode);
+Rcpp::Nullable<Rcpp::XPtr<bcfio::Bcf>> bopen(const char* filename, const char* mode);
 RcppExport SEXP _hwas_bopen(SEXP filenameSEXP, SEXP modeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -60,13 +60,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // bclose
-void bclose(Rcpp::XPtr<bcfio::Bcf> bid);
+int bclose(Rcpp::XPtr<bcfio::Bcf> bid);
 RcppExport SEXP _hwas_bclose(SEXP bidSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::XPtr<bcfio::Bcf> >::type bid(bidSEXP);
-    bclose(bid);
-    return R_NilValue;
+    rcpp_result_gen = Rcpp::wrap(bclose(bid));
+    return rcpp_result_gen;
 END_RCPP
 }
 // isopen

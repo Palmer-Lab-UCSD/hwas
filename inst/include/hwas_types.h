@@ -76,8 +76,8 @@
 //
 // End quote
 //
-Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode);
-void bclose(Rcpp::XPtr<bcfio::Bcf> bid);
+Rcpp::Nullable<Rcpp::XPtr<bcfio::Bcf>> bopen(const char* filename, const char* mode);
+int bclose(Rcpp::XPtr<bcfio::Bcf> bid);
 
 Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 

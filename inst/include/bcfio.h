@@ -205,7 +205,7 @@ struct Bcf
     Bcf(Bcf&&)=delete;
     Bcf& operator=(Bcf&&)=delete;
 
-    ~Bcf();
+    ~Bcf() { close(); };
 
     bool isopen();
     void close() noexcept;

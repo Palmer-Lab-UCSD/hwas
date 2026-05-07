@@ -3,17 +3,20 @@
 
 
 // [[Rcpp::export]]
-Rcpp::XPtr<bcfio::Bcf> bopen(const char* filename, const char* mode) {
+Rcpp::Nullable<Rcpp::XPtr<bcfio::Bcf>> bopen(const char* filename, const char* mode) {
     htslib::htsFile* fid = htslib::hts_open(filename, mode);
     if (!fid)
-        Rcpp::stop("File was not found");
+        return R_NilValue;
 
     return Rcpp::XPtr<bcfio::Bcf>(new bcfio::Bcf(filename, fid), true);
 }
 
 // [[Rcpp::export]]
-void bclose(Rcpp::XPtr<bcfio::Bcf> bid) {
+int bclose(Rcpp::XPtr<bcfio::Bcf> bid) {
+    if (!bid || !bid.get()) return -1;
+
     bid->close();
+    return 0;
 }
 
 // [[Rcpp::export]]

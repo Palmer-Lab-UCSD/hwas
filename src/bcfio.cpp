@@ -148,18 +148,20 @@ bcfio::Bcf::Bcf(const char *filename, htslib::htsFile* fid)
     fid_(fid),
     hdr_(fid_) {};
 
-bcfio::Bcf::~Bcf() {
-    close();
-}
-
+// for the bcf instance to be open, then both the
+// header and file connection resources must be in 
+// valid states
 bool bcfio::Bcf::isopen() {
-    if (!fid_)
+    if (!fid_) {
+        hdr_.close();
         return false;
+    }
 
     // if, for some reason the hdr_ is closed but the file handle
     // isn't, then close the file handle before return false
     if (hdr_.isnull()) {
-        close();
+        htslib::hts_close(fid_);
+        fid_ = nullptr;
         return false;
     }
 
@@ -167,10 +169,10 @@ bool bcfio::Bcf::isopen() {
 }
 
 void bcfio::Bcf::close() noexcept {
-    hdr_.close();
     if (isopen()) {
         htslib::hts_close(fid_);
         fid_ = nullptr;
+        hdr_.close();
     }
 }
 

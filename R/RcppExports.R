@@ -14,7 +14,7 @@ bopen <- function(filename, mode) {
 }
 
 bclose <- function(bid) {
-    invisible(.Call('_hwas_bclose', PACKAGE = 'hwas', bid))
+    .Call('_hwas_bclose', PACKAGE = 'hwas', bid)
 }
 
 isopen <- function(bid) {
