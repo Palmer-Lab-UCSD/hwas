@@ -1,5 +1,0 @@
-
-
-assoc <- function(bcfname, outputname) {
-
-}

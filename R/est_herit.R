@@ -212,3 +212,67 @@ est_herit <-
 
     hsq
 }
+
+
+#####################################################################
+# from scan1_pg.R
+#####################################################################
+
+# fit LMM for each of a matrix of phenotypes
+# Ke is eigendecomposition of 2*kinship
+calc_hsq_clean <-
+    function(Ke, pheno, addcovar=NULL, Xcovar=NULL, is_x_chr=FALSE, weights=NULL,
+             reml=TRUE, cores=1, check_boundary=FALSE, tol=1e-12)
+{
+    n <- nrow(pheno)
+    nphe <- ncol(pheno)
+
+    # if just one kinship matrix, force it to be a list
+    if(!is_kinship_list(Ke)) {
+        # X chromosome with special covariates
+        if(!is.null(Xcovar) && any(is_x_chr) && any(!is_x_chr)) {
+            Ke <- list(Ke, Ke)
+            is_x_chr <- c(FALSE, TRUE)
+        }
+        else { Ke <- list(Ke) }
+    }
+
+    # function that does the work
+    by_chr_func <-
+        function(chr)
+        {
+            # premultiply phenotypes and covariates by transposed eigenvectors
+            y <- Ke[[chr]]$vectors %*% pheno
+            intercept <- weights; if(is_null_weights(weights)) intercept <- rep(1,n)
+            ac <- cbind(intercept, addcovar)
+            if(!is.null(Xcovar) && is_x_chr[chr]) # add Xcovar if necessary
+                ac <- drop_depcols(cbind(ac, Xcovar), FALSE, tol)
+            logdetXpX = Rcpp_calc_logdetXpX(ac)
+            ac <- Ke[[chr]]$vectors %*% ac
+
+            Rcpp_fitLMM_mat(Ke[[chr]]$values, y, ac, reml, check_boundary,
+                            logdetXpX, tol)
+        }
+
+    # now do the work
+    result <- cluster_lapply(cores, seq_along(Ke), by_chr_func)
+
+    # check for problems (if clusters run out of memory, they'll return NULL)
+    result_is_null <- vapply(result, is.null, TRUE)
+    if(any(result_is_null))
+        stop("cluster problem: returned ", sum(result_is_null), " NULLs.")
+
+    # re-arrange results
+    hsq <- matrix(unlist(lapply(result, function(a) a$hsq)), byrow=TRUE,
+                  ncol=nphe)
+    loglik <- matrix(unlist(lapply(result, function(a) a$loglik)), byrow=TRUE,
+                  ncol=nphe)
+
+    sigmasq <- matrix(unlist(lapply(result, function(a) a$sigmasq)), byrow=TRUE,
+                      ncol=nphe)
+
+    list(hsq=hsq, loglik=loglik, sigmasq=sigmasq)
+}
+
+
+

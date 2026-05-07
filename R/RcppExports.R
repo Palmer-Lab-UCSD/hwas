@@ -17,6 +17,10 @@ bclose <- function(bid) {
     invisible(.Call('_hwas_bclose', PACKAGE = 'hwas', bid))
 }
 
+isopen <- function(bid) {
+    .Call('_hwas_isopen', PACKAGE = 'hwas', bid)
+}
+
 k_fmt <- function(bid, id) {
     .Call('_hwas_k_fmt', PACKAGE = 'hwas', bid, id)
 }
@@ -25,8 +29,12 @@ num_samples <- function(bid) {
     .Call('_hwas_num_samples', PACKAGE = 'hwas', bid)
 }
 
-query_next <- function(bid, id) {
-    .Call('_hwas_query_next', PACKAGE = 'hwas', bid, id)
+num_positions <- function(bid) {
+    .Call('_hwas_num_positions', PACKAGE = 'hwas', bid)
+}
+
+sample_names <- function(bid) {
+    .Call('_hwas_sample_names', PACKAGE = 'hwas', bid)
 }
 
 subset_samples <- function(bid, filename) {
@@ -35,6 +43,10 @@ subset_samples <- function(bid, filename) {
 
 set_threads <- function(bid, n) {
     .Call('_hwas_set_threads', PACKAGE = 'hwas', bid, n)
+}
+
+query_next <- function(bid, id) {
+    .Call('_hwas_query_next', PACKAGE = 'hwas', bid, id)
 }
 
 calc_grm <- function(bid, id) {
