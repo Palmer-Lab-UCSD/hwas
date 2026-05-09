@@ -8,4 +8,7 @@ vec
 *.tar
 *.tar.gz
 *Rcheck*
-
+*.o
+*.rds
+*.so
+src/Makevars
