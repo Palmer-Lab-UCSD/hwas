@@ -1,6 +1,9 @@
 useDynLib(hwas)
 import(Rcpp)
 
+# pipeline
+export(init)
+
 # bcfio
 export(bopen)
 export(bclose)
