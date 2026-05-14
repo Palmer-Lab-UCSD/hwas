@@ -3,7 +3,6 @@ library(hwas)
 
 source(system.file("utils/unittest.R", package = "hwas"))
 
-
 set_up <- function() {
     bcf_filename <- system.file("exdata", "geno_test_data.bcf", 
                                 package = "hwas",
@@ -30,21 +29,21 @@ set_up <- function() {
 }
 
 
-test_bopen <- function() {
+unittests$TEST("TestHts", "test_open", function() {
     test_data <- set_up()
     bid <- hwas::bopen(attr(test_data, "bcf"), "r")
 
-    TEST_NOTNULL(bid);
+    Expect$not_null(bid);
     
     status <- hwas::bclose(bid)
+    cat(sprintf("\n\nBopen status: %d\n\n\n", status))
     
-    TEST_EQ(0, status)
-}
+    Expect$eq(0, status)
+})
 
 
 if (!interactive()) {
-    test_bopen()
-    
-    ERROR_REPORT()
+    print("Running as not interactive")
+    unittests$main()
 }
 

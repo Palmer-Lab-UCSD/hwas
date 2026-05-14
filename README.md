@@ -7,7 +7,7 @@
 |- phenotype_name/
    |--- 2026-001/
    |    |--- config.yaml
-   |    |--- scripts/
+   |    |--- .scripts/
    |    |    |--- compute_grm.R
    |    |    |--- compute_herit.R
    |    |    |--- process_pos.R

@@ -64,7 +64,7 @@
 #       by pipeline.  
 
 is_valid_dirname <- function(d) {
-    ismatch <- grep("[^a-zA-Z0-9-_]", d, perl=TRUE)
+    ismatch <- grep("[^a-zA-Z0-9-_/]", d, perl=TRUE)
     return(length(ismatch) == 0)
 }
 
