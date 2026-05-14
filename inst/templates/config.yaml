@@ -1,0 +1,73 @@
+# Data and settings: genotypes, haplotypes, and trait
+#
+###########################################################
+## USER INPUT
+###########################################################
+#
+# Supported types are:
+#   - float,
+#   - character
+#
+# Supported normalization methods are:
+#   - quantile_normal
+#   - zscore
+#
+phenotype: 
+  name: 
+  type:
+  norm:
+
+covariates:
+  - name: 
+    type: 
+    norm:
+
+###########################################################
+## USER CONFIRM ACCURACY
+###########################################################
+# where to find raw phenotype data files
+genotypes:
+  dir:
+  pos_exclude:
+  pos_include:
+  samples_exclude:
+  samples_include:
+  chrom:
+
+# chrom:
+#    - name:
+#      dir: 
+#      bcf:
+#      index:
+
+
+###########################################################
+## DO NOT EDIT BELOW
+###########################################################
+setup:
+  rootdir: 
+  subdirs:
+    - scripts
+    - preprocess_data
+    - postprocess_data:
+        rootdir:
+        subdirs:
+          - pos
+    - results:
+        rootdir: results
+        subdirs:
+          - grms
+          - lod
+          - blup
+
+trait:
+  raw: 
+    dir: preprocessed_data
+    na_string: [NA, \N]
+    sample_name_col:
+  processed:
+    dir: processed_data
+    sample_file: samples
+    covariate_file: covariates.tsv
+    phenotype_file: 
+

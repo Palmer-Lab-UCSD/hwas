@@ -17,12 +17,6 @@
 #    |    |    |--- process_traits.R
 #    |    |    |--- unique_samples.R
 #    |    | 
-#    |    |--- grms/
-#    |    |    |--- **chr01.RData**
-#    |    |    |--- **chr02.RData**
-#    |    |    |--- ...
-#    |    |    |--- **chr20.RData**
-#    |    |
 #    |    |--- preprocess_data/
 #    |    |    |--- *traits.tsv*
 #    |    |    |--- *samples*
@@ -31,15 +25,20 @@
 #    |    |    |--- **covariates.tsv**
 #    |    |    |--- **phenotype.tsv**
 #    |    |    |--- **samples**
-#    |    |
-#    |    |--- pos/
-#    |    |    |--- **chr01.tsv**
-#    |    |    |--- **chr02.tsv**
-#    |    |    |--- ...
-#    |    |    |--- **chr20.tsv**
+#    |    |    |--- pos/
+#    |    |         |--- **chr01.tsv**
+#    |    |         |--- **chr02.tsv**
+#    |    |         |--- ...
+#    |    |         |--- **chr20.tsv**
 #    |    |
 #    |    |--- results/
 #    |    |    |--- **heritability**
+#    |    |    |--- grms/
+#    |    |    |    |--- **chr01.RData**
+#    |    |    |    |--- **chr02.RData**
+#    |    |    |    |--- ...
+#    |    |    |    |--- **chr20.RData**
+#    |    |    |
 #    |    |    |--- lod/
 #    |    |    |    |--- **chr01.bed**
 #    |    |    |    |--- ...
@@ -62,6 +61,18 @@
 #
 # - **covariates.tsv**, and any other name between ** are produced
 #       by pipeline.  
+#
+#
+# ASSUMPTIONS
+#
+# * Configuring genotype files
+#   - user specified path to genotypes contains all genotype files 
+#       desired
+#   - genotypes are in the bcf file format with suffix .bcf
+#   - bcf file names must have the chromosome string in format
+#       chr[0-9]+.
+#
+
 
 is_valid_dirname <- function(d) {
     ismatch <- grep("[^a-zA-Z0-9-_/]", d, perl=TRUE)
@@ -76,15 +87,22 @@ err <- function(val, msg) {
 }
 
 
-mk_analysis_set_dirname <- function(i) {
+mk_dirname <- function(i) {
+    if (length(i) != 1 
+        || !is.numeric(i) 
+        || floor(i) == 0
+        || i %% floor(i) != 0)
+        return(err(FALSE, "Index needs to be a natural number"))
+
     if (i <= 0 || i >= 1000)
         return(err(FALSE, "Index out of bounds"))
 
-    return(sprintf("%s-%3d", format(Sys.time(), "%Y"), i))
+    return(sprintf("%s-%03d", format(Sys.time(), "%Y"), i))
 }
 
 
-make_analysis_directories <- function(pheno) {
+# @title: make the directories and files
+make.skeleton <- function(pheno,) {
 
     # Cases:
     #   dir.exists      dir.create      statement
@@ -95,56 +113,165 @@ make_analysis_directories <- function(pheno) {
     if (!dir.exists(pheno) && !dir.create(pheno, mode="0750"))
         return(err(FALSE, "Couldn't create directory\n"))
 
-    setwd(phenotype)
-
     j <- 1
-    analysis_dirname <- mk_analysis_set_dirname(j)
-    while (dir.exists(analysis_dir)) {
+    analysis_dirname <- mk_dirname(j)
+    if (!analysis_dirname)
+        return(analysis_dirname)
+    analysis_dirname <- file.path(phenotype, analysis_dirname)
+
+    while (dir.exists(analysis_dirname)) {
         j <- j+1
         analysis_dirname <- mk_analysis_set_dirname(j)
 
         if (!analysis_dirname)
             return(analysis_dirname)
+
+        analysis_dirname <- file.path(phenotype, analysis_dirname)
     }
-    
 
     if (!dir.create(analysis_dirname, mode="750"))
         return(err(FALSE,
                    sprintf("Couldn't create dir %s\n",
                            analysis_dirname)))
 
-    setwd(analysis_dirname)
-    if (!dir.create("grms", mode="750"))
+    if (!dir.create(file.path(analysis_dirname, "grms"), 
+                    mode="750"))
         return(err(FALSE, "Couldn't create dir grms\n"))
 
-    if (!dir.create("preprocess_data", mode="750"))
+    if (!dir.create(file.path(analysis_dirname, "preprocess_data"), 
+                    mode="750"))
         return(err(FALSE, "Couldn't create dir preprocess_data\n"))
 
-    if (!dir.create("postprocess_data", mode="750"))
+    if (!dir.create(file.path(analysis_dirname, "postprocess_data"), 
+                    mode="750"))
         return(err(FALSE, "Couldn't create dir postprocess_data\n"))
 
-    if (!dir.create("seq", mode="750"))
-        return(err(FALSE, "Couldn't create dir seq\n"))
+    if (!dir.create(file.path(analysis_dirname, "pos"), 
+                    mode="750"))
+        return(err(FALSE, "Couldn't create dir pos\n"))
 
-    if (!dir.create(file.path("seq", "pos"), mode="750"))
-        return(err(FALSE, "Couldn't create dir seq\n"))
+    if (!dir.create(file.path(analysis_dirname, "scripts"), 
+                    mode="750"))
+        return(err(FALSE, "Couldn't create dir scripts\n"))
 
-    if (!dir.create("results", mode="750"))
+    if (!dir.create(file.path(analysis_dirname, "results"), 
+                    mode="750"))
         return(err(FALSE, "Couldn't create dir results\n"))
     
     return(TRUE)
 }
 
 
-init <- function(phenotype) {
-    if (dir.exists(phenotype))
-        stop(sprintf("Director for %s already exists\n", phenotype))
+get_chromname <- function(bcf_filename) {
+    reg <- regexpr("^(?<chrom>chr[0-9+])_", bcf_filename)
+    if (reg != 1)
+        return(error(NULL, "Couldn't extract autosome name from path"))
 
-    if (!is_valid_dirname(phenotype))
-        stop(sprintf("Invalid direcotry name\n"))
+    start_idx <- attr(reg, "capture.start")[, "chrom"]
+    end_idx <- start_idx + attr(reg, "capture.length")[,"chrom"] - 1
 
-    if (!make_analysis_directory(phenotype))
-        stop(sprintf("couldn't make project\n"))
+    return(substr(bcf_filename, start_idx, end_idx))
+}
+
+
+
+mk_config <- function(cfg_fname, 
+                      phenotype,
+                      genotype_rootdir,
+                      pos_file,
+                      samples_file,
+                      pos_include = TRUE,
+                      samples_include = TRUE) {
+
+    cfg <- yaml::yaml.load_file(cfg_fname)
+
+    cfg$setup$rootdir <- getwd()
+    cfg$phenotype$name <- phenotype   
+
+
+    cfg$genotypes$dir <- genotype_rootdir
+    cfg$genotypes$pos_include <- NULL
+    cfg$genotypes$pos_exclude <- NULL
+    if (pos_include)
+        cfg$genotypes$pos_include <- pos_file
+    else
+        cfg$genotypes$pos_exclude <- pos_file
+
+    cfg$genotypes$samples_include <- NULL
+    cfg$genotypes$samples_exclude <- NULL
+
+    if (samples_include)
+        cfg$genotypes$samples_include <- samples_file
+    else
+        cfg$genotypes$samples_exclude <- samples_file
+
+
+    bcf_files <- grepv("chr[0-9]+.*\\.bcf$", 
+                       list.files(cfg$genotypes$dir,
+                                  pattern=".bcf",
+                                  recursive = TRUE),
+                       perl=TRUE)
+
+    if (length(bcf_files) == 0)
+        return(error(NULL, "No autosome genotype files with 
+                     suffix .bcf were found."))
+
+    cfg$genotypes$chrom <- vector(mode=list, length=length(bcf_files))
+
+    i <- 1
+    for (bcf in bcf_files) {
+        chrom <- get_chromname(bcf)
+        if (is.null(chrom))
+            return(chrom)
+
+        bcf_idx <- paste0(bcf, ".csi")
+        if (!file.exists(bcf_idx))
+            bcf_index <- NULL
+
+        cfg$genotypes$chrom[[i]] <- list(name: chrom,
+                                         dir: dirname(bcf),
+                                         bcf: basename(bcf),
+                                         index: bcf_index)
+        i <- i + 1
+    }
+
+    return(cfg)
+}
+
+
+init <- function(phenotype,
+                 genotype_rootdir,
+                 pos_file,
+                 samples_file,
+                 pos_include = TRUE,
+                 samples_include = TRUE) {
+
+    if (length(list.files(".")) != 0)
+        stop("Make a new directory with no contents.\n")
+
+    pkg_path <- system.files(".", package="hwas")
+    cfg <- mk_config(file.path(pkg_path, "templates", "config.yaml"),
+                     genotype_rootdir,
+                     pos_file,
+                     samples_file,
+                     pos_include = TRUE,
+                     samples_include = TRUE)
+
+    # Remember: we make the directory in a temporary directory, and
+    # move upon successful setup 
+    tmp_dirname <- make.skeleton(phenotype,
+                                 genotype_rootdir,
+                                 pos_file,
+                                 samples_file,
+                                 pos_include,
+                                 samples_include)
+
+    if (is.null(tmp_dirname) && class(tmp_dirname) == "error")
+        stop(attr(tmp_dirname, "msg"))
+    else if (is.null(tmp_dirname))
+        stop("couldn't initialize project")
+
+
 
 
     ## copy scripts
@@ -154,5 +281,15 @@ init <- function(phenotype) {
                   copy.mode=TRUE,
                   overwrite=FALSE)
 
+
+    for (elem in list.files(tmp)) {
+        status <- file.copy(file.path(tmp, elem), 
+                            ".", 
+                            overwrite=FALSE, 
+                            recursive=TRUE)
+        
+        if (!status)
+            stop("failed copying hwas skeleton to current directory")
+    }
 
 }

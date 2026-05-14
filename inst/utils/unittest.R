@@ -12,12 +12,17 @@
 # environment object that is manipulated
 
 
+unittests <- new.env(parent = baseenv())
+Expect <- new.env(parent = unittests)
+
 ###########################################################
 ## UNITTESTS ENVIRONMENT
 ###########################################################
-unittests <- new.env(parent = baseenv())
 
 evalq({
+    .MAGIC_CONST <- "__UNIT_TEST_RESULTS__"
+    .PRINT_BARRIER <- "===============================================\n"
+    .PRINT_SMALL_BAR <- "-----------------------------------------------\n"
     # user defined test suites and associated tests
     # registered with unittests$TEST
     .test_suites <- list()
@@ -54,9 +59,9 @@ evalq({
 
 evalq({
     .print_pass_fail <- function(x) {
-        cat("-----------------------------------------------\n")
+        cat(.PRINT_SMALL_BAR)
         cat(sprintf("%s\n", x))
-        cat("===============================================\n")
+        cat(.PRINT_SMALL_BAR)
 }}, envir = unittests)
 
 
@@ -64,7 +69,11 @@ evalq({
     .print_report <- function() {
         penv <- parent.env(environment())
 
-        cat("===============================================\n")
+
+        cat(sprintf("%s\n", .MAGIC_CONST))
+        cat(.PRINT_BARRIER)
+        cat("TEST RESULTS\n")
+
         n_failed    <- length(get(".failed",    penv))
         n_warn      <- length(get(".warning",      penv))
         n_success   <- length(get(".success",   penv))
@@ -74,8 +83,6 @@ evalq({
             get(".print_pass_fail", penv)("FAILED")
             return(FALSE)
         }
-
-        cat("Test results\n")
         cat(sprintf("%-20s%d\n", "Failed", n_failed))
         for (msg in get(".failed", penv))
             cat(sprintf("%4s\n", msg))
@@ -88,12 +95,9 @@ evalq({
 
         if (n_failed == 0)
             get(".print_pass_fail", penv)("PASS")
-            return(TRUE)
-
-        get(".print_pass_fail", penv)("FAILED")
-        return(FALSE)
+        else 
+            get(".print_pass_fail", penv)("FAILED")
 }}, envir = unittests)
-
 
 evalq({
     main <- function() {
@@ -106,14 +110,13 @@ evalq({
 
         .print_report()
     }
-},
-envir = unittests)
+}, envir = unittests)
+
+
 
 ###########################################################
 ## EXPECT 
 ###########################################################
-
-Expect <- new.env(parent = unittests)
 
 evalq({true <- function(x) {
     caller <- sys.function(-1)

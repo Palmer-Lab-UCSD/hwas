@@ -6,3 +6,4 @@ R -e "library(Rcpp); Rcpp::compileAttributes()"
 
 R CMD build .
 R CMD check "hwas_0.0.1.tar.gz"
+Rscript "inst/utils/print_unittest_results.R"

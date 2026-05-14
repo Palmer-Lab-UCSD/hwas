@@ -16,8 +16,6 @@ export(k_fmt)
 export(num_positions)
 
 
-export(is_valid_dirname)
-export(init)
 # grm
 export(calc_grm)
 
