@@ -70,13 +70,20 @@
 #       desired
 #   - genotypes are in the bcf file format with suffix .bcf
 #   - bcf file names must have the chromosome string in format
-#       chr[0-9]+.
+#       chr[0-9]+[^a-zA-Z]+.
 #
 
+library(yaml)
 
 is_valid_dirname <- function(d) {
     ismatch <- grep("[^a-zA-Z0-9-_/]", d, perl=TRUE)
     return(length(ismatch) == 0)
+}
+
+
+is.err <- function(error) {
+    return(class(error) == "error"
+           && "msg" %in% names(attributes(error)))
 }
 
 
@@ -101,8 +108,30 @@ mk_dirname <- function(i) {
 }
 
 
+get_chromname <- function(bcf_filename) {
+    bcf_filename <- basename(bcf_filename)
+    reg <- regexpr("^(?<chrom>chr[0-9]+)[^a-zA-Z]", 
+                   bcf_filename, 
+                   perl=TRUE)
+    if (reg != 1)
+        return(err(character(0), 
+                   "Couldn't extract autosome name from path"))
+
+    start_idx <- attr(reg, "capture.start")[, "chrom"]
+    end_idx <- start_idx + attr(reg, "capture.length")[,"chrom"] - 1
+
+    return(substr(bcf_filename, start_idx, end_idx))
+}
+
+
+
 # @title: make the directories and files
-make.skeleton <- function(pheno,) {
+make_skeleton <- function(phenotype,
+                          genotype_rootdir,
+                          pos_file,
+                          samples_file,
+                          pos_include,
+                          samples_include) {
 
     # Cases:
     #   dir.exists      dir.create      statement
@@ -162,17 +191,6 @@ make.skeleton <- function(pheno,) {
 }
 
 
-get_chromname <- function(bcf_filename) {
-    reg <- regexpr("^(?<chrom>chr[0-9+])_", bcf_filename)
-    if (reg != 1)
-        return(error(NULL, "Couldn't extract autosome name from path"))
-
-    start_idx <- attr(reg, "capture.start")[, "chrom"]
-    end_idx <- start_idx + attr(reg, "capture.length")[,"chrom"] - 1
-
-    return(substr(bcf_filename, start_idx, end_idx))
-}
-
 
 
 mk_config <- function(cfg_fname, 
@@ -213,20 +231,24 @@ mk_config <- function(cfg_fname,
                        perl=TRUE)
 
     if (length(bcf_files) == 0)
-        return(error(NULL, "No autosome genotype files with 
+        return(err(character(0), "No autosome genotype files with 
                      suffix .bcf were found."))
 
     cfg$genotypes$chrom <- vector(mode=list, length=length(bcf_files))
 
+    # Note that bcf_files should include a directory prefix if
+    # it was found in a subdirectory of cfg$genotypes$dir
     i <- 1
     for (bcf in bcf_files) {
-        chrom <- get_chromname(bcf)
+        chrom <- get_chromname(basename(bcf))
         if (is.null(chrom))
             return(chrom)
 
         bcf_idx <- paste0(bcf, ".csi")
-        if (!file.exists(bcf_idx))
-            bcf_index <- NULL
+        if (file.exists(file.path(cfg$genotypes$dir, bcf_idx)))
+            bcf_idx <- basename(bcf_idx)
+        else
+            bcf_idx <- NULL
 
         cfg$genotypes$chrom[[i]] <- list(name: chrom,
                                          dir: dirname(bcf),
@@ -266,7 +288,7 @@ init <- function(phenotype,
                                  pos_include,
                                  samples_include)
 
-    if (is.null(tmp_dirname) && class(tmp_dirname) == "error")
+    if (is.null(tmp_dirname) && is.err(tmp_dirname))
         stop(attr(tmp_dirname, "msg"))
     else if (is.null(tmp_dirname))
         stop("couldn't initialize project")
