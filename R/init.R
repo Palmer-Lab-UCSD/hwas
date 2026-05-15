@@ -67,6 +67,10 @@
 #       chr[0-9]+[^a-zA-Z]+.
 #
 
+
+# TODO :
+#   * I need to find position files per chromosome
+
 library(yaml)
 
 is_valid_dirname <- function(d) {

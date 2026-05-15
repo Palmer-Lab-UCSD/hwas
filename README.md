@@ -1,9 +1,35 @@
 # haplotype wide association study (hwas)
 
+This package contains tools for running an HWAS interactively
+(e.g. interactive R console or Jupyter notebook) or semi-
+automatically by a programmatic pipeline.  The data are read
+from the bcf file format with htslib [1-2] and the statistics
+by code from Karl Broman's QTL2 [3-4].
 
-## Example
 
-In R
+**Contents**
+
+[Pipeline Instructions](#pipeline-instructions)
+[Compiling and Installation](#compiling-and-installation)
+[Features Outstanding](#features-outstanding)
+[AI Disclosure](#ai-disclosure)
+[Copyright](#copyright)
+[References](#references)
+
+
+## Pipeline Instructions
+Either way memory
+requirements should be relatively modest and on the order of 
+$$N_\text{samples}^2$$.  
+
+To run the HWAS pipeline many pieces of data and instructions
+need to come together. Below, I described the requirements and
+configuration by an example.
+
+To start, we need to initialize the directory structure using
+the `hwas::init` function in an interactive R command line
+session, i.e. the R REPL.  
+
 ```
 library(hwas)
 
@@ -17,58 +43,28 @@ hwas::init(< phenotype of interest >,
            < TRUE / FALSE whether the positions are inclusive >)
 ```
 
-The initialization configures the following directory structure
-and configuration file.
+The name of the directory where we will work, `analysis_dir`, is 
+arbitrary.  If successful, the following directories and files
+will be created in directory `analysis_dir`:
 
 ```
-|- analysis_dir/
-   |--- config.yaml
-   |--- .scripts/
-   |    |--- compute_grm.R
-   |    |--- compute_herit.R
-   |    |--- process_pos.R
-   |    |--- process_traits.R
-   |    |--- unique_samples.R
-   |
-   |--- preprocess_data/
-   |    |--- *traits.tsv*
-   |    |--- *samples*
-   |
-   |--- postprocess_data/
-   |    |--- **covariates.tsv**
-   |    |--- **phenotype.tsv**
-   |    |--- **samples**
-   |    |--- pos/
-   |         |--- **chr01.tsv**
-   |         |--- **chr02.tsv**
-   |         |--- ...
-   |         |--- **chr20.tsv**
-   |
-   |--- results/
-        |--- **heritability**
-        |--- grms/
-        |    |--- **chr01.RData**
-        |    |--- **chr02.RData**
-        |    |--- ...
-        |    |--- **chr20.RData**
-        |
-        |--- lod/
-        |    |--- **chr01.bed**
-        |    |--- ...
-        |    |--- **chr20.bed**
-        |
-        |--- blup/
-             |--- **chr01.tsv**
-             |--- ...
-             |--- **chr20.tsv**
+|--- config.yaml
+|--- .scripts/
+|    |--- compute_grm.R
+|    |--- compute_herit.R
+|    |--- process_pos.R
+|    |--- process_traits.R
+|    |--- unique_samples.R
+|
+|--- preprocess_data/
+|    |--- *samples*
+|
+|--- postprocess_data/
+|--- results/
+     |--- grms/
+     |--- lod/
+     |--- blup/
 ```
-
-*NOTE ON DIR STRUCTURE*
-- *traits.tsv* a file with the sample id, covariates, and trait
-      measurements.  The user is responsible for making this file,
-      and it is considered raw data.
-- **covariates.tsv**, and any other name between ** are produced
-      by pipeline.  
 
 
 ## Installation and Compiling
@@ -115,4 +111,63 @@ Portions from the linear mixed model fitting code are:
 * Copyright (C) 2020 Karl Browman
 * Copyright (C) 1995, 1996 Robert Gentleman and Ross Ihaka,
 * Copyright (C) 1998-2014 The R Core Team
+
+## References
+
+[1] HTSLIB citation
+[2] https://github.com/samtools/htslib
+[3] QTL2 citation
+[4] https://github.com/rqtl/qtl2
+
+
+
+
+```
+|- analysis_dir/
+   |--- config.yaml
+   |--- .scripts/
+   |    |--- compute_grm.R
+   |    |--- compute_herit.R
+   |    |--- process_pos.R
+   |    |--- process_traits.R
+   |    |--- unique_samples.R
+   |
+   |--- preprocess_data/
+   |    |--- *traits.tsv*
+   |    |--- *samples*
+   |
+   |--- postprocess_data/
+   |    |--- **covariates.tsv**
+   |    |--- **phenotype.tsv**
+   |    |--- **samples**
+   |    |--- pos/
+   |         |--- **chr01.tsv**
+   |         |--- **chr02.tsv**
+   |         |--- ...
+   |         |--- **chr20.tsv**
+   |
+   |--- results/
+        |--- **heritability**
+        |--- grms/
+        |    |--- **chr01.RData**
+        |    |--- **chr02.RData**
+        |    |--- ...
+        |    |--- **chr20.RData**
+        |
+        |--- lod/
+        |    |--- **chr01.bed**
+        |    |--- ...
+        |    |--- **chr20.bed**
+        |
+        |--- blup/
+             |--- **chr01.tsv**
+             |--- ...
+             |--- **chr20.tsv**
+```
+*NOTE ON DIR STRUCTURE*
+- *traits.tsv* a file with the sample id, covariates, and trait
+      measurements.  The user is responsible for making this file,
+      and it is considered raw data.
+- **covariates.tsv**, and any other name between ** are produced
+      by pipeline.  
 
