@@ -20,7 +20,7 @@
 #    |    |--- *traits.tsv*
 #    |    |--- *samples*
 #    |
-#    |--- postproces_data/
+#    |--- postprocess_data/
 #    |    |--- **covariates.tsv**
 #    |    |--- **phenotype.tsv**
 #    |    |--- **samples**
@@ -64,7 +64,7 @@
 #       desired
 #   - genotypes are in the bcf file format with suffix .bcf
 #   - bcf file names must have the chromosome string in format
-#       ([^a-z]|^)chr[0-9]+.*\\.bcf
+#       chr[0-9]+[^a-zA-Z]+.
 #
 
 
@@ -115,7 +115,7 @@ mk_dirname <- function(i) {
 
 get_chromname <- function(bcf_filename) {
     bcf_filename <- basename(bcf_filename)
-    reg <- regexpr("([^a-z]|^)(?<chrom>chr[0-9]+).*\\.bcf", 
+    reg <- regexpr("^(?<chrom>chr[0-9]+)[^a-zA-Z]", 
                    bcf_filename, 
                    perl=TRUE)
     if (reg != 1)
@@ -163,53 +163,43 @@ config_samples <- function(geno_root, sfilename) {
 }
 
 
-config_chroms <- function(genotype_rootdir) {
+config_chroms <- function(geno_root) {
 
-    bcf_files <- grepv("[^a-z]chr[0-9]+.*\\.bcf$", 
-                       list.files(genotype_rootdir,
+    bcf_files <- grepv("[^a-z]chr[0-9]+[^a-z].*\\.bcf$", 
+                       list.files(cfg$genotypes$dir,
                                   pattern=".bcf",
                                   recursive = TRUE),
                        perl=TRUE)
 
     if (length(bcf_files) == 0)
-        return(err(list(), "No autosome genotype files with 
-                            suffix .bcf were found."))
+        return(err(character(0), "No autosome genotype files with 
+                     suffix .bcf were found."))
 
-    chrom_cfg <- vector(mode=list, length=length(bcf_files))
+    cfg$genotypes$chrom <- vector(mode=list, length=length(bcf_files))
 
     # Note that bcf_files should include a directory prefix if
-    # it was found in a subdirectory of genotype_rootdir
+    # it was found in a subdirectory of cfg$genotypes$dir
     i <- 1
     for (bcf in bcf_files) {
-
-        if(!is_bcf(bcf))
-            return(err(list(), sprintf("Invalide bcf: %s\n", 
-                                       file.path(genotype_rootdir, bcf))))
-
-        tmp <- get_chromname(basename(bcf))
-        if (is.err(tmp))
-            return(tmp)
-
-        chrom_i <- list(name = tmp, 
-                        dir = dirname(bcf),
-                        bcf = bcf,
-                        index = NULL)
+        chrom <- get_chromname(basename(bcf))
+        if (is.null(chrom))
+            return(chrom)
 
         bcf_idx <- paste0(bcf, ".csi")
-        if (file.exists(file.path(genotype_rootdir, bcf_idx)))
-            chrom_i[["index"]] <- bcf_idx
+        if (file.exists(file.path(cfg$genotypes$dir, bcf_idx)))
+            bcf_idx <- basename(bcf_idx)
+        else
+            bcf_idx <- NULL
 
-        pos_file <- grepv("snp", list.files(chrom_path, pattern = ".tsv"))
-        if (length(pos_file) != 1)
-            return(err(list(),
-                       sprintf("Can't find position file in: %s\n", 
-                               chrom_path)))
-
-        chrom_i[["pos"]] <- pos_file
+        cfg$genotypes$chrom[[i]] <- list(name: chrom,
+                                         dir: dirname(bcf),
+                                         bcf: basename(bcf),
+                                         index: bcf_index)
         i <- i + 1
     }
 
 }
+
 
 
 mk_config <- function(phenotype,

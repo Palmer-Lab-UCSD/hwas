@@ -42,6 +42,31 @@ unittests$TEST("TestHts", "test_open", function() {
 })
 
 
+unittests$TEST("TestHts",
+               "test_is_bcf",
+               function() {
+
+    bcf_compressed <- system.file("exdata", "geno_test_data_compressed.bcf",
+                                  package = "hwas",
+                                  mustWork = TRUE)
+    bcf_uncompressed <- system.file("exdata", "geno_test_data_uncompressed.bcf",
+                                    package = "hwas",
+                                    mustWork = TRUE)
+    vcf_uncompressed <- system.file("exdata", "geno_test_data.vcf",
+                                    package = "hwas",
+                                    mustWork = TRUE)
+    vcf_compressed <- system.file("exdata", "geno_test_data.vcf.gz",
+                                  package = "hwas",
+                                  mustWork = TRUE)
+    
+
+    Expect$true(hwas::is_bcf(bcf_compressed))
+    Expect$true(hwas::is_bcf(bcf_uncompressed))
+    Expect$false(hwas::is_bcf(vcf_uncompressed))
+    Expect$false(hwas::is_bcf(vcf_compressed))
+})
+
+
 if (!interactive()) {
     print("Running as not interactive")
     unittests$main()

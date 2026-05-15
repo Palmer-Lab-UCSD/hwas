@@ -249,3 +249,22 @@ int64_t bcfio::num_records(bcfio::Bcf* bid) {
 
     return n-1;
 }
+
+
+bool bcfio::is_bcf(const char* filename) {
+    htslib::hFILE* fh = htslib::hopen(filename, "r");
+    if (!fh)
+        return false;
+
+    htslib::htsFormat fmt {};
+    if (htslib::hts_detect_format(fh, &fmt) != 0)
+        return false;
+
+    if (fmt.format == htslib::bcf) {
+        htslib::hclose(fh);
+        return true;
+    }
+        
+    htslib::hclose(fh);
+    return false;
+}

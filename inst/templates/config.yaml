@@ -48,7 +48,7 @@ covariates:
 # Directory strucure
 #
 # /path/to/my/data
-#             |--- samples
+#             |--- samples_include
 #             |--- chr1_imputation/
 #             |    |--- bad_snps.tsv
 #             |    |--- sample_genos.bcf
@@ -65,8 +65,9 @@ covariates:
 #
 #   genotypes:
 #     dir: /path/to/my/data
-#     samples: samples
-#     samples_include: true
+#     samples: 
+#       filename: samples_include
+#       includsion: true
 #     chrom:
 #       - name: chr1
 #         dir: chr1_imputation
@@ -85,7 +86,8 @@ covariates:
 genotypes:
   dir:
   samples:
-  samples_include:
+    filename:
+    inclusion:
   chrom:
 
 

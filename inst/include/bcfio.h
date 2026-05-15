@@ -15,8 +15,9 @@
 
 namespace htslib {
 extern "C" {
-#include <htslib/vcf.h>
+#include <htslib/hfile.h>
 #include <htslib/hts.h>
+#include <htslib/vcf.h>
 }
 }
 
@@ -225,7 +226,7 @@ int next_record(Bcf* bid, BcfRecord<T>* rec, const char* id);
 
 int64_t num_records(Bcf* bid);
 
-
+bool is_bcf(const char* filename);
 
 }
 

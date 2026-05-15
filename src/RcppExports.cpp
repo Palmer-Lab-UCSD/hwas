@@ -81,6 +81,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// is_bcf
+bool is_bcf(const char* filename);
+RcppExport SEXP _hwas_is_bcf(SEXP filenameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const char* >::type filename(filenameSEXP);
+    rcpp_result_gen = Rcpp::wrap(is_bcf(filename));
+    return rcpp_result_gen;
+END_RCPP
+}
 // k_fmt
 double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 RcppExport SEXP _hwas_k_fmt(SEXP bidSEXP, SEXP idSEXP) {
@@ -649,6 +660,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_hwas_bopen", (DL_FUNC) &_hwas_bopen, 2},
     {"_hwas_bclose", (DL_FUNC) &_hwas_bclose, 1},
     {"_hwas_isopen", (DL_FUNC) &_hwas_isopen, 1},
+    {"_hwas_is_bcf", (DL_FUNC) &_hwas_is_bcf, 1},
     {"_hwas_k_fmt", (DL_FUNC) &_hwas_k_fmt, 2},
     {"_hwas_num_samples", (DL_FUNC) &_hwas_num_samples, 1},
     {"_hwas_num_positions", (DL_FUNC) &_hwas_num_positions, 1},

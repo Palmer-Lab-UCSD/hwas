@@ -4,7 +4,7 @@ import(Rcpp)
 # pipeline
 export(init)
 
-# bcfio
+# bcfio and htslib interface
 export(bopen)
 export(bclose)
 export(query_next)
@@ -14,6 +14,7 @@ export(sample_names)
 export(set_threads)
 export(k_fmt)
 export(num_positions)
+export(is_bcf)
 
 
 # grm

@@ -25,6 +25,11 @@ bool isopen(Rcpp::XPtr<bcfio::Bcf> bid) {
 }
 
 // [[Rcpp::export]]
+bool is_bcf(const char* filename) {
+    return bcfio::is_bcf(filename);
+}
+
+// [[Rcpp::export]]
 double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
     return static_cast<double>(bid->hdr_.k_fmt(id));
 }

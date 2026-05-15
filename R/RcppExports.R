@@ -21,6 +21,10 @@ isopen <- function(bid) {
     .Call('_hwas_isopen', PACKAGE = 'hwas', bid)
 }
 
+is_bcf <- function(filename) {
+    .Call('_hwas_is_bcf', PACKAGE = 'hwas', filename)
+}
+
 k_fmt <- function(bid, id) {
     .Call('_hwas_k_fmt', PACKAGE = 'hwas', bid, id)
 }
