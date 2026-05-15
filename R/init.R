@@ -7,54 +7,48 @@
 # 
 # The structure of an hwas run is as follows:
 #
-# |- phenotype_name/
-#    |--- 2026-001/
-#    |    |--- config.yaml
-#    |    |--- scripts/
-#    |    |    |--- compute_grm.R
-#    |    |    |--- compute_herit.R
-#    |    |    |--- process_pos.R
-#    |    |    |--- process_traits.R
-#    |    |    |--- unique_samples.R
-#    |    | 
-#    |    |--- preprocess_data/
-#    |    |    |--- *traits.tsv*
-#    |    |    |--- *samples*
-#    |    |
-#    |    |--- postprocess_data/
-#    |    |    |--- **covariates.tsv**
-#    |    |    |--- **phenotype.tsv**
-#    |    |    |--- **samples**
-#    |    |    |--- pos/
-#    |    |         |--- **chr01.tsv**
-#    |    |         |--- **chr02.tsv**
-#    |    |         |--- ...
-#    |    |         |--- **chr20.tsv**
-#    |    |
-#    |    |--- results/
-#    |    |    |--- **heritability**
-#    |    |    |--- grms/
-#    |    |    |    |--- **chr01.RData**
-#    |    |    |    |--- **chr02.RData**
-#    |    |    |    |--- ...
-#    |    |    |    |--- **chr20.RData**
-#    |    |    |
-#    |    |    |--- lod/
-#    |    |    |    |--- **chr01.bed**
-#    |    |    |    |--- ...
-#    |    |    |    |--- **chr20.bed**
-#    |    |    |
-#    |    |    |--- blup/
-#    |    |    |    |--- **chr01.tsv**
-#    |    |    |    |--- ...
-#    |    |    |    |--- **chr20.tsv**
+# |- analysis_dir/
+#    |--- config.yaml
+#    |--- .scripts/
+#    |    |--- compute_grm.R
+#    |    |--- compute_herit.R
+#    |    |--- process_pos.R
+#    |    |--- process_traits.R
+#    |    |--- unique_samples.R
 #    |
-#    |--- YYYY-III/
+#    |--- preprocess_data/
+#    |    |--- *traits.tsv*
+#    |    |--- *samples*
+#    |
+#    |--- postprocess_data/
+#    |    |--- **covariates.tsv**
+#    |    |--- **phenotype.tsv**
+#    |    |--- **samples**
+#    |    |--- pos/
+#    |         |--- **chr01.tsv**
+#    |         |--- **chr02.tsv**
+#    |         |--- ...
+#    |         |--- **chr20.tsv**
+#    |
+#    |--- results/
+#         |--- **heritability**
+#         |--- grms/
+#         |    |--- **chr01.RData**
+#         |    |--- **chr02.RData**
+#         |    |--- ...
+#         |    |--- **chr20.RData**
+#         |
+#         |--- lod/
+#         |    |--- **chr01.bed**
+#         |    |--- ...
+#         |    |--- **chr20.bed**
+#         |
+#         |--- blup/
+#              |--- **chr01.tsv**
+#              |--- ...
+#              |--- **chr20.tsv**
 #
 # NOTE ON DIR STRUCTURE
-# - YYYY-III is the year in format YYYY the analysis was completed
-#   and III is the index, e.g. 002.
-# 
 # - *traits.tsv* a file with the sample id, covariates, and trait
 #       measurements.  The user is responsible for making this file,
 #       and it is considered raw data.
