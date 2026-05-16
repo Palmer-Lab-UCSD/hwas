@@ -67,18 +67,20 @@ covariates:
 #     dir: /path/to/my/data
 #     samples: 
 #       filename: samples_include
-#       includsion: true
+#       exclusion: true
 #     chrom:
 #       - name: chr1
 #         dir: chr1_imputation
-#         pos: bad_snps.tsv
-#         pos_include: FALSE
+#         pos: 
+#           filename: bad_snps.tsv
+#           exclusion: FALSE
 #         bcf: sample_genos.bcf
 #         index: sample_genos.bcf.csi
 #       - name: chr2
 #         dir: chr2_imputation
-#         pos: bad_snps.tsv
-#         pos_include: FALSE
+#         pos: 
+#           filename: bad_snps.tsv
+#           exlusion: FALSE
 #         bcf: sample_genos.bcf
 #         index: sample_genos.bcf.csi
 #
@@ -87,7 +89,7 @@ genotypes:
   dir:
   samples:
     filename:
-    inclusion:
+    exlusion:
   chrom:
 
 

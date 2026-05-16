@@ -26,7 +26,7 @@ unittests$TEST("InitUtils",
     answer_to_ultimate_question <- 42
 
     m <- hwas:::err(answer_to_ultimate_question, ultimate_question)
-    Expect$true(hwas:::is.err(m))
+    Expect$true(hwas:::is_err(m))
     Expect$eq(attr(m, "class"), "error")
 
     Expect$eq(m, answer_to_ultimate_question)
@@ -36,37 +36,17 @@ unittests$TEST("InitUtils",
 
 
 unittests$TEST("InitUtils",
-               "test_mk_dirname",
-               function() {
-
-    Expect$false(hwas:::mk_dirname(-1))
-    Expect$false(hwas:::mk_dirname(c(1,2,4)))
-    Expect$false(hwas:::mk_dirname(54.2))
-    Expect$false(hwas:::mk_dirname(1000))
-    Expect$false(hwas:::mk_dirname(0))
-
-
-    year_str <- format(Sys.time(), "%Y")
-    Expect$eq(hwas:::mk_dirname(1),
-              paste(year_str, "001", sep="-"))
-
-    Expect$eq(hwas:::mk_dirname(99),
-              paste(year_str, "099", sep="-"))
-})                  
-
-
-unittests$TEST("InitUtils",
                "test_is_error",
                function() {
     v <- 42
     s <- "the answer to life, the universe, everything"
     error <- hwas:::err(v, s)
 
-    Expect$true(hwas:::is.err(error))
+    Expect$true(hwas:::is_err(error))
 
-    Expect$false(hwas:::is.err(v))
-    Expect$false(hwas:::is.err(structure(v, class = "error")))
-    Expect$false(hwas:::is.err(structure(v, msg = s)))
+    Expect$false(hwas:::is_err(v))
+    Expect$false(hwas:::is_err(structure(v, class = "error")))
+    Expect$false(hwas:::is_err(structure(v, msg = s)))
 })
 
 
@@ -78,16 +58,16 @@ unittests$TEST("InitUtils",
     Expect$eq(hwas:::get_chromname(s), "chr01")
 
     s <- "/path/to/ch01-genotypes.bcf"
-    Expect$true(hwas:::is.err(hwas:::get_chromname(s)))
+    Expect$true(hwas:::is_err(hwas:::get_chromname(s)))
 
     s <- "/path/to/achr01-genotypes.bcf"
-    Expect$true(hwas:::is.err(hwas:::get_chromname(s)))
+    Expect$true(hwas:::is_err(hwas:::get_chromname(s)))
 
     s <- "/path/to/chr01a-genotypes.bcf"
     Expect$eq(hwas:::get_chromname(s), "chr01")
 
     s <- "/path/to/chr01a-genotypes"
-    Expect$true(hwas:::is.err(hwas:::get_chromname(s)))
+    Expect$true(hwas:::is_err(hwas:::get_chromname(s)))
 })
 
 
@@ -99,20 +79,38 @@ unittests$TEST("InitUtils",
     sfname <- "sample_bad"
     sfpath <- file.path(tdir, sfname)
     file.create(sfpath)
+
     cfg <- hwas:::config_samples(tdir, sfname)
-    print(cfg)
-    Expect$eq(cfg$file, sfname)
-    Expect$false(cfg$inclusion)
+    Expect$true(hwas:::is_err(cfg))
 
 
     dir.create(file.path(tdir, "tmp"))
     sfname <- "tmp/samples_good.tsv"
     sfpath <- file.path(tdir, sfname)
     file.create(sfpath)
+
     cfg <- hwas:::config_samples(tdir, sfname)
-    print(cfg)
-    Expect$eq(cfg$file, sfname)
-    Expect$true(cfg$inclusion)
+    Expect$true(hwas:::is_err(cfg))
+
+    sfname <- "sample_bad.exclude_samples"
+    sfpath <- file.path(tdir, sfname)
+    file.create(sfpath)
+
+    cfg <- hwas:::config_samples(tdir, sfname)
+    Expect$false(hwas:::is_err(cfg))
+
+    Expect$eq(cfg$filename, sfname)
+    Expect$true(cfg$exclusion)
+
+    sfname <- "tmp/samples_good.exclude_samples"
+    sfpath <- file.path(tdir, sfname)
+    file.create(sfpath)
+
+    cfg <- hwas:::config_samples(tdir, sfname)
+    Expect$false(hwas:::is_err(cfg))
+
+    Expect$eq(cfg$filename, sfname)
+    Expect$true(cfg$exclusion)
 })
 
 

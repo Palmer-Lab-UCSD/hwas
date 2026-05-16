@@ -74,21 +74,59 @@
 library(yaml)
 
 
-init_env <- new.env(parent = baseenv())
-assign("INCLUDE_SENTIMENT", 
-       c("good", "include", "use"),
-       envir = init_env)
+###########################################################
+## SUFFIXES
+###########################################################
 
+SUFFIXES <- new.env(parent = baseenv())
+
+assign("samples", 
+       structure("exclude_samples",
+                 inclusion = FALSE,
+                 class = "suffix_samples"),
+       envir = SUFFIXES)
+assign("pos",
+       structure("exclude_snps",
+                 inclusion = FALSE,
+                 class = "suffix_pos"),
+       envir = SUFFIXES)
+assign("geno", "bcf", envir = SUFFIXES)
+assign("index", "csi", envir = SUFFIXES)
+
+
+###########################################################
+## REGEX PATTERNS
+###########################################################
+
+REGEX <- new.env(parent = baseenv())
+
+assign("invalid_dirchars",
+       "[^a-zA-Z0-9-_/]",
+        envir = REGEX)
+assign("chrom_from_bcfname",
+       "([^a-z]|^)(?<chrom>chr[0-9]+).*\\.bcf", 
+       envir = REGEX)
+assign("find_bcf",
+       "([^a-z]|^)chr[0-9]+.*\\.bcf$",
+       envir = REGEX)
+assign("geno_suffix",
+       sprintf("\\.%s$", get("geno", SUFFIXES)),
+       envir = REGEX)
+assign("sample_suffix",
+       sprintf("\\.%s$", get("samples", SUFFIXES)),
+       envir = REGEX)
+assign("pos_suffix",
+       sprintf("\\.%s$", get("pos", SUFFIXES)),
+       envir = REGEX)
+
+###########################################################
+## UTILS
+###########################################################
 
 is_valid_dirname <- function(d) {
-    ismatch <- grep("[^a-zA-Z0-9-_/]", d, perl=TRUE)
+    ismatch <- grep(get("invalid_dirchars", REGEX),
+                    d, perl=TRUE)
     return(length(ismatch) == 0)
-}
-
-
-is.err <- function(error) {
-    return(class(error) == "error"
-           && "msg" %in% names(attributes(error)))
 }
 
 
@@ -99,23 +137,19 @@ err <- function(val, msg) {
 }
 
 
-mk_dirname <- function(i) {
-    if (length(i) != 1 
-        || !is.numeric(i) 
-        || floor(i) == 0
-        || i %% floor(i) != 0)
-        return(err(FALSE, "Index needs to be a natural number"))
-
-    if (i <= 0 || i >= 1000)
-        return(err(FALSE, "Index out of bounds"))
-
-    return(sprintf("%s-%03d", format(Sys.time(), "%Y"), i))
+is_err <- function(error) {
+    return(class(error) == "error"
+           && "msg" %in% names(attributes(error)))
 }
 
 
+###########################################################
+## CONFIG TOOLS
+###########################################################
+
 get_chromname <- function(bcf_filename) {
     bcf_filename <- basename(bcf_filename)
-    reg <- regexpr("([^a-z]|^)(?<chrom>chr[0-9]+).*\\.bcf", 
+    reg <- regexpr(get("chrom_from_bcfname", REGEX),
                    bcf_filename, 
                    perl=TRUE)
     if (reg != 1)
@@ -129,7 +163,18 @@ get_chromname <- function(bcf_filename) {
 }
 
 
+#' @title Validate sample file
+#'
+#' @return list(filename: string, exclusion: boolean)
 config_samples <- function(geno_root, sfilename) {
+
+    is_suffix <- regexpr(get("sample_suffix", REGEX), sfilename)
+    if (is_suffix < 0)
+        return(err(list(),
+                   sprintf("File, %s, has incorrect suffix for
+                           samples, must be, %s",
+                           sfilename,
+                           get("samples", SUFFIXES))))
 
     spath <- file.path(geno_root, sfilename)
 
@@ -138,36 +183,18 @@ config_samples <- function(geno_root, sfilename) {
                    sprintf("Sample file, %s, is not found\n", 
                            spath)))
 
-    scfg <- list(filename = sfilename, inclusion = FALSE)
-
-    # I take the following approach to determine whether the list of
-    # samples in the file are to be included or excluded by following:
-    #   1) default to excluded
-    #   2) if the path to sample file contains at least one of the
-    #       substrings enumerated in INCLUDE_SENTIMENT, AND the 
-    #       preceeding character is not a lower case alphachar, AND
-    #       (proceeding the substring is either nothing OR is not an
-    #       alphachar)
-    spath <- tolower(spath)
-    for (w in get("INCLUDE_SENTIMENT", init_env)) {
-
-        reg <- sprintf("[^a-z]%s([^a-z]|$)", w)
-
-        if (regexpr(reg, spath, perl=TRUE) > 0) {
-            scfg[["inclusion"]] <- TRUE
-            break
-        }
-    }
-
-    return(scfg)
+    return(list(filename = sfilename, exclusion = TRUE))
 }
 
 
+#' @return list(list(name =, dir=, pos=, pos_exclude=, bcf=, index=),
+#'              list(name =, dir=, pos=, pos_exclude=, bcf=, index=),
+#'              ...)
 config_chroms <- function(genotype_rootdir) {
 
-    bcf_files <- grepv("[^a-z]chr[0-9]+.*\\.bcf$", 
+    bcf_files <- grepv(get("find_bcf", REGEX),
                        list.files(genotype_rootdir,
-                                  pattern=".bcf",
+                                  pattern=get("geno_suffix", REGEX),
                                   recursive = TRUE),
                        perl=TRUE)
 
@@ -183,32 +210,39 @@ config_chroms <- function(genotype_rootdir) {
     for (bcf in bcf_files) {
 
         if(!is_bcf(bcf))
-            return(err(list(), sprintf("Invalide bcf: %s\n", 
-                                       file.path(genotype_rootdir, bcf))))
+            return(err(list(), 
+                       sprintf("Invalide bcf: %s\n", 
+                               file.path(genotype_rootdir, bcf))))
 
         tmp <- get_chromname(basename(bcf))
-        if (is.err(tmp))
+        if (is_err(tmp))
             return(tmp)
 
         chrom_i <- list(name = tmp, 
                         dir = dirname(bcf),
+                        pos = NULL,
                         bcf = bcf,
                         index = NULL)
 
-        bcf_idx <- paste0(bcf, ".csi")
+        pos_file <- grepv(get("pos_suffix", REGEX), 
+                          list.files(chrom_path, 
+                                     pattern=get("pos",SUFFIXES),
+                                     recursive = TRUE),
+                          perl = TRUE)
+        
+        if (length(pos_file) == 1)
+            chrom_i[["pos"]] <- list(filename = pos_file,
+                                     exclusion = TRUE)
+
+        bcf_idx <- sprintf("%s.%s", bcf, get("index", SUFFIXES))
         if (file.exists(file.path(genotype_rootdir, bcf_idx)))
             chrom_i[["index"]] <- bcf_idx
 
-        pos_file <- grepv("snp", list.files(chrom_path, pattern = ".tsv"))
-        if (length(pos_file) != 1)
-            return(err(list(),
-                       sprintf("Can't find position file in: %s\n", 
-                               chrom_path)))
-
-        chrom_i[["pos"]] <- pos_file
+        chrom_cfg[[i]] <- chrom_i
         i <- i + 1
     }
 
+    return(chrom_cfg)
 }
 
 
@@ -236,9 +270,9 @@ mk_config <- function(phenotype,
 
     cfg$genotypes$samples <- samp_cfg
 
-    chrm_cfg <- config_chroms(cfg$genotypes$dir)
+    cfg$genotypes$chroms <- config_chroms(cfg$genotypes$dir)
 
-
+    cat(yaml::as.yaml(cfg))
     return(cfg)
 }
 
@@ -307,10 +341,14 @@ mk_config <- function(phenotype,
 #     
 #     return(TRUE)
 # }
+
+###########################################################
+## USER ACCESSIBLE FEATURES
+###########################################################
+
 init <- function(phenotype,
                  genotype_rootdir,
                  samples_file,
-                 pos_include = TRUE,
                  samples_include = TRUE) {
 
     if (length(list.files(".")) != 0)
