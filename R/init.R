@@ -9,7 +9,7 @@
 #
 # |- analysis_dir/
 #    |--- config.yaml
-#    |--- .scripts/
+#    |--- scripts/
 #    |    |--- compute_grm.R
 #    |    |--- compute_herit.R
 #    |    |--- process_pos.R
@@ -18,7 +18,16 @@
 #    |
 #    |--- preprocess_data/
 #    |    |--- *traits.tsv*
-#    |    |--- *samples*
+#    |    |--- samples/
+#    |    |    |--- **chr1.exclude_samples**
+#    |    |    |--- **chr2.exclude_samples**
+#    |    |    |--- ...
+#    |    |    |--- **chr2.exclude_samples**
+#    |    |--- pos/
+#    |         |--- **chr1_pos.exclude_snps**
+#    |         |--- **chr2.exclude_snps**
+#    |         |--- ...
+#    |         |--- **chr2.exclude_snps**
 #    |
 #    |--- postproces_data/
 #    |    |--- **covariates.tsv**
@@ -112,12 +121,14 @@ assign("find_bcf",
 assign("geno_suffix",
        sprintf("\\.%s$", get("geno", SUFFIXES)),
        envir = REGEX)
-assign("sample_suffix",
-       sprintf("\\.%s$", get("samples", SUFFIXES)),
+assign("sample_filename",
+       sprintf("([^a-zA-Z0-9]|^)chr([0-9]){1,2}[^0-9]*\\.%s$", 
+               get("samples", SUFFIXES)),
        envir = REGEX)
 assign("pos_suffix",
        sprintf("\\.%s$", get("pos", SUFFIXES)),
        envir = REGEX)
+
 
 ###########################################################
 ## UTILS
@@ -163,27 +174,60 @@ get_chromname <- function(bcf_filename) {
 }
 
 
-#' @title Validate sample file
+#' @description
+#'  Find requisite sample files assuming that they satisfy the
+#'  following assumptions:
+#'      * Given the geno_root and sampdir, all exluce sample files
+#'          can be found in any subdirectory ${geno_root}/${sampdir}
+#'      * The set of child directories in ${geno_root}/${sampdir}
+#'          consist only those that contain exclude sample files for
+#'          that round of imputation.
+#'      * The sample files must contain the chromosome it applies to
+#'          in either the relative path, i.e. 
+#'          ${geno_root}/${sampdir}/<RELATIVE_PATH> or file name 
+#'      * The file extension must be ".exclude_samples"
+#' 
+#' An example file directory is:
+#' 
+#'  /path/to/data/
+#'           |--- filtered_samples/
+#'           |    |--- annot_chr1_filt/
+#'           |    |    |--- bad_samples.exclude_samples
+#'           |    |    |--- ...
+#'           |    |
+#'           |    |--- annot_chr2_filt/
+#'           |    |    |--- bad_samples.exclude_samples
+#'           |    |    |--- ...
+#'           |    |
+#'           |    |--- ...
+#'           |    |
+#'           |    |--- annot_chr20_filt/
+#'           |         |--- bad_samples.exclude_samples
+#'           |         |--- ...
+#'           |
+#'           |--- genotypes/
 #'
-#' @return list(filename: string, exclusion: boolean)
-config_samples <- function(geno_root, sfilename) {
+#' @return list(dir, filenames)
+config_samples <- function(geno_root, sampdir) {
 
-    is_suffix <- regexpr(get("sample_suffix", REGEX), sfilename)
-    if (is_suffix < 0)
-        return(err(list(),
-                   sprintf("File, %s, has incorrect suffix for
-                           samples, must be, %s",
-                           sfilename,
-                           get("samples", SUFFIXES))))
+    samp_path <- file.path(geno_root, sampdir)
+    if(!dir.exists(samp_path))
+        return(err(list(), "Sample directory does not exist"))
 
-    spath <- file.path(geno_root, sfilename)
+    samp_files <- list.files(samp_path, 
+                             pattern = get("samples", SUFFIXES),
+                             recursive = TRUE)
+    samp_files <- grep(get("sample_filename", REGEX),
+                       samp_files,
+                       perl = TRUE,
+                       value = TRUE)
+ 
+    if (length(samp_files) <= 0)
+        return(err(list(), "No sample exclude files found"))
 
-    if (!file.exists(spath))
-        return(err(list(),
-                   sprintf("Sample file, %s, is not found\n", 
-                           spath)))
+    samp_files <- sort(samp_files)
 
-    return(list(filename = sfilename, exclusion = TRUE))
+    return(list(dir = sampdir, filenames = samp_files))
 }
 
 
@@ -192,11 +236,12 @@ config_samples <- function(geno_root, sfilename) {
 #'              ...)
 config_chroms <- function(genotype_rootdir) {
 
-    bcf_files <- grepv(get("find_bcf", REGEX),
-                       list.files(genotype_rootdir,
+    bcf_files <- grep(get("find_bcf", REGEX),
+                      list.files(genotype_rootdir,
                                   pattern=get("geno_suffix", REGEX),
                                   recursive = TRUE),
-                       perl=TRUE)
+                      perl=TRUE,
+                      value=TRUE)
 
     if (length(bcf_files) == 0)
         return(err(list(), "No autosome genotype files with 
@@ -276,6 +321,7 @@ mk_config <- function(phenotype,
     return(cfg)
 }
 
+# TODO make skeleton of directories and unit tests
 
 # @title: make the directories and files
 # make_skeleton <- function(phenotype,
@@ -346,6 +392,7 @@ mk_config <- function(phenotype,
 ## USER ACCESSIBLE FEATURES
 ###########################################################
 
+# TODO finish init implementation and unit tests
 init <- function(phenotype,
                  genotype_rootdir,
                  samples_file,

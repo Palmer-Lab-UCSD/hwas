@@ -47,49 +47,70 @@ covariates:
 #
 # Directory strucure
 #
-# /path/to/my/data
-#             |--- samples_include
-#             |--- chr1_imputation/
-#             |    |--- bad_snps.tsv
-#             |    |--- sample_genos.bcf
-#             |    |--- sample_genos.bcf.csi
-#             |    |--- misc_non_used_files.txt
-#             |--- chr2_imputation/
-#                  |--- bad_snps.tsv
-#                  |--- sample_genos.bcf
-#                  |--- sample_genos.bcf.csi
-#                  |--- misc_non_used_files.txt
+# /path/to/raw_genotypes
+#             |--- samples
+#             |    |--- chr1_samps/
+#             |    |    |--- samps.exclude_samples
+#             |    |    
+#             |    |--- chr2_samps/
+#             |    |    |--- samps.exclude_samples
+#             |    |
+#             |    |--- ...
+#             |    |
+#             |    |--- chr20_samps/
+#             |         |--- samps.exclude_samples
+#             | 
+#             |--- filtered_snps
+#                 |--- chr1_imputation/
+#                 |    |--- bad_snps.exclude_snps
+#                 |    |--- sample_genos.bcf
+#                 |    |--- sample_genos.bcf.csi
+#                 |    |--- misc_non_used_files.txt
+#                 |--- chr2_imputation/
+#                 |    |--- bad_snps.exclude_snps
+#                 |    |--- sample_genos.bcf
+#                 |    |--- sample_genos.bcf.csi
+#                 |    |--- misc_non_used_files.txt
+#                 |
+#                 |--- ...
+#                 |    
+#                 |
+#                 |--- chr20_imputation/
+#                      |--- bad_snps.exclude_snps
+#                      |--- sample_genos.bcf
+#                      |--- sample_genos.bcf.csi
+#                      |--- misc_non_used_files.txt
 #
 #
 # Corresponding config
 #
 #   genotypes:
-#     dir: /path/to/my/data
-#     samples: 
-#       filename: samples_include
-#       exclusion: true
+#     dir: /path/to/raw_genotypes
+#     samples:
+#       dir: relative_path
+#       filenames:
+#         - filter_samps_chr1/annot_chr1_b.exclude_samples
+#         - filter_samps_chr2/annot_chr2_b.exclude_samples
+#         - ...
+#         - filter_samps_chr20/annot_chr20_b.exclude_samples
 #     chrom:
 #       - name: chr1
 #         dir: chr1_imputation
-#         pos: 
-#           filename: bad_snps.tsv
-#           exclusion: FALSE
+#         pos: bad_snps.exclude_snps
 #         bcf: sample_genos.bcf
 #         index: sample_genos.bcf.csi
-#       - name: chr2
-#         dir: chr2_imputation
-#         pos: 
-#           filename: bad_snps.tsv
-#           exlusion: FALSE
+#       - ...
+#       - name: chr20
+#         dir: chr20_imputation
+#         pos: bad_snps.exclude_snps
 #         bcf: sample_genos.bcf
 #         index: sample_genos.bcf.csi
-#
 
 genotypes:
   dir:
   samples:
-    filename:
-    exlusion:
+    dir:
+    filenames:
   chrom:
 
 
@@ -101,10 +122,14 @@ genotypes:
 setup:
   rootdir: 
   subdirs:
-    - .scripts
-    - preprocess_data
+    - scripts
+    - preprocess_data:
+      rootdir: preprocess_data
+      subdirs:
+        - samples
+        - pos
     - postprocess_data:
-        rootdir:
+        rootdir: postprocess_data
         subdirs:
           - pos
     - results:

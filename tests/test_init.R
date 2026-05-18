@@ -71,47 +71,94 @@ unittests$TEST("InitUtils",
 })
 
 
-unittests$TEST("InitUtils",
+# tempdir/
+#   sample_dir/
+#       chr3_filter/
+#           samples.exclude_samples
+#       chr18_filter/
+#           samples.exclude_samples
+ 
+# list () of filenames
+setUpSamples <- function() {
+    data_dir <- system.file("exdata/", package = "hwas")
+
+    tdir <- tempdir()
+    samp_dir <- "samp_dir"
+    chr3_dir <- "b_chr3_filter"
+    chr18_dir <- "a_chr18_filter"
+    
+    dir.create(file.path(tdir, samp_dir))
+    dir.create(file.path(tdir, samp_dir, chr3_dir))
+    dir.create(file.path(tdir, samp_dir, chr18_dir))
+
+    # Note that temp_dir serves the purpose of geno_rootdir
+    out <- list(temp_dir= tdir,
+                samp_dir = samp_dir,
+                filenames = c(file.path(chr3_dir, "samps.exclude_samples"),
+                              file.path(chr18_dir, "samps.exclude_samples")))
+
+    out$filenames <- sort(out$filenames)
+
+    for (tofile in out$filenames)
+        file.copy(from = file.path(data_dir, "samps.exclude_samples"),
+                  to = file.path(out$temp_dir, out$samp_dir, tofile),
+                  overwrite = FALSE)
+
+    return(out)
+}
+
+cleanUpSamples <- function(tmp_dirname) {
+    if (regexpr("^/tmp/Rtmp[a-zA-Z0-9]+$", tmp_dirname) > 0)
+        unlink(tmp_dirname, recursive = TRUE)
+    else
+        cat(sprintf("Directory, %s, is not valid tmp directory\n",
+                    tmp_dirname))
+}
+
+unittests$TEST("InitConfig",
                "test_samp_config",
                function() {
+    tmp_cfg <- setUpSamples()
+    on.exit(cleanUpSamples(tmp_cfg$temp_dir))
+
+    cfg <- hwas:::config_samples(tmp_cfg$temp_dir, "wrong_sampdir")
+    Expect$true(hwas:::is_err(cfg))
+
+
+    cfg <- hwas:::config_samples(tmp_cfg$temp_dir, tmp_cfg$samp_dir)
+    Expect$false(hwas:::is_err(cfg))
+
+    Expect$eq(cfg$dir, tmp_cfg$samp_dir)
+    Expect$eq(length(cfg$filenames), length(tmp_cfg$filenames))
+
+    for (i in seq(length(tmp_cfg$filenames)))
+        Expect$eq(cfg$filenames[i], tmp_cfg$filenames[i])
+})
+
+
+setUpGenotypes <- function() {
+    data_dir <- system.file("exdata/", package = "hwas")
     tdir <- tempdir()
 
-    sfname <- "sample_bad"
-    sfpath <- file.path(tdir, sfname)
-    file.create(sfpath)
+    print(tdir)
 
-    cfg <- hwas:::config_samples(tdir, sfname)
-    Expect$true(hwas:::is_err(cfg))
+    for (i in seq(10)) {
+        chromdir <- sprintf("chr%d_asdfsad", i)
+        dir.create(file.path(tdir, chromdir))
+        file.copy(file.path(data_dir, "geno_test_data.bcf"),
+                  file.path(tdir, chrom, "chrm_genos.bcf"))
+    }
+
+    return(dirname)
+}
+unittests$TEST("InitConfig",
+               "test_chrom",
+               function() {
+
+ })
 
 
-    dir.create(file.path(tdir, "tmp"))
-    sfname <- "tmp/samples_good.tsv"
-    sfpath <- file.path(tdir, sfname)
-    file.create(sfpath)
-
-    cfg <- hwas:::config_samples(tdir, sfname)
-    Expect$true(hwas:::is_err(cfg))
-
-    sfname <- "sample_bad.exclude_samples"
-    sfpath <- file.path(tdir, sfname)
-    file.create(sfpath)
-
-    cfg <- hwas:::config_samples(tdir, sfname)
-    Expect$false(hwas:::is_err(cfg))
-
-    Expect$eq(cfg$filename, sfname)
-    Expect$true(cfg$exclusion)
-
-    sfname <- "tmp/samples_good.exclude_samples"
-    sfpath <- file.path(tdir, sfname)
-    file.create(sfpath)
-
-    cfg <- hwas:::config_samples(tdir, sfname)
-    Expect$false(hwas:::is_err(cfg))
-
-    Expect$eq(cfg$filename, sfname)
-    Expect$true(cfg$exclusion)
-})
+# TODO unit tests from chrom some configuration deduction
 
 
 # setUp <- function() {
