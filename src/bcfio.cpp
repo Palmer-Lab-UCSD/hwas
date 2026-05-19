@@ -257,8 +257,10 @@ bool bcfio::is_bcf(const char* filename) {
         return false;
 
     htslib::htsFormat fmt {};
-    if (htslib::hts_detect_format(fh, &fmt) != 0)
+    if (htslib::hts_detect_format(fh, &fmt) != 0) {
+        htslib::hclose(fh);
         return false;
+    }
 
     if (fmt.format == htslib::bcf) {
         htslib::hclose(fh);
