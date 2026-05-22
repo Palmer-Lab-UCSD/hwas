@@ -84,34 +84,39 @@ covariates:
 #
 # Corresponding config
 #
-#   genotypes:
-#     dir: /path/to/raw_genotypes
+#   round:
+#     dir: /path/to/raw_genotypes/round
 #     samples:
-#       dir: relative_path
+#       dir: filtered_samples
 #       filenames:
 #         - filter_samps_chr1/annot_chr1_b.exclude_samples
 #         - filter_samps_chr2/annot_chr2_b.exclude_samples
 #         - ...
 #         - filter_samps_chr20/annot_chr20_b.exclude_samples
-#     chrom:
-#       - name: chr1
-#         dir: chr1_imputation
-#         pos: bad_snps.exclude_snps
-#         bcf: sample_genos.bcf
-#         index: sample_genos.bcf.csi
-#       - ...
-#       - name: chr20
-#         dir: chr20_imputation
-#         pos: bad_snps.exclude_snps
-#         bcf: sample_genos.bcf
-#         index: sample_genos.bcf.csi
+#     genotypes:
+#       dir: filtered_snps
+#       chr:
+#         - name: chr1
+#           dir: chr1_imputation
+#           pos: bad_snps.exclude_snps
+#           bcf: sample_genos.bcf
+#           index: sample_genos.bcf.csi
+#         - ...
+#         - name: chr20
+#           dir: chr20_imputation
+#           pos: bad_snps.exclude_snps
+#           bcf: sample_genos.bcf
+#           index: sample_genos.bcf.csi
 
-genotypes:
+round:
   dir:
   samples:
     dir:
     filenames:
-  chrom:
+  genotypes:
+    dir:
+    chr:
+
 
 
 ###########################################################
@@ -120,20 +125,22 @@ genotypes:
 # Do not edit these settings
 #
 setup:
-  rootdir: 
+  dir: 
   subdirs:
-    - scripts
+    - scripts:
+      dir: scripts
+      subdirs:
     - preprocess_data:
-      rootdir: preprocess_data
+      dir: preprocess_data
       subdirs:
         - samples
         - pos
     - postprocess_data:
-        rootdir: postprocess_data
+        dir: postprocess_data
         subdirs:
           - pos
     - results:
-        rootdir: results
+        dir: results
         subdirs:
           - grms
           - lod

@@ -221,6 +221,12 @@ evalq({neq <- function(test_val, truth_val) {
                envir = ppenv)
         return(TRUE)
     }
+    cat(paste("Expected neq, instead\ntest_val:",
+              test_val,
+              "\n, equal to truth val:\n",
+              truth_val,
+              "\n"),
+        file = stderr())
     assign(".failed",
            append(get(".failed", ppenv), s),
            envir = ppenv)
@@ -243,6 +249,12 @@ evalq({eq <- function(test_val, truth_val) {
                envir = ppenv)
         return(TRUE)
     }
+    cat(paste("Expected eq, instead test_val,",
+              test_val,
+              ",not equal to,",
+              truth_val,
+              ".\n"),
+        file = stderr())
     assign(".failed",
            append(get(".failed", ppenv), s),
            envir = ppenv)

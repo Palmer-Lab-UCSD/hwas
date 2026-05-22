@@ -84,9 +84,11 @@ library(yaml)
 
 
 ###########################################################
-## SUFFIXES
+## CONSTANTS
 ###########################################################
 
+
+## SUFFIXES
 SUFFIXES <- new.env(parent = baseenv())
 
 assign("samples", 
@@ -103,17 +105,14 @@ assign("geno", "bcf", envir = SUFFIXES)
 assign("index", "csi", envir = SUFFIXES)
 
 
-###########################################################
-## REGEX PATTERNS
-###########################################################
-
+## REGEX
 REGEX <- new.env(parent = baseenv())
 
 assign("invalid_dirchars",
        "[^a-zA-Z0-9-_/]",
         envir = REGEX)
 assign("chrom_from_bcfname",
-       "([^a-z]|^)(?<chrom>chr[0-9]+).*\\.bcf", 
+       "([^a-z]|^)(?<chrom>chr[0-9]{1,2}).*\\.bcf$", 
        envir = REGEX)
 assign("find_bcf",
        "([^a-z]|^)chr[0-9]+.*\\.bcf$",
@@ -159,11 +158,10 @@ is_err <- function(error) {
 ###########################################################
 
 get_chromname <- function(bcf_filename) {
-    bcf_filename <- basename(bcf_filename)
     reg <- regexpr(get("chrom_from_bcfname", REGEX),
                    bcf_filename, 
                    perl=TRUE)
-    if (reg != 1)
+    if (reg <= 0)
         return(err(character(0), 
                    "Couldn't extract autosome name from path"))
 
@@ -175,6 +173,7 @@ get_chromname <- function(bcf_filename) {
 
 
 #' @description
+#'
 #'  Find requisite sample files assuming that they satisfy the
 #'  following assumptions:
 #'      * Given the geno_root and sampdir, all exluce sample files
@@ -231,10 +230,41 @@ config_samples <- function(geno_root, sampdir) {
 }
 
 
-#' @return list(list(name =, dir=, pos=, pos_exclude=, bcf=, index=),
-#'              list(name =, dir=, pos=, pos_exclude=, bcf=, index=),
+#' @description
+#'  The assumed directory layout is:
+#'
+#'  /path/to/data/
+#'           |--- filtered_samples/
+#'           |    |--- ...
+#'           |
+#'           |--- filetered_snps/
+#'                |--- annot_chr1_filt/
+#'                |    |--- pos.exclude_snps
+#'                |    |--- genotype.bcf
+#'                |    |--- genotype.bcf.csi
+#'                |    |--- ...
+#'                |
+#'                |--- annot_chr2_filt/
+#'                |    |--- pos.exclude_snps
+#'                |    |--- genotype.bcf
+#'                |    |--- genotype.bcf.csi
+#'                |    |--- ...
+#'                |
+#'                |--- ...
+#'                |
+#'                |--- annot_chr20_filt/
+#'                     |--- pos.exclude_snps
+#'                     |--- genotype.bcf
+#'                     |--- genotype.bcf.csi
+#'                     |--- ...
+#'            
+#' @return list(list(name =, dir=, pos=, bcf=, index=),
+#'              list(name =, dir=, pos=, bcf=, index=),
 #'              ...)
-config_chroms <- function(genotype_rootdir) {
+#' @export
+config_chroms <- function(round_dir, geno_dir) {
+
+    genotype_rootdir <- file.path(round_dir, geno_dir)
 
     bcf_files <- grep(get("find_bcf", REGEX),
                       list.files(genotype_rootdir,
@@ -244,44 +274,44 @@ config_chroms <- function(genotype_rootdir) {
                       value=TRUE)
 
     if (length(bcf_files) == 0)
-        return(err(list(), "No autosome genotype files with 
-                            suffix .bcf were found."))
+        return(err(list(), 
+                   paste("No autosome genotype files with",
+                         "suffix .bcf were found.")))
 
-    chrom_cfg <- vector(mode=list, length=length(bcf_files))
+    chrom_cfg <- vector(mode="list", length=length(bcf_files))
 
     # Note that bcf_files should include a directory prefix if
     # it was found in a subdirectory of genotype_rootdir
     i <- 1
     for (bcf in bcf_files) {
+        bcf_full_path <- file.path(genotype_rootdir, bcf)
+        
+        if(!is_bcf(bcf_full_path))
+            return(err(list(), sprintf("Invalid bcf: %s\n", bcf_full_path)))
 
-        if(!is_bcf(bcf))
-            return(err(list(), 
-                       sprintf("Invalide bcf: %s\n", 
-                               file.path(genotype_rootdir, bcf))))
-
-        tmp <- get_chromname(basename(bcf))
+        tmp <- get_chromname(bcf)
         if (is_err(tmp))
             return(tmp)
 
         chrom_i <- list(name = tmp, 
                         dir = dirname(bcf),
                         pos = NULL,
-                        bcf = bcf,
+                        bcf = basename(bcf),
                         index = NULL)
 
-        pos_file <- grepv(get("pos_suffix", REGEX), 
-                          list.files(chrom_path, 
-                                     pattern=get("pos",SUFFIXES),
-                                     recursive = TRUE),
-                          perl = TRUE)
+        pos_file <- grep(get("pos_suffix", REGEX), 
+                         list.files(dirname(bcf_full_path),
+                                    pattern=get("pos",SUFFIXES),
+                                    recursive = TRUE),
+                         perl = TRUE,
+                         value = TRUE)
         
         if (length(pos_file) == 1)
-            chrom_i[["pos"]] <- list(filename = pos_file,
-                                     exclusion = TRUE)
+            chrom_i$pos <- pos_file
 
         bcf_idx <- sprintf("%s.%s", bcf, get("index", SUFFIXES))
         if (file.exists(file.path(genotype_rootdir, bcf_idx)))
-            chrom_i[["index"]] <- bcf_idx
+            chrom_i[["index"]] <- basename(bcf_idx)
 
         chrom_cfg[[i]] <- chrom_i
         i <- i + 1
@@ -291,31 +321,60 @@ config_chroms <- function(genotype_rootdir) {
 }
 
 
-mk_config <- function(phenotype,
-                      genotype_rootdir,
-                      samples_file,
-                      pos_include = TRUE) {
+trait_meta <- function(name, type, norm) {
 
+    if (!is_norm(norm))
+        return(err(list(), "Invalid normalization"))
+
+    return(structure(list(name = name, type = type, norm = norm),
+                     class="trait_metadata"))
+}
+
+geno_meta <- function(round_dir, geno_dir, samp_dir) {
+    return(structure(list(round_dir = round_dir,
+                          geno_dir = geno_dir, 
+                          samp_dir = samp_dir),
+                     class = "geno_metadata"))
+}
+
+
+#' @param phenotype: trait_metadata instance for phenotype of interest
+#' @param covariates: list of trait_metadata for each covariate
+#' @param geno: geno_metadata instance
+#' @return config.yaml as R structures
+mk_config <- function(pheno, covariates, geno) {
+    if (class(pheno) != "trait_metadata")
+        return(err(list(), "No valid pheno metadata."))
+    if (class(geno) != "geno_metadata")
+        return(err(list(), "No valid geno metadata."))
+
+    # load config template
     pkg_path <- system.files(".", package="hwas")
     cfg_fname <- file.path(pkg_path, "templates", "config.yaml")
     cfg <- yaml::yaml.load_file(cfg_fname)
 
-    cfg$setup$rootdir <- getwd()
-    cfg$phenotype$name <- phenotype   
+    # configure setup
+    cfg$setup$dir <- getwd()
 
-    if (!dir.exists(genotype_rootdir))
+    # configure phenotype
+    cfg$phenotype$name <- pheno$name
+    cfg$phenotype$type <- pheno$type
+    cfg$phenotype$norm <- pheno$norm
+
+    if (!dir.exists(geno$round_dir))
         return(err(list(),
-                   sprintf("Genotype directory, %s, is not found\n", 
-                           genotype_rootdir)))
-    cfg$genotypes$dir <- genotype_rootdir
+                   sprintf("Genotype round directory, %s, is not found\n", 
+                           geno$round_dir)))
+    cfg$round$dir <- geno$round_dir
 
-    samp_cfg <- config_samples(cfg$genotypes$dir, samples)
+    samp_cfg <- config_samples(cfg$round$dir, 
+                               geno$samp_dir)
     if (is.err(samp_cfg))
         return(samp_cfg)
+    cfg$round$samples$dir <- samp_cfg$dir
+    cfg$round$samples$filenames <- samp_cfg$filenames
 
-    cfg$genotypes$samples <- samp_cfg
-
-    cfg$genotypes$chroms <- config_chroms(cfg$genotypes$dir)
+    cfg$round$chroms <- config_chroms(cfg$genotypes$dir)
 
     cat(yaml::as.yaml(cfg))
     return(cfg)

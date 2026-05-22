@@ -3,6 +3,16 @@ library(hwas)
 
 source(system.file("utils/unittest.R", package = "hwas"))
 
+
+cleanUp <- function(tmp_dirname) {
+    if (regexpr("^/tmp/Rtmp[a-zA-Z0-9]+$", tmp_dirname) > 0)
+        unlink(tmp_dirname, recursive = TRUE)
+    else
+        cat(sprintf("Directory, %s, is not valid tmp directory\n",
+                    tmp_dirname))
+}
+
+
 unittests$TEST("InitUtils",
                "test_is_valid_dirname", 
                function() {
@@ -82,7 +92,7 @@ unittests$TEST("InitUtils",
 setUpSamples <- function() {
     data_dir <- system.file("exdata/", package = "hwas")
 
-    tdir <- tempdir()
+    tdir <- tempdir(check=TRUE)
     samp_dir <- "samp_dir"
     chr3_dir <- "b_chr3_filter"
     chr18_dir <- "a_chr18_filter"
@@ -107,19 +117,12 @@ setUpSamples <- function() {
     return(out)
 }
 
-cleanUpSamples <- function(tmp_dirname) {
-    if (regexpr("^/tmp/Rtmp[a-zA-Z0-9]+$", tmp_dirname) > 0)
-        unlink(tmp_dirname, recursive = TRUE)
-    else
-        cat(sprintf("Directory, %s, is not valid tmp directory\n",
-                    tmp_dirname))
-}
 
 unittests$TEST("InitConfig",
                "test_samp_config",
                function() {
     tmp_cfg <- setUpSamples()
-    on.exit(cleanUpSamples(tmp_cfg$temp_dir))
+    on.exit(cleanUp(tmp_cfg$temp_dir))
 
     cfg <- hwas:::config_samples(tmp_cfg$temp_dir, "wrong_sampdir")
     Expect$true(hwas:::is_err(cfg))
@@ -136,26 +139,96 @@ unittests$TEST("InitConfig",
 })
 
 
+# /tmp/Rtmpaijfdad/
+#      |--- filtered_snps/
+#           |--- annot_chr1_randomstr/
+#                |--- pos.exclude_snps
+#                |--- geno_test_data.bcf
+#                |--- geno_test_data.bcf.csi
 setUpGenotypes <- function() {
-    data_dir <- system.file("exdata/", package = "hwas")
-    tdir <- tempdir()
+    data_dir <- system.file("exdata", package = "hwas")
 
-    print(tdir)
-
-    for (i in seq(10)) {
-        chromdir <- sprintf("chr%d_asdfsad", i)
-        dir.create(file.path(tdir, chromdir))
-        file.copy(file.path(data_dir, "geno_test_data.bcf"),
-                  file.path(tdir, chrom, "chrm_genos.bcf"))
+    # tempdir has an odd behavior that only one temp directory is
+    # made per session.  Consequently, my cleanUp is deleting it.
+    # By setting check = TRUE, I can delete the pervious tempdir
+    # and create a replacement one here.
+    tdir <- tempdir(check = TRUE)
+    genotypes_dir <- "filt_snps"
+    
+    if (!dir.create(file.path(tdir, genotypes_dir))) {
+        cat(sprintf("Could not create directory %s\n", 
+                    file.path(tdir, genotypes_dir)), 
+            file = stderr())
+        return(list())
     }
 
-    return(dirname)
+    out <- list(round_dir = tdir,
+                dir = genotypes_dir,
+                chr = list())
+
+    for (i in seq(10)) {
+        chrom <- list(name = sprintf("chr%d", i),
+                      dir = sprintf("auto_chr%d_aadsf", i),
+                      pos = "pos.exclude_snps",
+                      bcf = "geno_test_data_compressed.bcf",
+                      index = "geno_test_data_compressed.bcf.csi")
+
+        dir.create(file.path(out$round_dir, out$dir, chrom$dir))
+
+        file.copy(from = file.path(data_dir, chrom$pos),
+                  to = file.path(out$round_dir,out$dir, chrom$dir),
+                  overwrite = FALSE)
+        file.copy(from = file.path(data_dir, chrom$bcf),
+                  to = file.path(out$round_dir,out$dir, chrom$dir),
+                  overwrite = FALSE)
+        file.copy(from = file.path(data_dir, chrom$index),
+                  to = file.path(out$round_dir,out$dir, chrom$dir),
+                  overwrite = FALSE)
+
+        out$chr[[i]] <- chrom
+    }
+
+    return(out)
 }
+
+
 unittests$TEST("InitConfig",
                "test_chrom",
                function() {
+    tmp_cfg <- setUpGenotypes()
+    on.exit(cleanUp(tmp_cfg$round_dir))
 
+    out <- hwas:::config_chroms(tmp_cfg$round_dir, tmp_cfg$dir)
+
+    print(length(tmp_cfg$chr))
+    print(length(out))
+    Expect$eq(length(tmp_cfg$chr), length(out))
+
+    for (truth_chr in tmp_cfg$chr) {
+
+        for (out_chr in out)
+            if (truth_chr$name == out_chr$name) {
+                Expect$eq(truth_chr$dir,   out_chr$dir)
+                Expect$eq(truth_chr$pos,   out_chr$pos)
+                Expect$eq(truth_chr$bcf,   out_chr$bcf)
+                Expect$eq(truth_chr$index, out_chr$index)
+                break
+            }
+    }
  })
+
+
+setUpCfg <- function() {
+}
+
+unittests$TEST("InitConfig",
+               "test_mk_config",
+               function() {
+
+    tmp_cfg <- setUpGenotypes()
+    on.exit(cleanUp(tmp_cfg$round_dir))
+    
+})
 
 
 # TODO unit tests from chrom some configuration deduction
