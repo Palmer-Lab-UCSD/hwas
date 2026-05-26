@@ -369,7 +369,7 @@ mk_config <- function(pheno, covariates, geno) {
 
     samp_cfg <- config_samples(cfg$round$dir, 
                                geno$samp_dir)
-    if (is.err(samp_cfg))
+    if (is_err(samp_cfg))
         return(samp_cfg)
     cfg$round$samples$dir <- samp_cfg$dir
     cfg$round$samples$filenames <- samp_cfg$filenames
@@ -454,8 +454,7 @@ mk_config <- function(pheno, covariates, geno) {
 # TODO finish init implementation and unit tests
 init <- function(phenotype,
                  genotype_rootdir,
-                 samples_file,
-                 samples_include = TRUE) {
+                 samples_rootdir) {
 
     if (length(list.files(".")) != 0)
         stop("Make a new directory with no contents.\n")

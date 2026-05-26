@@ -36,11 +36,8 @@ library(hwas)
 dir.create("analysis_dir")
 setwd("analysis_dir")
 
-hwas::init(< phenotype of interest >,
-           < geno root directory that contains all genotypes >,
-           < path to sample file relative to geno root >,
-           < TRUE / FALSE whether the sample file >,
-           < TRUE / FALSE whether the positions are inclusive >)
+hwas::init(< geno root directory that contains all dirs with bcf files>,
+           < geno root directory that contains all sample lists>)
 ```
 
 The name of the directory where we will work, `analysis_dir`, is 
@@ -49,7 +46,7 @@ will be created in directory `analysis_dir`:
 
 ```
 |--- config.yaml
-|--- .scripts/
+|--- scripts/
 |    |--- compute_grm.R
 |    |--- compute_herit.R
 |    |--- process_pos.R
@@ -57,14 +54,21 @@ will be created in directory `analysis_dir`:
 |    |--- unique_samples.R
 |
 |--- preprocess_data/
-|    |--- *samples*
+|    |--- samples/
+|    |--- pos/
 |
 |--- postprocess_data/
+|    |--- pos/
+|
 |--- results/
      |--- grms/
      |--- lod/
      |--- blup/
 ```
+
+Next, we need to add the trait specific information to the `config.yaml`
+file.
+
 
 
 ## Installation and Compiling

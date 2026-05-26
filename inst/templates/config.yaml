@@ -1,9 +1,8 @@
 # Configuration of HWAS run
 #
-# Most of these fields are occupied programmatically.  
-# However, there could exist errors.  To account for
-# possible errors, the config file is separated into three
-# sections that users need to understand:
+# This configuration file contains the required information to
+# run an HWAS.  The information is categorized into three sections
+# that specify user input and responsibility.  The are as follows:
 #
 #   USER INPUT
 #     These settings can not be deduced programmatically
@@ -16,7 +15,8 @@
 #     These settings are programmatically set and should
 #     not be modified by users.  They are assumptions of
 #     the software that need to be maintained.
-#
+
+
 ###########################################################
 ## USER INPUT
 ###########################################################
@@ -29,15 +29,19 @@
 #   - quantile_normal
 #   - zscore
 #
-phenotype: 
-  name: 
-  type:
-  norm:
 
-covariates:
-  - name: 
-    type: 
+traits:
+  na_string: [NA, \N]
+  sample_col_name: 
+  phenotype: 
+    name: 
+    type:
     norm:
+  covariates:
+    - name: 
+      type: 
+      norm:
+
 
 ###########################################################
 ## USER CONFIRM ACCURACY
@@ -109,7 +113,6 @@ covariates:
 #           index: sample_genos.bcf.csi
 
 round:
-  dir:
   samples:
     dir:
     filenames:
@@ -145,15 +148,4 @@ setup:
           - grms
           - lod
           - blup
-
-trait:
-  raw: 
-    dir: preprocessed_data
-    na_string: [NA, \N]
-    sample_name_col:
-  processed:
-    dir: processed_data
-    sample_file: samples
-    covariate_file: covariates.tsv
-    phenotype_file: 
 
