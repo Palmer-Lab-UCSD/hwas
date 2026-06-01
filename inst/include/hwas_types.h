@@ -79,7 +79,7 @@
 Rcpp::Nullable<Rcpp::XPtr<bcfio::Bcf>> bopen(const char* filename, const char* mode);
 int bclose(Rcpp::XPtr<bcfio::Bcf> bid);
 
-Rcpp::RObject query_next(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
+Rcpp::RObject next_record(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
 
 uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid);
 
@@ -87,7 +87,7 @@ Rcpp::RObject sample_names(Rcpp::XPtr<bcfio::Bcf>);
 
 int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename);
 int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n);
-double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
+double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* format_id);
 
 
 /////////////////////////////////////////////////////////////////////

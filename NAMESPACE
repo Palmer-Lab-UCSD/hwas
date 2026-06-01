@@ -1,22 +1,37 @@
 useDynLib(hwas)
 import(Rcpp)
 
-# pipeline
+#########################################################
+## pipeline functionality
+#########################################################
 export(init)
 
-# bcfio and htslib interface
+#########################################################
+## bcfio and htslib interface
+#########################################################
+# bcf connection utilities
 export(bopen)
 export(bclose)
-export(query_next)
-export(num_samples)
-export(subset_samples)
-export(sample_names)
-export(set_threads)
-export(k_fmt)
-export(num_positions)
 export(is_bcf)
+export(is_open)
+
+# query bcf header data
+export(k_fmt)
+export(num_samples)
+export(num_positions)
+export(sample_names)
+
+# set bcf metadata values
+export(subset_samples)
+export(set_threads)
+
+# query bcf data
+export(next_record)
 
 
+#########################################################
+## HWAS computation
+#########################################################
 # grm
 export(calc_grm)
 

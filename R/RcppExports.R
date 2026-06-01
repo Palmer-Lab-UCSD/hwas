@@ -9,6 +9,17 @@ fit1_pg_intcovar <- function(genoprobs, pheno, addcovar, intcovar, eigenvec, wei
     .Call('_hwas_fit1_pg_intcovar', PACKAGE = 'hwas', genoprobs, pheno, addcovar, intcovar, eigenvec, weights, se, tol)
 }
 
+#' Open a file connection to bcf, vcf, or vcf.gz file
+#'
+#'
+#'
+#' @param filename A character vector of the name, and the path if necessary, of
+#' the bcf file that a connection will be opened.
+#' @param mode A character vector with the mode, read (r), TODO
+NULL
+
+#' @return pointer to open bcf file connection
+#' @export
 bopen <- function(filename, mode) {
     .Call('_hwas_bopen', PACKAGE = 'hwas', filename, mode)
 }

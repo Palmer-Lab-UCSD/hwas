@@ -208,7 +208,7 @@ struct Bcf
 
     ~Bcf() { close(); };
 
-    bool isopen();
+    bool is_open();
     void close() noexcept;
 
     const std::string fname_;
