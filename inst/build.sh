@@ -49,6 +49,7 @@ fi
 
 if [ $only_compile -eq 1 ]; then
     R CMD check "hwas_0.0.1.tar.gz"
+    success=$?
 else
     R CMD check --no-tests \
         --no-examples \
@@ -56,7 +57,7 @@ else
         --no-vignettes "hwas_0.0.1.tar.gz"
 fi
 
-if [ $only_compile -eq 1 ]; then
+if [ $only_compile -eq 1 ] && [ $success -eq 0 ]; then
     echo "=========================================================="
     echo "UNIT TESTS"
     echo "=========================================================="

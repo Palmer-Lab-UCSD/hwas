@@ -25,15 +25,15 @@ Rcpp::NumericVector pg_sim(const char* bcf_filename,
     if (heritability < 0 || heritability > 1)
         return Rcpp::NumericVector();
 
-    bcfio::Bcf* bid = bcfio::bopen(bcf_filename, "r");
+    std::unique_ptr<bcfio::Bcf> bid = bcfio::bopen(bcf_filename, "r");
 
     if (!bid)
         return Rcpp::NumericVector();
 
     PolygenicParameters pars {};
-    int success = estimate_pars(bid, heritability, &pars);
+    int success = estimate_pars(bid.get(), heritability, &pars);
 
-    uint64_t nsamps = num_samples(bid);
+    uint64_t nsamps = num_samples(bid.get());
     Rcpp::NumericVector phenotypes(nsamps);
 
     return phenotypes;

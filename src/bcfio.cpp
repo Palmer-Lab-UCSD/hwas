@@ -183,7 +183,8 @@ void bcfio::Bcf::close() noexcept {
 }
 
 
-bcfio::Bcf* bcfio::bopen(const char* filename, const char* mode) {
+std::unique_ptr<bcfio::Bcf> bcfio::bopen(const char* filename, 
+        const char* mode) {
     if (!bcfio::is_bcf(filename))
         return nullptr;
 
@@ -191,7 +192,7 @@ bcfio::Bcf* bcfio::bopen(const char* filename, const char* mode) {
     if (!fh)
         return nullptr;
 
-    return new bcfio::Bcf(fh);
+    return std::make_unique<bcfio::Bcf>(fh);
 }
 
 
@@ -233,7 +234,7 @@ template int bcfio::next_record<float> (bcfio::Bcf* bid,
 
 // htslib accepts a file name with samples to include / exclude or
 // a list of comma delimited sample names
-int subset_samples_from_file(bcfio::Bcf* bid, const char* samples_filename){
+int bcfio::subset_samples_from_file(bcfio::Bcf* bid, const char* samples_filename){
     if (!bid || !samples_filename)
         return -1;
 
@@ -244,7 +245,7 @@ int subset_samples_from_file(bcfio::Bcf* bid, const char* samples_filename){
 }
 
 
-int subset_samples(bcfio::Bcf* bid, const char* samples){
+int bcfio::subset_samples(bcfio::Bcf* bid, const char* samples){
     if (!bid)
         return -1;
 
@@ -269,11 +270,13 @@ int64_t bcfio::num_pos(bcfio::Bcf* bid) {
         return -1;
     // open a new file handle, then I can iterate without affecting
     // the current position of bid
-    bcfio::Bcf* fid = bcfio::bopen(bid->filename().c_str(), "r");
+    std::unique_ptr<bcfio::Bcf> fid;
+    fid = bcfio::bopen(bid->filename().c_str(), "r");
+
     if (!fid)
         return -2;
     // bcf_hdr_set_samples
-    int status = bcfio::subset_samples(fid, nullptr);
+    int status = bcfio::subset_samples(fid.get(), nullptr);
     if (status != 0)
         return -1;
 
@@ -302,17 +305,17 @@ bool bcfio::is_bcf(const char* filename) {
 
     htslib::htsFormat fmt {};
     if (htslib::hts_detect_format(fh, &fmt) != 0) {
-        htslib::hclose(fh);
+        static_cast<void>(htslib::hclose(fh));
         return false;
     }
 
     if (fmt.format == htslib::bcf ||
             fmt.format == htslib::vcf) {
-        htslib::hclose(fh);
+        static_cast<void>(htslib::hclose(fh));
         return true;
     }
         
-    htslib::hclose(fh);
+    static_cast<void>(htslib::hclose(fh));
     return false;
 }
 

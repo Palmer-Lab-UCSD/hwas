@@ -18,10 +18,10 @@
 //
 // [[Rcpp::export]]
 bcf_conn_t bopen(const char* filename, const char* mode) {
-    bcfio::Bcf* bid = bcfio::bopen(filename, mode);
+    std::unique_ptr<bcfio::Bcf> bid = bcfio::bopen(filename, mode);
     if (bid == nullptr)
        return bcf_conn_t(nullptr, true); 
-    return bcf_conn_t(bid, true);
+    return bcf_conn_t(bid.release(), true);
 }
 
 // [X] Documentation: man/hts_conn.Rd

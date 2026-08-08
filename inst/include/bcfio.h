@@ -217,7 +217,7 @@ struct Bcf
     BcfHeader hdr_;
 };
 
-Bcf* bopen(const char* filename, const char* mode);
+std::unique_ptr<Bcf> bopen(const char* filename, const char* mode);
 
 // @title Query the next record
 // @param the pointer to open htslib file

@@ -69,7 +69,8 @@ However, for the sake of demonstration we will do this.  Currently,
 the set of samples is
 
 <<>>=
-print(hwas::sample_names(bid))
+samples <- hwas::sample_names(bid)
+print(samples)
 @
 
 We can configure \texttt{bid} to 
@@ -80,7 +81,7 @@ file
 samples_include_fname <- system.file("exdata", "samples.include",
                                      package = "hwas",
                                      mustWork = TRUE)
-hwas::subset_samples(bid, samples_include_fname)
+hwas::subset_samples(bid, c(samples[3], samples[5], samples[9]))
 hwas::sample_names(bid)
 @
 
