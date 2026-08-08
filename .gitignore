@@ -1,5 +1,6 @@
 data/
 scratch/
+stash/
 vec
 *.swp
 *.swo
@@ -11,4 +12,10 @@ vec
 *.o
 *.rds
 *.so
+*.tex
+*.log
+*.aux
+*.bbl
+*.pdf
+*.blg
 src/Makevars

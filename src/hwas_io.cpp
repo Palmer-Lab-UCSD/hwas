@@ -1,5 +1,5 @@
 
-#include <hwas_types.h>
+#include <hwas.h>
 
 
 /////////////////////////////////////////////////////////////////////
@@ -17,18 +17,17 @@
 // [X] Documentation: man/hts_conn.Rd
 //
 // [[Rcpp::export]]
-Rcpp::Nullable<Rcpp::XPtr<bcfio::Bcf>> bopen(const char* filename, const char* mode) {
-    htslib::htsFile* fid = htslib::hts_open(filename, mode);
-    if (!fid)
-        return R_NilValue;
-
-    return Rcpp::XPtr<bcfio::Bcf>(new bcfio::Bcf(filename, fid), true);
+bcf_conn_t bopen(const char* filename, const char* mode) {
+    bcfio::Bcf* bid = bcfio::bopen(filename, mode);
+    if (bid == nullptr)
+       return bcf_conn_t(nullptr, true); 
+    return bcf_conn_t(bid, true);
 }
 
 // [X] Documentation: man/hts_conn.Rd
 //
 // [[Rcpp::export]]
-int bclose(Rcpp::XPtr<bcfio::Bcf> bid) {
+int bclose(bcf_conn_t bid) {
     if (!bid || !bid.get()) return -1;
 
     bid->close();
@@ -38,7 +37,7 @@ int bclose(Rcpp::XPtr<bcfio::Bcf> bid) {
 // [X] Documentation: man/hts_conn.Rd
 //
 // [[Rcpp::export]]
-bool is_open(Rcpp::XPtr<bcfio::Bcf> bid) {
+bool is_open(bcf_conn_t bid) {
     return bid->is_open();
 }
 
@@ -58,28 +57,28 @@ bool is_bcf(const char* filename) {
 // [X] Documentation: man/hts_header.Rd
 //
 // [[Rcpp::export]]
-double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* format_id) {
-    return static_cast<double>(bid->hdr_.k_fmt(format_id));
+double k_fmt(bcf_conn_t bid, const char* id) {
+    return static_cast<double>(bid->hdr_.k_fmt(id));
 }
 
 // [X] Documentation: man/hts_header.Rd
 //
 // [[Rcpp::export]]
-uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid) {
-    return bid->hdr_.n_samples();
+uint32_t num_samples(bcf_conn_t bid) {
+    return bcfio::num_samples(bid.get());
 }
 
 // [X] Documentation: man/hts_header.Rd
 //
 // [[Rcpp::export]]
-int64_t num_positions(Rcpp::XPtr<bcfio::Bcf> bid) {
-    return bcfio::num_records(bid.get());
+int64_t num_positions(bcf_conn_t bid) {
+    return bcfio::num_pos(bid.get());
 }
 
 // [X] Documentation: man/hts_header.Rd
 //
 // [[Rcpp::export]]
-Rcpp::RObject sample_names(Rcpp::XPtr<bcfio::Bcf> bid) {
+Rcpp::RObject sample_names(bcf_conn_t bid) {
     if (!bid.get())
         return R_NilValue;
 
@@ -99,14 +98,42 @@ Rcpp::RObject sample_names(Rcpp::XPtr<bcfio::Bcf> bid) {
 // [] Documentation: man/hts_config.Rd
 //
 // [[Rcpp::export]]
-int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename) {
-    return htslib::bcf_hdr_set_samples(bid->hdr_.hts_hdr_, filename, 1);
+int subset_samples(bcf_conn_t bid, 
+        Rcpp::CharacterVector samples) {
+
+    bool is_na_val = samples[0] == R_NaString;
+    if (samples.size() == 1 && is_na_val)
+        return bcfio::subset_samples(bid.get(), nullptr);
+
+    if (is_na_val)
+        return -1;
+
+    std::string samp_str = Rcpp::as<std::string>(samples[0]);
+
+    // check for missing values
+    for (int i = 1; i < samples.size(); i++) {
+        if (samples[i] == R_NaString)
+            return -1;
+
+        samp_str += ',' + Rcpp::as<std::string>(samples[i]);
+    }
+
+    return bcfio::subset_samples(bid.get(), samp_str.c_str());
+}
+
+
+int subset_samples_from_file(bcf_conn_t bid,
+        const char* samples_filename) {
+    if (!bid)
+        return -1;
+    return bcfio::subset_samples_from_file(bid.get(), 
+            samples_filename);
 }
 
 // [] Documentation: man/hts_config.Rd
 //
 // [[Rcpp::export]]
-int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n) {
+int set_threads(bcf_conn_t bid, int n) {
     return htslib::hts_set_threads(bid->fid_, n);
 }
 
@@ -117,7 +144,7 @@ int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n) {
 // [] Documentation: man/hts_records.Rd
 //
 // [[Rcpp::export]]
-Rcpp::RObject next_record(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
+Rcpp::RObject next_record(bcf_conn_t bid, const char* id) {
     bcfio::BcfRecord<float> rec {};
 
     int status = bcfio::next_record(bid.checked_get(), &rec, id);

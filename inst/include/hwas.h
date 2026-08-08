@@ -1,11 +1,3 @@
-// Parse STITCH vcf file
-//
-// By: Robert Vogel
-// Affiliation: Palmer Lab at UCSD
-// Date: 2025-01-09
-//
-//
-// Acknowledgment
 //
 //
 #ifndef HWAS_H
@@ -37,9 +29,13 @@
 //
 
 
+
 /////////////////////////////////////////////////////////////////////
 /// BCFIO
 /////////////////////////////////////////////////////////////////////
+///
+typedef Rcpp::XPtr<bcfio::Bcf> bcf_conn_t;
+
 
 // @title: The number of values stored in format id
 // @description: Each bcf format field is able to hold unique
@@ -76,18 +72,20 @@
 //
 // End quote
 //
-Rcpp::Nullable<Rcpp::XPtr<bcfio::Bcf>> bopen(const char* filename, const char* mode);
-int bclose(Rcpp::XPtr<bcfio::Bcf> bid);
+bcf_conn_t bopen(const char* filename, const char* mode);
+int bclose(bcf_conn_t bid);
 
-Rcpp::RObject next_record(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
+Rcpp::RObject next_record(bcf_conn_t bid, const char* id);
 
-uint32_t num_samples(Rcpp::XPtr<bcfio::Bcf> bid);
+uint32_t num_samples(bcf_conn_t bid);
 
-Rcpp::RObject sample_names(Rcpp::XPtr<bcfio::Bcf>);
+Rcpp::RObject sample_names(bcf_conn_t bid);
 
-int subset_samples(Rcpp::XPtr<bcfio::Bcf> bid, const char* filename);
-int set_threads(Rcpp::XPtr<bcfio::Bcf> bid, int n);
-double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* format_id);
+int subset_samples(bcf_conn_t bid, Rcpp::CharacterVector samples);
+int subset_samples_from_file(bcf_conn_t bid, const char* sample_filename);
+
+int set_threads(bcf_conn_t bid, int n);
+double k_fmt(bcf_conn_t bid, const char* format_id);
 
 
 /////////////////////////////////////////////////////////////////////
@@ -99,8 +97,16 @@ double k_fmt(Rcpp::XPtr<bcfio::Bcf> bid, const char* format_id);
 // @param format id for measurment to use for grm
 // @return R_NilValue if err otherwise an n sample by n sample
 //  Rcpp::NumericMatrix
-Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id);
+Rcpp::RObject calc_grm(bcf_conn_t bid, const char* id);
 
 
+
+/////////////////////////////////////////////////////////////////////
+/// PG_SIM
+/////////////////////////////////////////////////////////////////////
+///
+
+Rcpp::NumericVector pg_sim(const char* bcf_filename,
+        float heritability);
 
 #endif

@@ -1,0 +1,90 @@
+\documentclass[letter]{article}
+
+% programming
+\newcommand{\C}{\texttt{C}}
+
+% hwas program
+\newcommand{\hwas}{\texttt{hwas}}
+
+% R
+\newcommand{\rlang}{\texttt{R}}
+\newcommand{\rcpp}{\texttt{Rcpp}}
+\newcommand{\rnull}{\texttt{NULL}}
+
+
+% BIOINFORMATICS 
+\newcommand{\hts}{\texttt{hts}}
+\newcommand{\bcf}{\texttt{bcf}}
+\newcommand{\vcf}{\texttt{vcf}}
+\newcommand{\vcfgz}{\texttt{vcf.gz}}
+
+\newcommand{\htslib}{\texttt{htslib}}
+
+
+\title{Heritability estimation}
+
+\author{Robert Vogel}
+
+\begin{document}
+\maketitle
+
+The \hwas package provides the means to use R/QTL2 \cite{bromanQtl2}
+for haplotype association analysis from genetic data stored in an
+\hts file format.  \hts files -- i.e. file in the \bcf, \vcf, or \vcfgz 
+file formats -- are parsed using the \htslib \C library
+\cite{htslib} and records are streamed during computation to reduce
+memory requirements.  As such, the workflow of an \hwas is slightly
+unique to that of other tools.  A user must first open a file connection
+to the \hts file and then configure how the data are to be read.  This
+vignette provides an example of this workflow for computing the 
+heritability of a trait using toy data.
+
+
+To get started let's open a file included in the package and stored
+in the \bcf format.
+
+<<>>=
+library("hwas")
+
+filename <- system.file("exdata", "geno_test_data.bcf",
+                        package = "hwas",
+                        mustWork = TRUE)
+
+bid <- hwas::bopen(filename, "r")
+print(bid)
+@
+
+The \texttt{bid} object is a nullable \rcpp pointer to a C++ class
+instance that manages the file connection and parsing.  If the file 
+connection fails \texttt{bid} will be \rnull.  This object should be 
+used with other \hwas package functions and not with native \rlang tools.  
+For simplicity, I'll refer \texttt{bid} as a file connection.
+
+The file connection \texttt{bid} registers all samples in the file.  
+This can be undesirable when the relevant samples are
+a subset of the genotyped data.  The data in the package consists of 
+only \Sexpr{hwas::num_samples(bid)} and as in this example we will
+simulate sample phenotype data no sub-setting of samples is necessary.
+However, for the sake of demonstration we will do this.  Currently,
+the set of samples is
+
+<<>>=
+print(hwas::sample_names(bid))
+@
+
+We can configure \texttt{bid} to 
+only retrieve a subset of sample data by providing a sample inclusion
+file
+
+<<>>=
+samples_include_fname <- system.file("exdata", "samples.include",
+                                     package = "hwas",
+                                     mustWork = TRUE)
+hwas::subset_samples(bid, samples_include_fname)
+hwas::sample_names(bid)
+@
+
+\bibliography{refs}
+\bibliographystyle{plain}
+
+\end{document}

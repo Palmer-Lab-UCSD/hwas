@@ -140,17 +140,23 @@ int bcfio::BcfRecord<T>::load_data_(bcfio::BcfHeader *hdr,
 /////////////////////////////////////////////////////////////////////
 // 
 //
-bcfio::Bcf::Bcf()
-    : fname_(""), fid_(nullptr), hdr_() {};
+bcfio::Bcf::Bcf(): fid_(nullptr), hdr_() {};
  
-bcfio::Bcf::Bcf(const char *filename, htslib::htsFile* fid)
-    : fname_(filename),
-    fid_(fid),
-    hdr_(fid_) {};
+bcfio::Bcf::Bcf(htslib::htsFile* fid)
+    : fid_(fid), hdr_(fid) {};
 
-// for the bcf instance to be open, then both the
-// header and file connection resources must be in 
-// valid states
+// bcfio::Bcf::Bcf(const bcfio::Bcf& bid) {
+// }
+
+std::string bcfio::Bcf::filename() const {
+    if (!fid_)
+        return std::string();
+    return std::string(fid_->fn);
+}
+
+
+// for the bcf instance to be open, then both the header and file
+// resources must be in valid states.
 bool bcfio::Bcf::is_open() {
     if (!fid_) {
         hdr_.close();
@@ -177,13 +183,25 @@ void bcfio::Bcf::close() noexcept {
 }
 
 
+bcfio::Bcf* bcfio::bopen(const char* filename, const char* mode) {
+    if (!bcfio::is_bcf(filename))
+        return nullptr;
+
+    htslib::htsFile* fh = htslib::hts_open(filename, mode);
+    if (!fh)
+        return nullptr;
+
+    return new bcfio::Bcf(fh);
+}
+
+
 // title: load next record
 template <typename T>
 int bcfio::next_record(bcfio::Bcf* bid,
         bcfio::BcfRecord<T>* ptr, 
         const char* id) {
 
-    if (!bid->is_open())
+    if (!bid || !bid->is_open())
         return -1;
 
     int status = htslib::bcf_read(bid->fid_, 
@@ -206,43 +224,69 @@ int bcfio::next_record(bcfio::Bcf* bid,
     return ptr->load_data_(&(bid->hdr_), id);
 }
 
-
+// TODO I don't remember why this is necessary, should this go
+// in header?
 template struct bcfio::BcfRecord<float>;
 template int bcfio::next_record<float> (bcfio::Bcf* bid,
         bcfio::BcfRecord<float>* ptr,
         const char* id);
 
-int64_t bcfio::num_records(bcfio::Bcf* bid) {
+// htslib accepts a file name with samples to include / exclude or
+// a list of comma delimited sample names
+int subset_samples_from_file(bcfio::Bcf* bid, const char* samples_filename){
+    if (!bid || !samples_filename)
+        return -1;
+
+    // Recall that 1 indicates that samples are enumerated in file
+    return htslib::bcf_hdr_set_samples(bid->hdr_.hts_hdr_,
+            samples_filename, 
+            1);
+}
+
+
+int subset_samples(bcfio::Bcf* bid, const char* samples){
+    if (!bid)
+        return -1;
+
+    if (!samples)
+        samples = NULL;
+
+    // Recall that 1 indicates that samples are enumerated in file
+    return htslib::bcf_hdr_set_samples(bid->hdr_.hts_hdr_,
+            samples, 
+            0);
+}
+
+
+int64_t bcfio::num_samples(bcfio::Bcf* bid) {
+    if (!bid)
+        return -1;
+    return static_cast<int64_t>(bid->hdr_.n_samples());
+}
+
+int64_t bcfio::num_pos(bcfio::Bcf* bid) {
     if (!bid)
         return -1;
     // open a new file handle, then I can iterate without affecting
     // the current position of bid
-    htslib::htsFile* fid = htslib::hts_open(bid->fname_.c_str(), "r");
+    bcfio::Bcf* fid = bcfio::bopen(bid->filename().c_str(), "r");
     if (!fid)
         return -2;
-
-    htslib::bcf_hdr_t* hdr = htslib::bcf_hdr_read(fid);
-    if (!hdr) {
-        htslib::hts_close(fid);
-        return -2;
-    }
+    // bcf_hdr_set_samples
+    int status = bcfio::subset_samples(fid, nullptr);
+    if (status != 0)
+        return -1;
 
     // dummy record
     htslib::bcf1_t* brec = htslib::bcf_init();
-    if (!brec) {
-        htslib::bcf_hdr_destroy(hdr);
-        htslib::hts_close(fid);
+    if (!brec)
         return -2;
-    }
 
-    uint64_t n = 0;
-    int status;
+    int64_t n = 0;
     for (n = 0; status == 0; n++)
-        status = htslib::bcf_read(fid, hdr, brec);
+        status = htslib::bcf_read(fid->fid_, fid->hdr_.hts_hdr_, brec);
 
     htslib::bcf_destroy(brec);
-    htslib::bcf_hdr_destroy(hdr);
-    htslib::hts_close(fid);
     
     // report error occured while parsing
     if (status == -2) return status;
@@ -262,7 +306,8 @@ bool bcfio::is_bcf(const char* filename) {
         return false;
     }
 
-    if (fmt.format == htslib::bcf) {
+    if (fmt.format == htslib::bcf ||
+            fmt.format == htslib::vcf) {
         htslib::hclose(fh);
         return true;
     }
@@ -270,3 +315,4 @@ bool bcfio::is_bcf(const char* filename) {
     htslib::hclose(fh);
     return false;
 }
+

@@ -1,4 +1,5 @@
-
+// Manage HTSLIB requested resources by RAII
+//
 #ifndef BCFIO_H
 #define BCFIO_H
 
@@ -198,7 +199,7 @@ struct BcfRecord {
 struct Bcf
 {
     Bcf();
-    Bcf(const char* filename, htslib::htsFile* fid);
+    Bcf(htslib::htsFile* fid);
 
     Bcf(const Bcf&)=delete;
     Bcf& operator=(const Bcf&)=delete;
@@ -210,11 +211,13 @@ struct Bcf
 
     bool is_open();
     void close() noexcept;
+    std::string filename() const;
 
-    const std::string fname_;
     htslib::htsFile *fid_;
     BcfHeader hdr_;
 };
+
+Bcf* bopen(const char* filename, const char* mode);
 
 // @title Query the next record
 // @param the pointer to open htslib file
@@ -224,10 +227,27 @@ struct Bcf
 template <typename T>
 int next_record(Bcf* bid, BcfRecord<T>* rec, const char* id);
 
-int64_t num_records(Bcf* bid);
+// @title Subset samples to samples enumerated in file
+// @param bid: pointer to Bcf class
+// @param sample_filename: filename with sample names enumerated one
+//      per line
+// @return 0 success and < 0 upon error
+int subset_samples_from_file(Bcf* bid, const char* sample_filename);
 
+
+// @title Subset samples to samples in comma delimited string
+// @param bid: pointer to Bcf class
+// @param samples: name of samples enumerated in comma delimited string
+// @return 0 success and < 0 upon error
+int subset_samples(Bcf* bid, const char* samples);
+
+// int32_t exclude_samples(Bcf* bid, const char* sample_filename);
+
+int64_t num_pos(Bcf* bid);
+int64_t num_samples(Bcf* bid);
+
+// Check whether file is vcf or bcf
 bool is_bcf(const char* filename);
-
 }
 
 #endif

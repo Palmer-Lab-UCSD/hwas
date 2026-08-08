@@ -9,17 +9,10 @@ fit1_pg_intcovar <- function(genoprobs, pheno, addcovar, intcovar, eigenvec, wei
     .Call('_hwas_fit1_pg_intcovar', PACKAGE = 'hwas', genoprobs, pheno, addcovar, intcovar, eigenvec, weights, se, tol)
 }
 
-#' Open a file connection to bcf, vcf, or vcf.gz file
-#'
-#'
-#'
-#' @param filename A character vector of the name, and the path if necessary, of
-#' the bcf file that a connection will be opened.
-#' @param mode A character vector with the mode, read (r), TODO
-NULL
+calc_grm <- function(bid, id) {
+    .Call('_hwas_calc_grm', PACKAGE = 'hwas', bid, id)
+}
 
-#' @return pointer to open bcf file connection
-#' @export
 bopen <- function(filename, mode) {
     .Call('_hwas_bopen', PACKAGE = 'hwas', filename, mode)
 }
@@ -28,8 +21,8 @@ bclose <- function(bid) {
     .Call('_hwas_bclose', PACKAGE = 'hwas', bid)
 }
 
-isopen <- function(bid) {
-    .Call('_hwas_isopen', PACKAGE = 'hwas', bid)
+is_open <- function(bid) {
+    .Call('_hwas_is_open', PACKAGE = 'hwas', bid)
 }
 
 is_bcf <- function(filename) {
@@ -52,20 +45,16 @@ sample_names <- function(bid) {
     .Call('_hwas_sample_names', PACKAGE = 'hwas', bid)
 }
 
-subset_samples <- function(bid, filename) {
-    .Call('_hwas_subset_samples', PACKAGE = 'hwas', bid, filename)
+subset_samples <- function(bid, samples) {
+    .Call('_hwas_subset_samples', PACKAGE = 'hwas', bid, samples)
 }
 
 set_threads <- function(bid, n) {
     .Call('_hwas_set_threads', PACKAGE = 'hwas', bid, n)
 }
 
-query_next <- function(bid, id) {
-    .Call('_hwas_query_next', PACKAGE = 'hwas', bid, id)
-}
-
-calc_grm <- function(bid, id) {
-    .Call('_hwas_calc_grm', PACKAGE = 'hwas', bid, id)
+next_record <- function(bid, id) {
+    .Call('_hwas_next_record', PACKAGE = 'hwas', bid, id)
 }
 
 calc_rss_linreg <- function(X, Y, tol = 1e-12) {
@@ -210,5 +199,9 @@ matrix_x_vector <- function(X, y) {
 
 matrix_x_3darray <- function(X, A) {
     .Call('_hwas_matrix_x_3darray', PACKAGE = 'hwas', X, A)
+}
+
+pg_sim <- function(bcf_filename, heritability) {
+    .Call('_hwas_pg_sim', PACKAGE = 'hwas', bcf_filename, heritability)
 }
 

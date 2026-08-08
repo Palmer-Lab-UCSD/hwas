@@ -1,5 +1,5 @@
 
-#include <hwas_types.h>
+#include <hwas.h>
 
 
 // For signal handling see
@@ -11,8 +11,9 @@ volatile std::sig_atomic_t signal_received = 0;
 void signal_handler(int signal) {
     signal_received = 1;
 }
+
 // [[Rcpp::export]]
-Rcpp::RObject calc_grm(Rcpp::XPtr<bcfio::Bcf> bid, const char* id) {
+Rcpp::RObject calc_grm(bcf_conn_t bid, const char* id) {
 
     // reset signal for subsequent usage.
     signal_received = 0;

@@ -9,12 +9,40 @@ by code from Karl Broman's QTL2 [3-4].
 
 **Contents**
 
+[HWAS tools](#hwas-tooling)
 [Pipeline Instructions](#pipeline-instructions)
 [Compiling and Installation](#compiling-and-installation)
 [Features Outstanding](#features-outstanding)
 [AI Disclosure](#ai-disclosure)
 [Copyright](#copyright)
 [References](#references)
+
+## HWAS tools
+
+
+To run an individual `HWAS`, we need trait data and genetic data. 
+From these, we want to easily compute the GRM, estimate trait
+heritability, compute log odd scores (LOD) per genomic coordinate,
+and haplotype effect size BLUPs.  In what follows we take each
+one of these goals in turn.
+
+Consider a data set
+
+```
+library(hwas)
+
+bid <- hwas::bopen("genotypes.bcf")
+
+grm <- calc_grm(bid, "HD")
+```
+
+then we can compute the heritability from R/QTL2
+
+```
+h <- est_herit(pheno, grm, addcovar=covariates, reml=TRUE)
+```
+
+
 
 
 ## Pipeline Instructions
