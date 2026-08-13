@@ -101,6 +101,8 @@ file.
 
 ## Installation and Compiling
 
+**HTSLIB** 
+
 As the package depends on the systems htslib
 you need to tell R where to find the header and
 library files.  To do this set the following 
@@ -111,11 +113,20 @@ export HTSLIB_LIBS=-L<PATH_TO_LIB>
 export HTSLIB_CFLAGS=-isystem<PATH_TO_HEADER_DIR>
 ```
 
-Note here the use of `isystem` instead of `-I` to 
-specify the path of the header files.  The reason 
+Note here the use of `-isystem` instead of `-I` to 
+specify the path to header files.  The reason 
 for this is that we want the header files in R 
 packages to be discovered before packages locally
 installed on our system.
+
+**R LIBRARY TREE**
+
+When building the package be mindful that vignettes are also built
+from source.  When R builds the package vignette it doesn't read a
+users `Rprofile` file.  Consequently, the `hwas` package dependency
+needs to be installed either in the default R library path or that
+the environment variable `R_LIBS` contains the path to the relevant
+library directory.
 
 
 ## Features outstanding
