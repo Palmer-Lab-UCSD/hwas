@@ -1,4 +1,4 @@
-\documentclass[letter]{article}
+\documentclass[letterpaper]{article}
 
 % programming
 \newcommand{\C}{\texttt{C}}
@@ -81,9 +81,24 @@ file
 samples_include_fname <- system.file("exdata", "samples.include",
                                      package = "hwas",
                                      mustWork = TRUE)
-hwas::subset_samples(bid, c(samples[3], samples[5], samples[9]))
-hwas::sample_names(bid)
+status <- hwas::subset_samples(bid, c(samples[3], samples[5], samples[9]))
+if (status != 0) {
+    cat(sprintf("ERROR in subsetting samples\n"))
+} else {
+    hwas::sample_names(bid)
+}
 @
+
+
+%% grm <- calc_grm(bid, "HD")
+%% ```
+%% 
+%% then we can compute the heritability from R/QTL2
+%% 
+%% ```
+%% h <- est_herit(pheno, grm, addcovar=covariates, reml=TRUE)
+%% ```
+
 
 \bibliography{refs}
 \bibliographystyle{plain}

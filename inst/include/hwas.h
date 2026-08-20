@@ -75,9 +75,11 @@ typedef Rcpp::XPtr<bcfio::Bcf> bcf_conn_t;
 bcf_conn_t bopen(const char* filename, const char* mode);
 int bclose(bcf_conn_t bid);
 
-Rcpp::RObject next_record(bcf_conn_t bid, const char* id);
 
+int64_t num_positions(bcf_conn_t bid);
 uint32_t num_samples(bcf_conn_t bid);
+uint16_t k_fmt(bcf_conn_t bid, const char* format_id);
+
 
 Rcpp::RObject sample_names(bcf_conn_t bid);
 
@@ -85,7 +87,69 @@ int subset_samples(bcf_conn_t bid, Rcpp::CharacterVector samples);
 int subset_samples_from_file(bcf_conn_t bid, const char* sample_filename);
 
 int set_threads(bcf_conn_t bid, int n);
-double k_fmt(bcf_conn_t bid, const char* format_id);
+
+Rcpp::RObject next_record(bcf_conn_t bid, const char* id);
+
+template <typename T>
+Rcpp::NumericMatrix get_matrix(bcfio::Bcf* bid, 
+        const char* id,
+        const htslib::bcf_fmt_t* fmt_cfg) {
+
+    std::unique_ptr<bcfio::BcfRecord<T>> brec =
+        std::make_unique<bcfio::BcfRecord<T>>();
+    uint32_t nrow = 0;
+    uint16_t ncol = 0;
+
+    if (bcfio::num_samples(bid, &nrow) != 0) {
+        fprintf(stderr,
+                "ERROR: parse record errror\n");
+        return R_NilValue;
+    }
+
+    if (bcfio::k_fmt(bid, id, &ncol) != 0) {
+        fprintf(stderr,
+                "ERROR: parse record errror\n");
+        return R_NilValue;
+    }
+
+    if (ncol != fmt_cfg->n) {
+        fprintf(stderr, 
+                "ERROR: expected values per sample %d got %d\n",
+                ncol,
+                fmt_cfg->n);
+        return R_NilValue;
+    }
+
+    if (bcfio::next_record<T>(bid, brec.get(), id) != 0)
+        return R_NilValue;
+
+    Rcpp::NumericMatrix data(nrow, ncol);
+    T* cur_samp_rec = nullptr;
+    for (uint32_t i = 0; i < nrow; i++) {
+
+        cur_samp_rec = brec->data + i;
+
+        for (uint16_t j = 0; j < ncol; j++)
+            data(i, j) = cur_samp_rec[j];
+    }
+
+    data.attr("chrom") = bcfio::chrom(bid, brec.get());
+    int64_t p = -1;
+    bcfio::pos(brec.get(), &p);
+    data.attr("pos") = p;
+
+    //data.attr("qual") = rec.qual();
+    //data.attr(
+
+    return data;
+}
+
+
+// TODO: get ref allele
+// TODO: get alt allele
+// TODO: enumerate info keys and be able to query values
+// TODO: enumerate format keys and be able to query values
+
 
 
 /////////////////////////////////////////////////////////////////////

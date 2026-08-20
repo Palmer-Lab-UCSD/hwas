@@ -17,44 +17,44 @@ bopen <- function(filename, mode) {
     .Call('_hwas_bopen', PACKAGE = 'hwas', filename, mode)
 }
 
-bclose <- function(bid) {
-    .Call('_hwas_bclose', PACKAGE = 'hwas', bid)
+bclose <- function(bconn) {
+    .Call('_hwas_bclose', PACKAGE = 'hwas', bconn)
 }
 
-is_open <- function(bid) {
-    .Call('_hwas_is_open', PACKAGE = 'hwas', bid)
+is_open <- function(bconn) {
+    .Call('_hwas_is_open', PACKAGE = 'hwas', bconn)
 }
 
 is_bcf <- function(filename) {
     .Call('_hwas_is_bcf', PACKAGE = 'hwas', filename)
 }
 
-k_fmt <- function(bid, id) {
-    .Call('_hwas_k_fmt', PACKAGE = 'hwas', bid, id)
+k_fmt <- function(bconn, id) {
+    .Call('_hwas_k_fmt', PACKAGE = 'hwas', bconn, id)
 }
 
-num_samples <- function(bid) {
-    .Call('_hwas_num_samples', PACKAGE = 'hwas', bid)
+num_samples <- function(bconn) {
+    .Call('_hwas_num_samples', PACKAGE = 'hwas', bconn)
 }
 
-num_positions <- function(bid) {
-    .Call('_hwas_num_positions', PACKAGE = 'hwas', bid)
+num_positions <- function(bconn) {
+    .Call('_hwas_num_positions', PACKAGE = 'hwas', bconn)
 }
 
-sample_names <- function(bid) {
-    .Call('_hwas_sample_names', PACKAGE = 'hwas', bid)
+sample_names <- function(bconn) {
+    .Call('_hwas_sample_names', PACKAGE = 'hwas', bconn)
 }
 
-subset_samples <- function(bid, samples) {
-    .Call('_hwas_subset_samples', PACKAGE = 'hwas', bid, samples)
+subset_samples <- function(bconn, samples) {
+    .Call('_hwas_subset_samples', PACKAGE = 'hwas', bconn, samples)
 }
 
-set_threads <- function(bid, n) {
-    .Call('_hwas_set_threads', PACKAGE = 'hwas', bid, n)
+set_threads <- function(bconn, n) {
+    .Call('_hwas_set_threads', PACKAGE = 'hwas', bconn, n)
 }
 
-next_record <- function(bid, id) {
-    .Call('_hwas_next_record', PACKAGE = 'hwas', bid, id)
+next_record <- function(bconn, id) {
+    .Call('_hwas_next_record', PACKAGE = 'hwas', bconn, id)
 }
 
 calc_rss_linreg <- function(X, Y, tol = 1e-12) {

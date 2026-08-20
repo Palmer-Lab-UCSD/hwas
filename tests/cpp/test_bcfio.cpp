@@ -1,0 +1,755 @@
+
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+#include <memory>
+#include <string>
+
+#include <gtest/gtest.h>
+
+namespace htslib {
+extern "C" {
+#include <htslib/hts.h>
+#include <htslib/vcf.h>
+}
+}
+
+#include <bcfio.h>
+
+char TEST_DATA_DIR[] { "intst/exdata" };
+char VCF_NAME[] { "inst/exdata/geno_test_data.vcf" };
+char VCFGZ_NAME[] { "inst/exdata/geno_test_data.vcf.gz" };
+char BCF_NAME[] { "inst/exdata/geno_test_data.bcf" };
+uint8_t K_FOUNDERS = 8;
+uint8_t N_SAMPS = 11;
+
+
+// TODO:
+//      [] sample subset from file unit tests
+//      [] update commented unit tests
+
+
+///////////////////////////////////////////////////////////////////////////
+// Test bcfio::BcfHeader
+///////////////////////////////////////////////////////////////////////////
+
+// TEST(TestBcfHeader, BcfHdrFmtGt) {
+//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     bcfio::BcfHeader hdr { fid };
+// 
+//     EXPECT_FALSE(hdr.isnull());
+//     
+//     bcfio::BcfHdrAttr attr {};
+// 
+//     int status = hdr.get_format_attr("GT", &attr);
+//     EXPECT_EQ(status, 0);
+//     EXPECT_EQ(attr.number, static_cast<uint8_t>(1));
+//     EXPECT_EQ(attr.vl_type, static_cast<uint8_t>(BCF_VL_FIXED));
+//     EXPECT_EQ(attr.type, static_cast<uint8_t>(BCF_HT_STR));
+// 
+//     if (fid) htslib::hts_close(fid);
+// }
+// 
+// 
+// TEST(TestBcfHeader, BcfHdrFmtGp) {
+//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     bcfio::BcfHeader hdr { fid };
+// 
+//     EXPECT_FALSE(hdr.isnull());
+//     
+//     bcfio::BcfHdrAttr attr {};
+// 
+//     int status = hdr.get_format_attr("GP", &attr);
+//     EXPECT_EQ(status, 0);
+//     EXPECT_EQ(attr.number, static_cast<uint8_t>(3));
+//     EXPECT_EQ(attr.vl_type, static_cast<uint8_t>(BCF_VL_FIXED));
+//     EXPECT_EQ(attr.type, static_cast<uint8_t>(BCF_HT_REAL));
+// 
+//     if (fid) htslib::hts_close(fid);
+// }
+// 
+// TEST(TestBcfHeader, BcfHdrFmtDs) {
+//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     bcfio::BcfHeader hdr { fid };
+// 
+//     EXPECT_FALSE(hdr.isnull());
+//     
+//     bcfio::BcfHdrAttr attr {};
+// 
+//     int status = hdr.get_format_attr("DS", &attr);
+//     EXPECT_EQ(status, 0);
+//     EXPECT_EQ(attr.number, static_cast<uint8_t>(1));
+//     EXPECT_EQ(attr.vl_type, static_cast<uint8_t>(BCF_VL_FIXED));
+//     EXPECT_EQ(attr.type, static_cast<uint8_t>(BCF_HT_REAL));
+// 
+//     if (fid) htslib::hts_close(fid);
+// }
+// 
+// 
+// TEST(TestBcfHeader, BcfHdrFmtErr) {
+//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     bcfio::BcfHeader hdr { fid };
+// 
+//     EXPECT_FALSE(hdr.isnull());
+//     
+//     bcfio::BcfHdrAttr attr {};
+// 
+//     int status = hdr.get_format_attr("DOESNOTEXIST", &attr);
+//     EXPECT_NE(status, 0);
+// 
+//     if (fid) htslib::hts_close(fid);
+// }
+// 
+// 
+// TEST(TestBcfHeader, BcfHdrFilter) {
+//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     bcfio::BcfHeader hdr { fid };
+// 
+//     EXPECT_FALSE(hdr.isnull());
+//     
+//     bcfio::BcfHdrAttr attr {};
+// 
+//     int status = hdr.get_filter_attr("PASS", &attr);
+//     EXPECT_EQ(status, 0);
+// 
+//     status = hdr.get_filter_attr("PASSING", &attr);
+//     EXPECT_NE(status, 0);
+// 
+//     if (fid) htslib::hts_close(fid);
+// }
+// 
+// 
+// TEST(TestBcfHeader, BcfHdrInfoEaf) {
+//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     bcfio::BcfHeader hdr { fid };
+// 
+//     EXPECT_FALSE(hdr.isnull());
+//     
+//     bcfio::BcfHdrAttr attr {};
+// 
+//     int status = hdr.get_info_attr("EAF", &attr);
+//     EXPECT_EQ(status, 0);
+//     EXPECT_EQ(attr.type, static_cast<uint8_t>(BCF_HT_REAL));
+//     EXPECT_EQ(attr.vl_type, static_cast<uint8_t>(BCF_VL_VAR));
+// 
+//     if (fid) htslib::hts_close(fid);
+// }
+// 
+// 
+// TEST(TestBcfHeader, BcfHdrInfoErc) {
+//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     bcfio::BcfHeader hdr { fid };
+// 
+//     EXPECT_FALSE(hdr.isnull());
+//     
+//     bcfio::BcfHdrAttr attr {};
+// 
+//     int status = hdr.get_info_attr("ERC", &attr);
+//     EXPECT_EQ(status, 0);
+//     EXPECT_EQ(attr.type, static_cast<uint8_t>(BCF_HT_REAL));
+//     EXPECT_EQ(attr.vl_type, static_cast<uint8_t>(BCF_VL_VAR));
+// 
+//     if (fid) htslib::hts_close(fid);
+// }
+// 
+// 
+// TEST(TestBcfHeader, BcfHdrInfoErr) {
+//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     bcfio::BcfHeader hdr { fid };
+// 
+//     EXPECT_FALSE(hdr.isnull());
+//     
+//     bcfio::BcfHdrAttr attr {};
+// 
+//     int status = hdr.get_info_attr("NOTAINFOMEMBER", &attr);
+//     EXPECT_NE(status, 0);
+// 
+//     if (fid) htslib::hts_close(fid);
+// }
+// 
+// 
+///////////////////////////////////////////////////////////////////////////
+// Test bcfio::BcfFloatRecord
+///////////////////////////////////////////////////////////////////////////
+
+TEST(TestBcfRecord, Constructor) {
+    bcfio::BcfRecord<float> bfloat {};
+    EXPECT_EQ(bfloat.data_cap, 0);
+
+    bcfio::BcfRecord<int32_t> bint {};
+    EXPECT_EQ(bint.data_cap, 0);
+
+    bcfio::BcfRecord<char> bchar {};
+    EXPECT_EQ(bchar.data_cap, 0);
+}
+
+
+TEST(TestBcfRecord, GetGenomicCoords) {
+    constexpr int nfiles = 3;
+    bcfio::bid_t bids[nfiles] = {
+        bcfio::bopen(VCF_NAME, "r"),
+        bcfio::bopen(VCFGZ_NAME, "r"),
+        bcfio::bopen(BCF_NAME, "r")
+    };
+
+    const char true_chrom_name[] = "chr12";
+    constexpr int num_pos = 8;
+    int64_t true_pos[num_pos] = {
+        788, 1321, 1335, 1661, 1714, 2088, 2090, 2631
+    };
+
+    bcfio::BcfRecord<float> brec {};
+
+
+    const char* chrom_out = nullptr;
+    int64_t pos_out = -1;
+    int status = -1;
+    bcfio::Bcf* bid = nullptr;
+
+    EXPECT_TRUE(bcfio::chrom<float>(nullptr, &brec) == nullptr);
+    EXPECT_TRUE(bcfio::chrom<float>(nullptr, nullptr) == nullptr);
+
+    for (int i = 0; i < nfiles; i++) {
+
+        bid = bids[i].get();
+        EXPECT_TRUE(bcfio::chrom<float>(bid, nullptr) == nullptr);
+
+        for (int j = 0; bcfio::next_record<float>(bid, &brec, "DS") == 0; j++) {
+            status = bcfio::pos<float>(&brec, &pos_out);
+            EXPECT_EQ(status, 0);
+            EXPECT_EQ(pos_out, true_pos[j]);
+
+            status = bcfio::pos<float>(nullptr, &pos_out);
+            EXPECT_TRUE(status < 0);
+
+            status = bcfio::pos<float>(nullptr, nullptr);
+            EXPECT_TRUE(status < 0);
+
+            status = bcfio::pos<float>(&brec, nullptr);
+            EXPECT_TRUE(status < 0);
+
+            chrom_out = bcfio::chrom<float>(bid, &brec);
+            EXPECT_STREQ(chrom_out, true_chrom_name);
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////
+// Test bcfio::Bcf
+////////////////////////////////////////////////////////////////////
+
+
+TEST(TestBcf, DefaultConstructor) {
+    bcfio::Bcf bid {};
+    EXPECT_FALSE(bcfio::is_open(&bid));
+}
+
+TEST(TestBcf, Constructor) {
+    htslib::htsFile* fid = htslib::hts_open(VCF_NAME, "r");
+    bcfio::Bcf bid { fid };
+
+    EXPECT_TRUE(bcfio::is_open(&bid));
+
+    uint32_t n = 0;
+    int status = bcfio::num_samples(&bid, &n);
+    EXPECT_EQ(status, 0);
+    EXPECT_EQ(n, N_SAMPS);
+}
+
+TEST(TestBcf, OpenFailure) {
+    bcfio::bid_t bid = bcfio::bopen("", "r");
+    EXPECT_EQ(bid, nullptr);
+}
+
+TEST(TestBcf, OpenVCFSuccess) {
+    bcfio::bid_t bid = bcfio::bopen(VCF_NAME, "r");
+    ASSERT_NE(bid, nullptr);
+    EXPECT_TRUE(bcfio::is_open(bid.get()));
+}
+
+TEST(TestBcf, OpenVCFGZSuccess) {
+    bcfio::bid_t bid = bcfio::bopen(VCFGZ_NAME, "r");
+    ASSERT_NE(bid, nullptr);
+    EXPECT_TRUE(bcfio::is_open(bid.get()));
+}
+
+TEST(TestBcf, OpenBCFSuccess) {
+    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+    ASSERT_NE(bid, nullptr);
+    EXPECT_TRUE(bcfio::is_open(bid.get()));
+}
+ 
+
+TEST(TestBcf, Kfmt) {
+    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+    
+    // DS is alt allele dosage, which is more clearly defined as 
+    // the expected count of alt alleles under the trained HMM
+    uint16_t k = 0;
+    int status = -1;
+
+    status = bcfio::k_fmt(bid.get(), "DS", &k);
+    EXPECT_EQ(status, 0);
+    EXPECT_EQ(k, 1);
+
+    status = bcfio::k_fmt(bid.get(), "HD", &k);
+    EXPECT_EQ(status, 0);
+    EXPECT_EQ(k, K_FOUNDERS);
+
+    // TODO: what happens if I submit "GT", it exists but is a string
+    //      not float
+    // error detection
+    EXPECT_TRUE(bcfio::k_fmt(bid.get(), "WRONG_ID", &k) < 0);
+    EXPECT_TRUE(bcfio::k_fmt(bid.get(), "", &k) < 0);
+    EXPECT_TRUE(bcfio::k_fmt(bid.get(), nullptr, &k) < 0);
+    EXPECT_TRUE(bcfio::k_fmt(bid.get(), "HD", nullptr) < 0);
+}
+
+
+TEST(TestBcf, SubsetSamplesEasy) {
+    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+
+    constexpr uint32_t nsamps = 3;
+    const char* sample_subset[nsamps] = { "S01", "S07", "S08" };
+    const char sample_list[] = "S01,S07,S08";
+
+    int status = bcfio::subset_samples(bid.get(), sample_list);
+    
+    ASSERT_TRUE(status == 0);
+
+    uint32_t n = 0;
+    status = bcfio::num_samples(bid.get(), &n);
+    EXPECT_EQ(status, 0);
+    EXPECT_EQ(n, nsamps);
+
+    for (int i = 0; i < nsamps; i++)
+        EXPECT_STREQ(sample_subset[i], bid->hdr->samples[i]);
+}
+
+
+TEST(TestBcf, SubsetSamplesWrongSampName) {
+    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+
+    constexpr uint32_t nsamps = 3;
+    const char* sample_subset[nsamps] = { "S01", "S72", "S08" };
+
+    constexpr uint32_t nsamps_correct = 2;
+    const uint32_t correct_samp_idx[nsamps_correct] = { 0, 2 };
+    const char sample_list[] = "S01,S08";
+
+    int status = bcfio::subset_samples(bid.get(), sample_list);
+    ASSERT_TRUE(status == 0);
+
+    uint32_t n = 0;
+    status = bcfio::num_samples(bid.get(), &n);
+    EXPECT_EQ(status, 0);
+    EXPECT_EQ(n, nsamps_correct);
+
+    uint32_t idx;
+    for (uint32_t i = 0; i < nsamps_correct; i++) {
+        idx = correct_samp_idx[i];
+        EXPECT_STREQ(sample_subset[idx], bid->hdr->samples[i]);
+    }
+}
+
+
+TEST(TestBcf, SubsetSamplesNullptr) {
+    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+
+    int status = bcfio::subset_samples(bid.get(), nullptr);
+    
+    ASSERT_TRUE(status == 0);
+
+    uint32_t n = 0;
+    status = bcfio::num_samples(bid.get(), &n);
+    EXPECT_EQ(status, 0);
+    EXPECT_EQ(n, 0);
+}
+
+
+struct SampleStringData {
+    SampleStringData(uint32_t count)
+        : nsamps(count),
+        samp_names(count > 0 ? new char*[count] : nullptr),
+        samp_list(nullptr) {};
+
+    ~SampleStringData() {
+        if (samp_names) {
+            for (uint32_t i = 0; i < nsamps; i++) {
+                if (samp_names[i])
+                    delete[] samp_names[i];
+            }
+
+            delete[] samp_names;
+            samp_names = nullptr;
+        }
+
+        if (samp_list) {
+            delete[] samp_list;
+            samp_list = nullptr;
+        }
+    }
+
+    uint32_t nsamps;
+    char** samp_names;
+    char* samp_list;
+};
+
+
+std::unique_ptr<SampleStringData> 
+NewSampleStringData(uint32_t count, ...) {
+    if (count == 0)
+        return std::make_unique<SampleStringData>(0);
+
+    std::unique_ptr<SampleStringData> data = 
+        std::make_unique<SampleStringData>(count);
+
+    va_list args;
+    va_start(args, count);
+
+    // copy words from variadic arguments to the array of C-style
+    // character strings
+    char* s = nullptr;
+    size_t len = 0;
+    size_t total_len = 0;
+    uint32_t i = 0;
+    for (i = 0; i < count; i++) {
+        s = va_arg(args, char*);
+        if (s == nullptr) break;
+
+        // strlen does not count null character, hence + 1
+        len = std::strlen(s) + 1;
+        total_len += len - 1;
+
+        data->samp_names[i] = new char[len];
+        std::memset(data->samp_names[i], '\0', len);
+
+        // strncpy(dst, src, n)
+        std::strncpy(data->samp_names[i], s, len);
+    }
+
+    va_end(args);
+
+    if (i != count)
+        return nullptr;
+
+    // make comma delimited list of sample names, simply replace
+    // the null chars with comma's except for last word
+    count = data->nsamps;
+    data->samp_list = new char[total_len + count];
+    std::memset(data->samp_list, '\0', total_len + count);
+
+    size_t j = 0;
+    for (i = 0; i < count-1; i++) {
+        len = std::strlen(data->samp_names[i]) + 1;
+        std::strncpy(data->samp_list + j, data->samp_names[i], len);
+
+        data->samp_list[j + len - 1] = ',';
+        j += len;
+    }
+
+    len = std::strlen(data->samp_names[i]) + 1;
+    std::strncpy(data->samp_list + j, data->samp_names[i], len);
+    
+    return data;
+}
+
+TEST(TestBcf, SubsetSamplesSubsequentSets) {
+    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+
+    constexpr int ntests = 3;
+    std::unique_ptr<SampleStringData> data[ntests] = {
+        NewSampleStringData(3, "S01", "S05", "S08"),
+        NewSampleStringData(2, "S01", "S08"),
+        NewSampleStringData(0)
+    };
+
+    // NewSampleStringData(4, "S02", "S03", "S04", "S07")
+    int status = -1;
+    uint32_t n = 0;
+    for (int i = 0; i < ntests; i++) {
+        status = bcfio::subset_samples(bid.get(), 
+                data[i]->samp_list);
+        ASSERT_EQ(status, 0);
+
+        status = bcfio::num_samples(bid.get(), &n);
+        EXPECT_EQ(status, 0);
+        EXPECT_EQ(n, data[i]->nsamps);
+
+        for (int j = 0; j < data[i]->nsamps; j++)
+            EXPECT_STREQ(data[i]->samp_names[j], 
+                    bid->hdr->samples[j]);
+    }
+}
+
+TEST(TestBcf, SubsetSamplesDiffSubsequentSets) {
+
+    char* bcf_names[3] = { VCF_NAME, VCFGZ_NAME, BCF_NAME };
+    bcfio::bid_t bid;
+
+    uint32_t n = 0;
+    int status = -1;
+    for (int bcf_i = 0; bcf_i < 3; bcf_i++) {
+        bid = bcfio::bopen(bcf_names[bcf_i], "r");
+    
+        constexpr int ntests = 2;
+        std::unique_ptr<SampleStringData> data[ntests] = {
+            NewSampleStringData(3, "S01", "S05", "S08"),
+            NewSampleStringData(4, "S04", "S05", "S06", "S08")
+        };
+    
+        status = bcfio::subset_samples(bid.get(), 
+                    data[0]->samp_list);
+        ASSERT_EQ(status, 0);
+
+        status = bcfio::num_samples(bid.get(), &n);
+        EXPECT_EQ(status, 0);
+        EXPECT_EQ(n, data[0]->nsamps);
+        
+        status = bcfio::subset_samples(bid.get(), 
+                    data[1]->samp_list);
+        EXPECT_TRUE(status > 0);
+
+        bid->close();
+    }
+}
+
+
+TEST(TestBcf, SamplesExclusion) {
+    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+
+    constexpr int ntests = 6;
+    std::unique_ptr<SampleStringData> data[ntests] = {
+        NewSampleStringData(5, "S01", "S02", "S03", "S05", "S08"),
+        NewSampleStringData(1, "^S03"),
+        NewSampleStringData(4, "S01", "S02", "S05", "S08"),
+        NewSampleStringData(4, "S01", "^S02", "S05", "S08"),
+        NewSampleStringData(2, "^S01", "S05"),
+        NewSampleStringData(1, "S08")
+    };
+
+    int status = bcfio::subset_samples(bid.get(), 
+                data[0]->samp_list);
+    ASSERT_EQ(status, 0);
+
+    uint32_t n = 0;
+    status = bcfio::num_samples(bid.get(), &n);
+    EXPECT_EQ(status, 0);
+    EXPECT_EQ(n, data[0]->nsamps);
+    
+    // Test simple sample exclusion
+    status = bcfio::subset_samples(bid.get(), 
+                data[1]->samp_list);
+    ASSERT_EQ(status, 0);
+
+    status = bcfio::num_samples(bid.get(), &n);
+    EXPECT_EQ(status, 0);
+    EXPECT_EQ(n, data[2]->nsamps);
+
+    for (int j = 0; j < data[2]->nsamps; j++)
+        EXPECT_STREQ(data[2]->samp_names[j], bid->hdr->samples[j]);
+
+
+    // Can't mix and match exlcusion inclusion cases
+    status = bcfio::subset_samples(bid.get(), 
+                data[3]->samp_list);
+    ASSERT_TRUE(status > 0);
+
+
+    // Multiple sample exclusion
+    status = bcfio::subset_samples(bid.get(), 
+                data[4]->samp_list);
+
+    ASSERT_EQ(status, 0);
+    status = bcfio::num_samples(bid.get(), &n);
+    EXPECT_EQ(status, 0);
+    EXPECT_EQ(n, data[5]->nsamps);
+
+    for (uint32_t j = 0; j < n; j++)
+        EXPECT_STREQ(data[5]->samp_names[j], bid->hdr->samples[j]);
+}
+
+
+TEST(TestBcfInfo, GetFilename) {
+    constexpr int num_files = 4;
+    bcfio::bid_t bids[num_files] = {
+        nullptr,
+        bcfio::bopen(VCF_NAME, "r"),
+        bcfio::bopen(VCFGZ_NAME, "r"),
+        bcfio::bopen(BCF_NAME, "r")
+    };
+    const char* filenames[num_files] = { 
+        nullptr,
+        VCF_NAME, 
+        VCFGZ_NAME, 
+        BCF_NAME
+    };
+
+    for (int i = 0; i < num_files; i++) {
+        if (bids[i] == nullptr) {
+            EXPECT_TRUE(filenames[i] == nullptr);
+            continue;
+        }
+
+        EXPECT_STREQ(bcfio::get_filename(bids[i].get()), filenames[i]);
+    }
+}
+
+
+TEST(TestBcfInfo, NumPositions) {
+    constexpr int num_files = 4;
+    bcfio::bid_t bids[num_files] = {
+        nullptr,
+        bcfio::bopen(VCF_NAME, "r"),
+        bcfio::bopen(VCFGZ_NAME, "r"),
+        bcfio::bopen(BCF_NAME, "r")
+    };
+
+    int64_t npos = 8;
+    int64_t ntest = 0;
+    int statuses[num_files] = { -1, 0, 0, 0 };
+    int status = 0;
+
+    for (int i = 0; i < num_files; i++) {
+        status = bcfio::num_pos(bids[i].get(), &ntest);
+
+        EXPECT_EQ(status, statuses[i]);
+
+        if (bids[i] == nullptr)
+            continue;
+
+        EXPECT_EQ(ntest, npos);
+     }
+
+}
+
+
+// TEST(TestReadBcf, LoadRecord) {
+// 
+//     bcfio::ReadBcf bcf = bcfio::open(VCF_NAME, "r");
+//     bcfio::BcfFloatRecord rec {};
+// 
+//     bcf.next_record(&rec, "HD");
+// 
+//     int32_t k_founders = bcf.k_fmt("HD");
+//     EXPECT_FALSE(k_founders <= 0);
+//     EXPECT_EQ(rec.size(), bcf.n_samples() * static_cast<uint32_t>(k_founders));
+//     EXPECT_EQ(bcf.n_samples(), rec.nrows());
+//     EXPECT_EQ(static_cast<uint64_t>(k_founders), rec.ncols());
+//     EXPECT_TRUE(rec.is_snp());
+// 
+//     // EXPECT_EQ(record.chrom(), "chr12");
+//     // EXPECT_EQ(record.pos(), 788);
+//     // EXPECT_EQ(record.id(), ".");
+//     // EXPECT_EQ(record.ref(), 'A');
+//     // EXPECT_EQ(record.alt(), 'G');
+//     // EXkECT_EQ(record.qual(), ".");
+//     // EXPECT_EQ(record.filter(), "PASS");
+//     // EXPECT_EQ(record.info(), "EAF=0.00228;INFO_SCORE=1;HWE=1;ERC=0.01949;EAC=7.94153;PAF=0.00245;REF_PANEL=0");
+//     // EXPECT_EQ(record.format(), "GT:GP:DS:HD");
+// }
+// 
+// 
+// 
+// struct Buff {
+//     Buff(const uint32_t size_in)
+//         : size(size_in), array(new char[size]) { reset(); };
+//     ~Buff() { if (array) delete[] array; };
+// 
+//     void reset() {
+//         std::memset(array, '\0', size);
+//     }
+// 
+//     uint32_t size;
+//     char* array;
+// };
+// 
+// struct FloatArray {
+//     FloatArray(const uint32_t size_in)
+//         : size(size_in), array(new float[size]) { reset(); };
+//     ~FloatArray() { if (array) delete[] array; };
+// 
+//     void reset() {
+//         for (uint32_t i = 0; i < size; i++)
+//             array[i] = static_cast<float>(0);
+//     }
+// 
+//     uint32_t size;
+//     float *array;
+// };
+// 
+// 
+// int get_sample_truth_vals(FILE* fid,
+//         FloatArray* data, 
+//         Buff* buff) {
+// 
+//     size_t buff_idx = 0;
+//     size_t data_idx = 0;
+//     int c;
+//     while ((c = fgetc(fid)) != EOF) {
+// 
+//         if (c == ',' || c == '\n') {
+//             if (buff_idx >= buff->size-1) 
+//                 return -1;
+//             buff->array[buff_idx] = '\0';
+// 
+//             if (data_idx >= data->size)
+//                 return -1;
+// 
+//             data->array[data_idx++] = atof(buff->array);
+//             buff_idx = 0;
+//             buff->reset();
+// 
+//             if (c == '\n') break;
+// 
+//             continue;
+//         }
+// 
+//         buff->array[buff_idx++] = c;
+//     }
+//     
+//     return 0;
+// }
+// 
+// 
+// 
+// TEST(TestReadBcf, HDRecordValue) {
+// 
+//     bcfio::ReadBcf bcf = bcfio::open(VCF_NAME, "r");
+//     bcfio::BcfFloatRecord rec {};
+// 
+//     Buff buff_fname { 100 };
+//     Buff buff_data { 1000 };
+//     FloatArray data { static_cast<uint32_t>(bcf.k_fmt("HD")) };
+// 
+//     FILE* fid;
+//     // iterate positions
+//     size_t pos = 1;
+//     int status;
+//     while (bcf.next_record(&rec, "HD") == 0) {
+//         
+//         snprintf(buff_fname.array, 
+//                 buff_fname.size, 
+//                 "tests/hd_%02zu.csv", pos++);
+// 
+//         fid = fopen(buff_fname.array, "r");
+// 
+//         EXPECT_EQ(rec.nrows(), bcf.n_samples());
+//         EXPECT_EQ(rec.ncols(), static_cast<uint64_t>(bcf.k_fmt("HD")));
+// 
+//         // loop over samples
+//         for (uint64_t i = 0; i < rec.nrows(); i++) {
+// 
+//             status = get_sample_truth_vals(fid, &data, &buff_data);
+//             if (status != 0)
+//                 printf("\n\nERROR\n\n");
+// 
+//            // loop over haplotypes
+//             for (uint64_t j = 0; j < rec.ncols(); j++)
+//                 EXPECT_EQ(data.array[j], rec.get(i, j).value());
+//         }
+//         fclose(fid);
+//     }
+// }

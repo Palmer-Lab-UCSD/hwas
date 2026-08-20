@@ -17,50 +17,109 @@
 //
 
 namespace grm {
-// Symmetri matrix
-// n is the number of columns in the matrix
-constexpr uint64_t sym_matrix_idx_to_array(const uint64_t i, 
-                        const uint64_t j, 
-                        const uint64_t n) { 
+
+// @title Compute index of one-dimension array from matrix indices
+// @param i: matrix row index
+// @param j: matrix col index, note that j >= i
+// @param n: number of cols, and as symmetric number of rows, of the
+//  matrix, note that n = max(i) + 1 = max(j) + 1
+// @return index
+uint32_t sym_matrix_idx_to_array(const uint32_t i, 
+                        const uint32_t j, 
+                        const uint32_t n) {
     return i*n - i*(i-1)/2 + j - i; 
 }
 
 // n is the number of columns in the matrix
-constexpr uint64_t matrix_idx_to_array(const uint64_t i, 
-                              const uint64_t j,
-                              const uint64_t n) { 
+uint32_t matrix_idx_to_array(const uint32_t i, 
+                             const uint32_t j,
+                             const uint32_t n) { 
     return i*n + j; 
 };
 
+
+template <typename T>
 struct Grm {
+    Grm(): nsamps(0), capacity(0), data(nullptr) {};
+    Grm(uint32_t n_samps): nsamps(n_samps),
+        capacity(n_samps == 0 ? 0 : n_samps * (n_samps + 1) / 2),
+        data(nsamps == 0 ? nullptr : new T[capacity]) {
+
+        if (data) {
+            T default_val {};
+            std::memset(data, default_val, nsamps * sizeof(T));
+        }
+    }
+
+    // Grm(const Grm&)=delete;                          
+    // Grm& operator=(const Grm&)=delete;
+
+    // Grm(Grm&&);
+    // grm::Grm::Grm(grm::Grm&& other)
+    // : n_samples(other.n_samples), data(std::move(other.data)) {
+    // other.n_samples = 0;    
+    // grm::Grm& grm::Grm::operator=(grm::Grm&& other) {
+    //     if (this == &other)
+    //         return *this;
     // 
-    Grm();
-    Grm(uint64_t n_samps);
+    //     n_samples = other.n_samples;
+    //     other.n_samples = 0;
+    // 
+    //     data = std::move(other.data);
+    // 
+    //     return *this;
+    // }
 
-    Grm(const Grm&)=delete;                          
-    Grm& operator=(const Grm&)=delete;
+    // };
+    // Grm& operator=(Grm&&);
 
-    Grm(Grm&&);
-    Grm& operator=(Grm&&);
+    ~Grm() {
+        if (data)
+            delete[] data;
+        data = nullptr;
+        nsamps = 0;
+        capacity = 0;
+    }
                                             
-    // Unchecked indexes when setting and getting of matrix values
-    float operator()(const uint64_t i, const uint64_t j) const;
-    float& operator()(const uint64_t i, const uint64_t j);
+    T operator()(const uint32_t i, const uint32_t j) const {
+        if (i > j)
+            return data[sym_matrix_idx_to_array(j, i, nsamps)];
+        return data[sym_matrix_idx_to_array(i, j, nsamps)];
+    }
 
-    // Checked indexes when setting and getting of matrix values
-    int set(const uint64_t i, const uint64_t j, const float val); 
-    int get(const uint64_t i, const uint64_t j, float *val) const; 
+    T& operator()(const uint32_t i, const uint32_t j) {
+        if (i > j)
+            return data[sym_matrix_idx_to_array(j, i, nsamps)];
 
-    uint64_t size() const;
+        return data[sym_matrix_idx_to_array(i, j, nsamps)];
+    }
 
-    int midx_to_arr(const uint64_t i, 
-            const uint64_t j, uint64_t* idx) const;
+    int midx_to_arr(const uint32_t i, 
+            const uint32_t j, 
+            uint32_t* idx) const {
 
-    uint64_t n_samples;
-    std::unique_ptr<float[]> data;
+        if (i >= nsamps || j >= nsamps)
+            return -1;
+
+        // remember that by symmetry, the matrix is equal to its transpose
+        if (i <= j)
+            *idx = sym_matrix_idx_to_array(i, j, nsamps);
+        else 
+            *idx = sym_matrix_idx_to_array(j, i, nsamps);
+
+        return 0;
+    }
+
+    uint32_t nsamps;        
+    uint32_t capacity;      // size of allocated memory for data
+    T* data;
 };
 
-int hap_update_kernel(Grm* grmat, const bcfio::BcfRecord<float>* rec);
+// int hap_update_kernel(Grm* grmat, const bcfio::BcfRecord<float>* rec);
+
+// compute_sum_grm();
+// compute_norm_grm();
+
 }
 
 #endif

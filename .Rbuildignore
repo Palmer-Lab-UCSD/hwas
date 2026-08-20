@@ -1,0 +1,9 @@
+^.gitignore$
+.swp
+^Makefile$
+
+^stash/
+^scatch/
+^build/
+^tools/
+^tests/cpp/

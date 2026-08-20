@@ -14,36 +14,34 @@
 // @param mode A character vector with the mode, read (r), TODO
 // @return pointer to open bcf file connection
 // 
-// [X] Documentation: man/hts_conn.Rd
 //
 // [[Rcpp::export]]
 bcf_conn_t bopen(const char* filename, const char* mode) {
+    if (strcmp(mode, "r") != 0) {
+        fprintf(stderr, "ERROR: Mode %s is not yet supported.\n");
+        return R_NilValue;
+    }
+
     std::unique_ptr<bcfio::Bcf> bid = bcfio::bopen(filename, mode);
     if (bid == nullptr)
        return bcf_conn_t(nullptr, true); 
     return bcf_conn_t(bid.release(), true);
 }
 
-// [X] Documentation: man/hts_conn.Rd
-//
 // [[Rcpp::export]]
-int bclose(bcf_conn_t bid) {
-    if (!bid || !bid.get()) return -1;
+int bclose(bcf_conn_t bconn) {
+    if (!bconn || !bconn.get()) return -1;
 
-    bid->close();
+    bconn->close();
     return 0;
 }
 
-// [X] Documentation: man/hts_conn.Rd
-//
 // [[Rcpp::export]]
-bool is_open(bcf_conn_t bid) {
-    return bid->is_open();
+bool is_open(bcf_conn_t bconn) {
+    return bcfio::is_open(bconn.get());
 }
 
 
-// [X] Documentation: man/hts_conn.Rd
-//
 // [[Rcpp::export]]
 bool is_bcf(const char* filename) {
     return bcfio::is_bcf(filename);
@@ -54,39 +52,43 @@ bool is_bcf(const char* filename) {
 // bcf header
 /////////////////////////////////////////////////////////////////////
 
-// [X] Documentation: man/hts_header.Rd
-//
 // [[Rcpp::export]]
-double k_fmt(bcf_conn_t bid, const char* id) {
-    return static_cast<double>(bid->hdr_.k_fmt(id));
+uint16_t k_fmt(bcf_conn_t bconn, const char* id) {
+    uint16_t k = 0;
+    if (bcfio::k_fmt(bconn.get(), id, &k) != 0)
+        return R_NilValue;
+    return k;
 }
 
-// [X] Documentation: man/hts_header.Rd
-//
 // [[Rcpp::export]]
-uint32_t num_samples(bcf_conn_t bid) {
-    return bcfio::num_samples(bid.get());
+uint32_t num_samples(bcf_conn_t bconn) {
+    uint32_t nsamps = 0;
+    if (bcfio::num_samples(bconn.get(), &nsamps) != 0)
+        return R_NilValue;
+    return nsamps;
 }
 
-// [X] Documentation: man/hts_header.Rd
-//
 // [[Rcpp::export]]
-int64_t num_positions(bcf_conn_t bid) {
-    return bcfio::num_pos(bid.get());
+int64_t num_positions(bcf_conn_t bconn) {
+    int64_t npos = 0;
+    if (bcfio::num_pos(bconn.get(), &npos) != 0)
+        return R_NilValue;
+    return npos;
 }
 
-// [X] Documentation: man/hts_header.Rd
-//
 // [[Rcpp::export]]
-Rcpp::RObject sample_names(bcf_conn_t bid) {
-    if (!bid.get())
+Rcpp::RObject sample_names(bcf_conn_t bconn) {
+    if (!bconn || !bconn.get())
         return R_NilValue;
 
-    uint32_t nsamples = bid->hdr_.n_samples();
+    uint32_t nsamples = 0;
+    if (bcfio::num_samples(bconn.get(), &nsamples) != 0)
+        return R_NilValue;
+
     Rcpp::CharacterVector samp_names(nsamples);
 
     for (uint32_t i = 0; i < nsamples; i++)
-        samp_names[i] = std::string(bid->hdr_.hts_hdr_->samples[i]);
+        samp_names[i] = std::string(bconn->hdr->samples[i]);
 
     return samp_names;
 }
@@ -95,76 +97,82 @@ Rcpp::RObject sample_names(bcf_conn_t bid) {
 // bcf config
 /////////////////////////////////////////////////////////////////////
 
-// [] Documentation: man/hts_config.Rd
-//
 // [[Rcpp::export]]
-int subset_samples(bcf_conn_t bid, 
+int subset_samples(bcf_conn_t bconn, 
         Rcpp::CharacterVector samples) {
 
-    bool is_na_val = samples[0] == R_NaString;
-    if (samples.size() == 1 && is_na_val)
-        return bcfio::subset_samples(bid.get(), nullptr);
+    if (samples.size() == 1 && samples[0] == R_NaString)
+        return bcfio::subset_samples(bconn.get(), nullptr);
 
-    if (is_na_val)
+    int i = 0;
+    for (; i < s.size() && s[i] == R_NaString; i++)
+        ;
+    
+    if (i == s.size())
         return -1;
 
-    std::string samp_str = Rcpp::as<std::string>(samples[0]);
-
-    // check for missing values
-    for (int i = 1; i < samples.size(); i++) {
+    std::string samp_str = Rcpp::as<std::string>(samples[i]);
+    i++;
+    for (; i < samples.size(); i++) {
         if (samples[i] == R_NaString)
-            return -1;
+            continue;
 
         samp_str += ',' + Rcpp::as<std::string>(samples[i]);
     }
 
-    return bcfio::subset_samples(bid.get(), samp_str.c_str());
+    return bcfio::subset_samples(bconn.get(), samp_str.c_str());
 }
 
 
-int subset_samples_from_file(bcf_conn_t bid,
+int subset_samples_from_file(bcf_conn_t bconn,
         const char* samples_filename) {
-    if (!bid)
+    if (!bconn || !samples_filename)
         return -1;
-    return bcfio::subset_samples_from_file(bid.get(), 
+    return bcfio::subset_samples_from_file(bconn.get(), 
             samples_filename);
 }
 
-// [] Documentation: man/hts_config.Rd
-//
 // [[Rcpp::export]]
-int set_threads(bcf_conn_t bid, int n) {
-    return htslib::hts_set_threads(bid->fid_, n);
+int set_threads(bcf_conn_t bconn, int n) {
+    return htslib::hts_set_threads(bconn->fid, n);
 }
 
 /////////////////////////////////////////////////////////////////////
 // bcf query records
 /////////////////////////////////////////////////////////////////////
 
+
+
 // [] Documentation: man/hts_records.Rd
-//
+// TODO: update to new interface
 // [[Rcpp::export]]
-Rcpp::RObject next_record(bcf_conn_t bid, const char* id) {
-    bcfio::BcfRecord<float> rec {};
+Rcpp::RObject next_record(bcf_conn_t bconn, const char* id) {
 
-    int status = bcfio::next_record(bid.checked_get(), &rec, id);
-    if (status != 0)
-        return R_NilValue;
+    bcfio::Bcf* bid = bconn->checked_get();
 
-    std::optional<float> datum = std::nullopt;
-    Rcpp::NumericMatrix data(rec.nrows(), rec.ncols());
+    htslib::bcf_fmt_t* fmt_cfg = htslib::bcf_get_fmt(bid->hdr, id);
 
-    for (uint64_t i = 0; i < rec.nrows(); i++)
-        for (uint64_t j = 0; j < rec.ncols(); j++) {
-            if (!(datum = rec.get(i, j)))
-                Rcpp::stop("Data retrieval error.");
-            data(i, j) = datum.value();
-        }
+    // htslib macro (htslib/vcf.h line 1259
+    // TODO int_id, i need to transform id string to integer
+    // representation for htslib
+    //
+    // uint32_t fmt_type = bcf_hdr_id2type(bid->hdr_.hts_hdr_, 
+    //         BCF_HL_FMT, 
+    //         int_id);
+    // int status = -1;
 
-    data.attr("chrom") = std::string(rec.chrom(bid->hdr_.hts_hdr_));
-    data.attr("pos") = rec.pos();
-    //data.attr("qual") = rec.qual();
-    //data.attr(
 
+    Rcpp::NumericMatrix data;
+
+    switch (fmt_cfg->type) {
+    case BCF_HT_REAL:
+        data = get_float_matrix(bid, id, fmt_cfg);
+        break;
+    case BCF_HT_INT:
+        data = get_int_matrix();
+        break;
+    default:
+        data = R_NilValue;
+    }
     return data;
 }

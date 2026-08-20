@@ -72,24 +72,24 @@ BEGIN_RCPP
 END_RCPP
 }
 // bclose
-int bclose(bcf_conn_t bid);
-RcppExport SEXP _hwas_bclose(SEXP bidSEXP) {
+int bclose(bcf_conn_t bconn);
+RcppExport SEXP _hwas_bclose(SEXP bconnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bid(bidSEXP);
-    rcpp_result_gen = Rcpp::wrap(bclose(bid));
+    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    rcpp_result_gen = Rcpp::wrap(bclose(bconn));
     return rcpp_result_gen;
 END_RCPP
 }
 // is_open
-bool is_open(bcf_conn_t bid);
-RcppExport SEXP _hwas_is_open(SEXP bidSEXP) {
+bool is_open(bcf_conn_t bconn);
+RcppExport SEXP _hwas_is_open(SEXP bconnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bid(bidSEXP);
-    rcpp_result_gen = Rcpp::wrap(is_open(bid));
+    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    rcpp_result_gen = Rcpp::wrap(is_open(bconn));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -105,83 +105,83 @@ BEGIN_RCPP
 END_RCPP
 }
 // k_fmt
-double k_fmt(bcf_conn_t bid, const char* id);
-RcppExport SEXP _hwas_k_fmt(SEXP bidSEXP, SEXP idSEXP) {
+uint16_t k_fmt(bcf_conn_t bconn, const char* id);
+RcppExport SEXP _hwas_k_fmt(SEXP bconnSEXP, SEXP idSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bid(bidSEXP);
+    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
     Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
-    rcpp_result_gen = Rcpp::wrap(k_fmt(bid, id));
+    rcpp_result_gen = Rcpp::wrap(k_fmt(bconn, id));
     return rcpp_result_gen;
 END_RCPP
 }
 // num_samples
-uint32_t num_samples(bcf_conn_t bid);
-RcppExport SEXP _hwas_num_samples(SEXP bidSEXP) {
+uint32_t num_samples(bcf_conn_t bconn);
+RcppExport SEXP _hwas_num_samples(SEXP bconnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bid(bidSEXP);
-    rcpp_result_gen = Rcpp::wrap(num_samples(bid));
+    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    rcpp_result_gen = Rcpp::wrap(num_samples(bconn));
     return rcpp_result_gen;
 END_RCPP
 }
 // num_positions
-int64_t num_positions(bcf_conn_t bid);
-RcppExport SEXP _hwas_num_positions(SEXP bidSEXP) {
+int64_t num_positions(bcf_conn_t bconn);
+RcppExport SEXP _hwas_num_positions(SEXP bconnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bid(bidSEXP);
-    rcpp_result_gen = Rcpp::wrap(num_positions(bid));
+    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    rcpp_result_gen = Rcpp::wrap(num_positions(bconn));
     return rcpp_result_gen;
 END_RCPP
 }
 // sample_names
-Rcpp::RObject sample_names(bcf_conn_t bid);
-RcppExport SEXP _hwas_sample_names(SEXP bidSEXP) {
+Rcpp::RObject sample_names(bcf_conn_t bconn);
+RcppExport SEXP _hwas_sample_names(SEXP bconnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bid(bidSEXP);
-    rcpp_result_gen = Rcpp::wrap(sample_names(bid));
+    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    rcpp_result_gen = Rcpp::wrap(sample_names(bconn));
     return rcpp_result_gen;
 END_RCPP
 }
 // subset_samples
-int subset_samples(bcf_conn_t bid, Rcpp::CharacterVector samples);
-RcppExport SEXP _hwas_subset_samples(SEXP bidSEXP, SEXP samplesSEXP) {
+int subset_samples(bcf_conn_t bconn, Rcpp::CharacterVector samples);
+RcppExport SEXP _hwas_subset_samples(SEXP bconnSEXP, SEXP samplesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bid(bidSEXP);
+    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
     Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type samples(samplesSEXP);
-    rcpp_result_gen = Rcpp::wrap(subset_samples(bid, samples));
+    rcpp_result_gen = Rcpp::wrap(subset_samples(bconn, samples));
     return rcpp_result_gen;
 END_RCPP
 }
 // set_threads
-int set_threads(bcf_conn_t bid, int n);
-RcppExport SEXP _hwas_set_threads(SEXP bidSEXP, SEXP nSEXP) {
+int set_threads(bcf_conn_t bconn, int n);
+RcppExport SEXP _hwas_set_threads(SEXP bconnSEXP, SEXP nSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bid(bidSEXP);
+    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    rcpp_result_gen = Rcpp::wrap(set_threads(bid, n));
+    rcpp_result_gen = Rcpp::wrap(set_threads(bconn, n));
     return rcpp_result_gen;
 END_RCPP
 }
 // next_record
-Rcpp::RObject next_record(bcf_conn_t bid, const char* id);
-RcppExport SEXP _hwas_next_record(SEXP bidSEXP, SEXP idSEXP) {
+Rcpp::RObject next_record(bcf_conn_t bconn, const char* id);
+RcppExport SEXP _hwas_next_record(SEXP bconnSEXP, SEXP idSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bid(bidSEXP);
+    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
     Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
-    rcpp_result_gen = Rcpp::wrap(next_record(bid, id));
+    rcpp_result_gen = Rcpp::wrap(next_record(bconn, id));
     return rcpp_result_gen;
 END_RCPP
 }

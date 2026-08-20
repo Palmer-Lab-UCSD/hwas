@@ -21,11 +21,13 @@ Rcpp::RObject calc_grm(bcf_conn_t bid, const char* id) {
     std::signal(SIGINT, signal_handler);
 
     // instantiate matrices to hold calculations
-    int32_t k { 0 };
-    if ((k = k_fmt(bid, id)) < 0) {
+    uint16_t k = 0;
+    if (bcfio::k_fmt(bid, id, &k) != 0)
         return R_NilValue;
-    }
-    uint64_t nsamps = num_samples(bid);
+
+    uint32_t nsamps = 0;
+    if (num_samples(bid, &nsamps) != 0)
+        return R_NilValue;
 
     grm::Grm grmat { nsamps };
     bcfio::BcfRecord<float> rec {};
@@ -48,7 +50,9 @@ Rcpp::RObject calc_grm(bcf_conn_t bid, const char* id) {
         if (s != 0) break; 
 
         start_interval = clock::now();
-        if(grm::hap_update_kernel(&grmat, &rec) != 0) return R_NilValue;
+        if (grm::hap_update_kernel(&grmat, &rec) != 0) 
+            return R_NilValue;
+
         end_interval = clock::now();
         t_compute += end_interval - start_interval;
 
