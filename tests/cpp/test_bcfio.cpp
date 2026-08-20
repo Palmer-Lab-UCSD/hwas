@@ -236,6 +236,73 @@ TEST(TestBcfRecord, GetGenomicCoords) {
     }
 }
 
+TEST(BcfRecord, ChromFailures) {
+    // default constructors have nullptr vals
+    constexpr int num_bids = 3;
+    bcfio::bid_t bids[num_bids] = {
+        nullptr,
+        std::make_unique<bcfio::Bcf>(),
+        bcfio::bopen(BCF_NAME, "r")
+    };
+
+    constexpr int num_brec = 3;
+    std::unique_ptr<bcfio::BcfRecord<float>> brecs[num_brec] = {
+        nullptr,
+        std::make_unique<bcfio::BcfRecord<float>>(),
+        std::make_unique<bcfio::BcfRecord<float>>()
+    };
+
+    int status = bcfio::next_record<float>(bids[1].get(), 
+            brecs[1].get(), 
+            "DS");
+    htslib::bcf_destroy(brecs[1]->rec);
+    brecs[1]->rec = nullptr;
+
+    status = bcfio::next_record<float>(bids[2].get(), 
+            brecs[2].get(), 
+            "DS");
+    ASSERT_EQ(status, 0);
+
+    const char* chrom_return_vals[num_bids * num_brec] = {
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        "chr12"
+    };
+
+    bcfio::Bcf* bid = nullptr;
+    bcfio::BcfRecord<float>* brec = nullptr;
+    int i = 0;
+    for (int ibid = 0; ibid < num_bids; ibid++) {
+
+        if (bids[ibid] != nullptr)
+            bid = bids[ibid].get();
+        else
+            bid = nullptr;
+
+        for (int ibrec = 0; ibrec < num_brec; ibrec++) {
+            if (brecs[ibrec] != nullptr)
+                brec = brecs[ibrec].get();
+            else
+                brec = nullptr;
+
+            if (chrom_return_vals[i] == nullptr)
+                EXPECT_TRUE(bcfio::chrom(bid, brec) == nullptr);
+            else 
+                EXPECT_STREQ(bcfio::chrom(bid, brec),
+                        chrom_return_vals[i]);
+
+            i++;
+        }
+    }
+}
+
+
 ////////////////////////////////////////////////////////////////////
 // Test bcfio::Bcf
 ////////////////////////////////////////////////////////////////////
@@ -279,6 +346,31 @@ TEST(TestBcf, OpenBCFSuccess) {
     bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
     ASSERT_NE(bid, nullptr);
     EXPECT_TRUE(bcfio::is_open(bid.get()));
+}
+
+TEST(TestBcf, Closing) {
+    constexpr uint32_t nfiles = 3;
+    bcfio::bid_t bids[nfiles] = {
+        bcfio::bopen(VCF_NAME, "r"),
+        bcfio::bopen(VCFGZ_NAME, "r"),
+        bcfio::bopen(BCF_NAME, "r")
+    };
+
+    bcfio::Bcf* bid = nullptr;
+    for (int i = 0; i < nfiles; i++) {
+        bid = bids[i].get();
+        EXPECT_TRUE(bid->fid != nullptr);
+        EXPECT_TRUE(bid->hdr != nullptr);
+
+        bid->close();
+        EXPECT_TRUE(bid->fid == nullptr);
+        EXPECT_TRUE(bid->hdr == nullptr);
+
+        // confirm that nothing happens upon repeated close
+        bid->close();
+        EXPECT_TRUE(bid->fid == nullptr);
+        EXPECT_TRUE(bid->hdr == nullptr);
+    }
 }
  
 
@@ -624,6 +716,7 @@ TEST(TestBcfInfo, NumPositions) {
      }
 
 }
+
 
 
 // TEST(TestReadBcf, LoadRecord) {

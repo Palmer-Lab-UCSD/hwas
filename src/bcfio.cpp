@@ -67,12 +67,12 @@ bcfio::Bcf::Bcf(htslib::htsFile* hts_fid)
     hdr(hts_fid ? htslib::bcf_hdr_read(hts_fid) : nullptr) {};
 
 void bcfio::Bcf::close() noexcept {
-    if (!fid) {
+    if (fid) {
         htslib::hts_close(fid);
         fid = nullptr;
     }
 
-    if (!hdr) {
+    if (hdr) {
         htslib::bcf_hdr_destroy(hdr);
         hdr = nullptr;
     }
@@ -101,8 +101,10 @@ bcfio::bid_t bcfio::bopen(const char* filename, const char* mode) {
         return nullptr;
 
     bcfio::Bcf* bid = new Bcf(fh);
-    if (!bcfio::is_open(bid))
+    if (!bcfio::is_open(bid)) {
+        delete bid;
         return nullptr;
+    }
 
     return bcfio::bid_t(bid);
 }

@@ -84,6 +84,13 @@ std::unique_ptr<HFileReadConn> hread(const char* filename);
 template <typename T>
 struct BcfRecord {
     BcfRecord(): rec(htslib::bcf_init()) {};
+
+    BcfRecord(const BcfRecord&)=delete;
+    BcfRecord& operator=(const BcfRecord&)=delete;
+
+    BcfRecord(BcfRecord&&)=delete;
+    BcfRecord& operator=(BcfRecord&&)=delete;
+
     ~BcfRecord() {
         if (rec) htslib::bcf_destroy(rec);
         if (data) free(data);
@@ -112,40 +119,7 @@ struct BcfRecord {
 
 
 
-//     // provide check-free fast, but unsafe, access to loaded data
-//     T operator[](const size_t idx) const { return *(dst_ + idx); };
-//     const T* array() const;
-//     // provide index checked access to data.
-//     std::optional<T> get(const uint64_t row_idx, 
-//             const uint64_t col_idx) const;
-// 
-// 
-//     // the total amount of values per record, n_samples * k_founders
-//     uint64_t size() const { return static_cast<uint64_t>(ndst_); };
-//     uint64_t ncols() const { return col_num_; };
-//     uint64_t nrows() const { return row_num_; };
 //     float qual() const { return rec_->qual; };
-// 
-//     const char* chrom(htslib::bcf_hdr_t* hdr) const { 
-//         return htslib::bcf_hdr_id2name(hdr, rec_->rid); 
-//     };
-// 
-//     // store position with respect to vcf 1-based coordintates
-//     int64_t pos() const { return rec_->pos + 1; };
-//     
-// 
-//     htslib::bcf1_t *cur_rec() const { return rec_; }; 
-// 
-//     bool is_snp() const { return htslib::bcf_is_snp(rec_); }
-// 
-// 
-// 
-//     // data that dst_ point to are stored in row major order, with 
-//     // columns being k_fmt and rows being n_samples.
-//     uint64_t col_num_ = 0;
-//     uint64_t row_num_ = 0;
-// 
-//     // Needs to take values defined by macros in htslib/vcf.h BCF_HT_{}
 
 
 // @title Interface with htslib bcf
@@ -421,11 +395,12 @@ const char* chrom(const Bcf* bid, const BcfRecord<T>* brec) {
 
     if (!brec) {
         fprintf(stderr,
-                "ERROR: pointer to BcfRecor<T> is nullptr.\n");
+                "ERROR: pointer to BcfRecord<T> is nullptr.\n");
         return nullptr;
     }
 
-    if (!bid->hdr) {
+
+    if (!brec->rec) {
         fprintf(stderr,
                 "ERROR: BcfRecord<T> invalid internal state."
                 "Reload a new record.\n");
