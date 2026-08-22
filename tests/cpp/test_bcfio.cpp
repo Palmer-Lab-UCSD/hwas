@@ -170,28 +170,70 @@ uint8_t N_SAMPS = 11;
 // }
 // 
 // 
-///////////////////////////////////////////////////////////////////////////
-// Test bcfio::BcfFloatRecord
-///////////////////////////////////////////////////////////////////////////
+TEST(TestHFileRead, Initialise) {
+    struct Results {
+        bool is_nullptr;
+        bool is_bcf;
+    };
+
+    constexpr int num_files = 4;
+    bcfio::hfile_conn_t hfs[num_files] = {
+        nullptr,
+        bcfio::hread(VCF_NAME),
+        bcfio::hread(VCFGZ_NAME),
+        bcfio::hread(BCF_NAME)
+    };
+
+    Results results[num_files] = {
+        { true, false },
+        { false, true },
+        { false, true },
+        { false, true }
+    };
+
+    for (int i = 0; i < num_files; i++) {
+        if (results[i].is_nullptr)
+            EXPECT_TRUE(hfs[i] == nullptr);
+        else
+            EXPECT_FALSE(hfs[i] == nullptr);
+
+        if (results[i].is_bcf)
+            EXPECT_TRUE(hfs[i]->is_bcf());
+        else if (!results[i].is_nullptr && !results[i].is_bcf)
+            EXPECT_FALSE(hfs[i]->is_bcf());
+    }
+}
 
 TEST(TestBcfRecord, Constructor) {
-    bcfio::BcfRecord<float> bfloat {};
-    EXPECT_EQ(bfloat.data_cap, 0);
+    bcfio::brec_t<float> bfloat = bcfio::BcfRecord<float>::init();
+    ASSERT_TRUE(bfloat != nullptr);
+    EXPECT_EQ(bfloat->data_cap, 0);
+    EXPECT_EQ(bfloat->ncol, 0);
+    EXPECT_EQ(bfloat->nrow, 0);
+    EXPECT_TRUE(bfloat->data == nullptr);
 
-    bcfio::BcfRecord<int32_t> bint {};
-    EXPECT_EQ(bint.data_cap, 0);
+    bcfio::brec_t<int32_t> bint32 = bcfio::BcfRecord<int32_t>::init();
+    ASSERT_TRUE(bint32 != nullptr);
+    EXPECT_EQ(bint32->data_cap, 0);
+    EXPECT_EQ(bint32->ncol, 0);
+    EXPECT_EQ(bint32->nrow, 0);
+    EXPECT_TRUE(bint32->data == nullptr);
 
-    bcfio::BcfRecord<char> bchar {};
-    EXPECT_EQ(bchar.data_cap, 0);
+    bcfio::brec_t<int> bint = bcfio::BcfRecord<int>::init();
+    ASSERT_TRUE(bint != nullptr);
+    EXPECT_EQ(bint->data_cap, 0);
+    EXPECT_EQ(bint->ncol, 0);
+    EXPECT_EQ(bint->nrow, 0);
+    EXPECT_TRUE(bint->data == nullptr);
 }
 
 
 TEST(TestBcfRecord, GetGenomicCoords) {
     constexpr int nfiles = 3;
     bcfio::bid_t bids[nfiles] = {
-        bcfio::bopen(VCF_NAME, "r"),
-        bcfio::bopen(VCFGZ_NAME, "r"),
-        bcfio::bopen(BCF_NAME, "r")
+        bcfio::bread(VCF_NAME),
+        bcfio::bread(VCFGZ_NAME),
+        bcfio::bread(BCF_NAME)
     };
 
     const char true_chrom_name[] = "chr12";
@@ -200,15 +242,15 @@ TEST(TestBcfRecord, GetGenomicCoords) {
         788, 1321, 1335, 1661, 1714, 2088, 2090, 2631
     };
 
-    bcfio::BcfRecord<float> brec {};
-
+    bcfio::brec_t<float> brec = bcfio::BcfRecord<float>::init();
+    ASSERT_TRUE(brec != nullptr);
 
     const char* chrom_out = nullptr;
     int64_t pos_out = -1;
     int status = -1;
     bcfio::Bcf* bid = nullptr;
 
-    EXPECT_TRUE(bcfio::chrom<float>(nullptr, &brec) == nullptr);
+    EXPECT_TRUE(bcfio::chrom<float>(nullptr, brec.get()) == nullptr);
     EXPECT_TRUE(bcfio::chrom<float>(nullptr, nullptr) == nullptr);
 
     for (int i = 0; i < nfiles; i++) {
@@ -216,8 +258,8 @@ TEST(TestBcfRecord, GetGenomicCoords) {
         bid = bids[i].get();
         EXPECT_TRUE(bcfio::chrom<float>(bid, nullptr) == nullptr);
 
-        for (int j = 0; bcfio::next_record<float>(bid, &brec, "DS") == 0; j++) {
-            status = bcfio::pos<float>(&brec, &pos_out);
+        for (int j = 0; bcfio::next_record<float>(bid, brec.get(), "DS") == bcfio::Status::Success; j++) {
+            status = bcfio::pos<float>(brec.get(), &pos_out);
             EXPECT_EQ(status, 0);
             EXPECT_EQ(pos_out, true_pos[j]);
 
@@ -227,10 +269,10 @@ TEST(TestBcfRecord, GetGenomicCoords) {
             status = bcfio::pos<float>(nullptr, nullptr);
             EXPECT_TRUE(status < 0);
 
-            status = bcfio::pos<float>(&brec, nullptr);
+            status = bcfio::pos<float>(brec.get(), nullptr);
             EXPECT_TRUE(status < 0);
 
-            chrom_out = bcfio::chrom<float>(bid, &brec);
+            chrom_out = bcfio::chrom<float>(bid, brec.get());
             EXPECT_STREQ(chrom_out, true_chrom_name);
         }
     }
@@ -241,27 +283,33 @@ TEST(BcfRecord, ChromFailures) {
     constexpr int num_bids = 3;
     bcfio::bid_t bids[num_bids] = {
         nullptr,
-        std::make_unique<bcfio::Bcf>(),
-        bcfio::bopen(BCF_NAME, "r")
+        bcfio::bread(BCF_NAME), 
+        bcfio::bread(BCF_NAME)
     };
+    for (int i = 1; i < num_bids; i++)
+        ASSERT_TRUE(bids[i] != nullptr);
+    bids[1]->close();
 
     constexpr int num_brec = 3;
-    std::unique_ptr<bcfio::BcfRecord<float>> brecs[num_brec] = {
+    bcfio::brec_t<float> brecs[num_brec] = {
         nullptr,
-        std::make_unique<bcfio::BcfRecord<float>>(),
-        std::make_unique<bcfio::BcfRecord<float>>()
+        bcfio::BcfRecord<float>::init(),
+        bcfio::BcfRecord<float>::init()
     };
+    for (int i = 1; i < num_brec; i++)
+        ASSERT_TRUE(brecs[i] != nullptr);
 
-    int status = bcfio::next_record<float>(bids[1].get(), 
+    bcfio::Status status = bcfio::next_record<float>(bids[1].get(), 
             brecs[1].get(), 
             "DS");
+    ASSERT_EQ(status, bcfio::Status::ErrBcfNotOpen);
     htslib::bcf_destroy(brecs[1]->rec);
     brecs[1]->rec = nullptr;
 
     status = bcfio::next_record<float>(bids[2].get(), 
             brecs[2].get(), 
             "DS");
-    ASSERT_EQ(status, 0);
+    ASSERT_EQ(status, bcfio::Status::Success);
 
     const char* chrom_return_vals[num_bids * num_brec] = {
         nullptr,
@@ -309,41 +357,41 @@ TEST(BcfRecord, ChromFailures) {
 
 
 TEST(TestBcf, DefaultConstructor) {
-    bcfio::Bcf bid {};
-    EXPECT_FALSE(bcfio::is_open(&bid));
+    bcfio::bid_t bid = bcfio::bread(BCF_NAME);
+    bid->close(); 
+    EXPECT_FALSE(bcfio::is_open(bid.get()));
 }
 
 TEST(TestBcf, Constructor) {
-    htslib::htsFile* fid = htslib::hts_open(VCF_NAME, "r");
-    bcfio::Bcf bid { fid };
+    bcfio::bid_t bid = bcfio::bread(VCF_NAME);
 
-    EXPECT_TRUE(bcfio::is_open(&bid));
+    EXPECT_TRUE(bcfio::is_open(bid.get()));
 
     uint32_t n = 0;
-    int status = bcfio::num_samples(&bid, &n);
+    int status = bcfio::num_samples(bid.get(), &n);
     EXPECT_EQ(status, 0);
     EXPECT_EQ(n, N_SAMPS);
 }
 
 TEST(TestBcf, OpenFailure) {
-    bcfio::bid_t bid = bcfio::bopen("", "r");
+    bcfio::bid_t bid = bcfio::bread("");
     EXPECT_EQ(bid, nullptr);
 }
 
 TEST(TestBcf, OpenVCFSuccess) {
-    bcfio::bid_t bid = bcfio::bopen(VCF_NAME, "r");
+    bcfio::bid_t bid = bcfio::bread(VCF_NAME);
     ASSERT_NE(bid, nullptr);
     EXPECT_TRUE(bcfio::is_open(bid.get()));
 }
 
 TEST(TestBcf, OpenVCFGZSuccess) {
-    bcfio::bid_t bid = bcfio::bopen(VCFGZ_NAME, "r");
+    bcfio::bid_t bid = bcfio::bread(VCFGZ_NAME);
     ASSERT_NE(bid, nullptr);
     EXPECT_TRUE(bcfio::is_open(bid.get()));
 }
 
 TEST(TestBcf, OpenBCFSuccess) {
-    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+    bcfio::bid_t bid = bcfio::bread(BCF_NAME);
     ASSERT_NE(bid, nullptr);
     EXPECT_TRUE(bcfio::is_open(bid.get()));
 }
@@ -351,9 +399,9 @@ TEST(TestBcf, OpenBCFSuccess) {
 TEST(TestBcf, Closing) {
     constexpr uint32_t nfiles = 3;
     bcfio::bid_t bids[nfiles] = {
-        bcfio::bopen(VCF_NAME, "r"),
-        bcfio::bopen(VCFGZ_NAME, "r"),
-        bcfio::bopen(BCF_NAME, "r")
+        bcfio::bread(VCF_NAME),
+        bcfio::bread(VCFGZ_NAME),
+        bcfio::bread(BCF_NAME)
     };
 
     bcfio::Bcf* bid = nullptr;
@@ -375,7 +423,7 @@ TEST(TestBcf, Closing) {
  
 
 TEST(TestBcf, Kfmt) {
-    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+    bcfio::bid_t bid = bcfio::bread(BCF_NAME);
     
     // DS is alt allele dosage, which is more clearly defined as 
     // the expected count of alt alleles under the trained HMM
@@ -401,7 +449,7 @@ TEST(TestBcf, Kfmt) {
 
 
 TEST(TestBcf, SubsetSamplesEasy) {
-    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+    bcfio::bid_t bid = bcfio::bread(BCF_NAME);
 
     constexpr uint32_t nsamps = 3;
     const char* sample_subset[nsamps] = { "S01", "S07", "S08" };
@@ -422,7 +470,7 @@ TEST(TestBcf, SubsetSamplesEasy) {
 
 
 TEST(TestBcf, SubsetSamplesWrongSampName) {
-    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+    bcfio::bid_t bid = bcfio::bread(BCF_NAME);
 
     constexpr uint32_t nsamps = 3;
     const char* sample_subset[nsamps] = { "S01", "S72", "S08" };
@@ -448,7 +496,7 @@ TEST(TestBcf, SubsetSamplesWrongSampName) {
 
 
 TEST(TestBcf, SubsetSamplesNullptr) {
-    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+    bcfio::bid_t bid = bcfio::bread(BCF_NAME);
 
     int status = bcfio::subset_samples(bid.get(), nullptr);
     
@@ -549,7 +597,7 @@ NewSampleStringData(uint32_t count, ...) {
 }
 
 TEST(TestBcf, SubsetSamplesSubsequentSets) {
-    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+    bcfio::bid_t bid = bcfio::bread(BCF_NAME);
 
     constexpr int ntests = 3;
     std::unique_ptr<SampleStringData> data[ntests] = {
@@ -584,7 +632,7 @@ TEST(TestBcf, SubsetSamplesDiffSubsequentSets) {
     uint32_t n = 0;
     int status = -1;
     for (int bcf_i = 0; bcf_i < 3; bcf_i++) {
-        bid = bcfio::bopen(bcf_names[bcf_i], "r");
+        bid = bcfio::bread(bcf_names[bcf_i]);
     
         constexpr int ntests = 2;
         std::unique_ptr<SampleStringData> data[ntests] = {
@@ -610,7 +658,7 @@ TEST(TestBcf, SubsetSamplesDiffSubsequentSets) {
 
 
 TEST(TestBcf, SamplesExclusion) {
-    bcfio::bid_t bid = bcfio::bopen(BCF_NAME, "r");
+    bcfio::bid_t bid = bcfio::bread(BCF_NAME);
 
     constexpr int ntests = 6;
     std::unique_ptr<SampleStringData> data[ntests] = {
@@ -668,9 +716,9 @@ TEST(TestBcfInfo, GetFilename) {
     constexpr int num_files = 4;
     bcfio::bid_t bids[num_files] = {
         nullptr,
-        bcfio::bopen(VCF_NAME, "r"),
-        bcfio::bopen(VCFGZ_NAME, "r"),
-        bcfio::bopen(BCF_NAME, "r")
+        bcfio::bread(VCF_NAME),
+        bcfio::bread(VCFGZ_NAME),
+        bcfio::bread(BCF_NAME)
     };
     const char* filenames[num_files] = { 
         nullptr,
@@ -694,9 +742,9 @@ TEST(TestBcfInfo, NumPositions) {
     constexpr int num_files = 4;
     bcfio::bid_t bids[num_files] = {
         nullptr,
-        bcfio::bopen(VCF_NAME, "r"),
-        bcfio::bopen(VCFGZ_NAME, "r"),
-        bcfio::bopen(BCF_NAME, "r")
+        bcfio::bread(VCF_NAME),
+        bcfio::bread(VCFGZ_NAME),
+        bcfio::bread(BCF_NAME)
     };
 
     int64_t npos = 8;
@@ -718,6 +766,9 @@ TEST(TestBcfInfo, NumPositions) {
 }
 
 
+TEST(BcfUtils, IsBcf) {
+    EXPECT_TRUE(bcfio::is_bcf(BCF_NAME));
+}
 
 // TEST(TestReadBcf, LoadRecord) {
 // 

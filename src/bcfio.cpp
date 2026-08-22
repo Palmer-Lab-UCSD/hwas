@@ -4,6 +4,37 @@
 #include <bcfio.h>
 
 
+bcfio::HFileReadConn::~HFileReadConn() {
+    if (fid_) 
+        static_cast<void>(htslib::hclose(fid_)); 
+}
+
+bool bcfio::HFileReadConn::is_bcf() const {
+    htslib::htsFormat fmt {};
+    if (htslib::hts_detect_format(fid_, &fmt) != 0)
+        return false;
+
+    if (fmt.format == htslib::bcf || fmt.format == htslib::vcf)
+        return true;
+
+    return false;
+}
+
+bcfio::hfile_conn_t bcfio::hread(const char* filename) {
+    htslib::hFILE* fh = htslib::hopen(filename, "r");
+    if (fh == nullptr)
+        return nullptr;
+
+    bcfio::HFileReadConn* hfile = 
+        new(std::nothrow) bcfio::HFileReadConn(fh);
+    if (hfile == nullptr) {
+        static_cast<void>(htslib::hclose(fh));
+        return nullptr;
+    }
+
+    return bcfio::hfile_conn_t(hfile);
+}
+
 int bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
         const char* id, 
         const int bcf_dt_type, 
@@ -60,19 +91,13 @@ int bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
 /////////////////////////////////////////////////////////////////////
 // 
 //
-bcfio::Bcf::Bcf(): fid(nullptr), hdr(nullptr) {};
- 
-bcfio::Bcf::Bcf(htslib::htsFile* hts_fid)
-    : fid(hts_fid),
-    hdr(hts_fid ? htslib::bcf_hdr_read(hts_fid) : nullptr) {};
-
 void bcfio::Bcf::close() noexcept {
-    if (fid) {
-        htslib::hts_close(fid);
+    if (fid != nullptr) {
+        static_cast<void>(htslib::hts_close(fid));
         fid = nullptr;
     }
 
-    if (hdr) {
+    if (hdr != nullptr) {
         htslib::bcf_hdr_destroy(hdr);
         hdr = nullptr;
     }
@@ -91,18 +116,24 @@ const char* bcfio::get_filename(const Bcf* bid) {
 }
 
 
-// TODO double check return statemnent
-bcfio::bid_t bcfio::bopen(const char* filename, const char* mode) {
+bcfio::bid_t bcfio::bread(const char* filename) {
     if (!bcfio::is_bcf(filename))
         return nullptr;
 
-    htslib::htsFile* fh = htslib::hts_open(filename, mode);
+    htslib::htsFile* fh = htslib::hts_open(filename, "r");
     if (!fh)
         return nullptr;
 
-    bcfio::Bcf* bid = new Bcf(fh);
-    if (!bcfio::is_open(bid)) {
-        delete bid;
+    htslib::bcf_hdr_t* hdr = htslib::bcf_hdr_read(fh);
+    if (hdr == nullptr) {
+        static_cast<void>(htslib::hts_close(fh));
+        return nullptr;
+    }
+
+    bcfio::Bcf* bid = new(std::nothrow) bcfio::Bcf(fh, hdr);
+    if (bid == nullptr) {
+        static_cast<void>(htslib::hts_close(fh));
+        htslib::bcf_hdr_destroy(hdr);
         return nullptr;
     }
 
@@ -127,16 +158,6 @@ int bcfio::k_fmt(const bcfio::Bcf* bid, const char *id, uint16_t* k) {
     *k = static_cast<uint16_t>(fmt.number);
     return 0;
 }
-
-// title: load next record
-// @return -1 end of file, < -1 error, 0 success
-// 
-// TODO I don't remember why this is necessary, should this go
-// in header?
-// template struct bcfio::BcfRecord<float>;
-// template int bcfio::next_record<float> (bcfio::Bcf* bid,
-//         bcfio::BcfRecord<float>* ptr,
-//         const char* id);
 
 // htslib accepts a file name with samples to include / exclude or
 // a list of comma delimited sample names
@@ -181,7 +202,7 @@ int bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
     const char* filename = bcfio::get_filename(bid);
     // open a new file handle, then I can iterate without affecting
     // the current position of bid
-    bcfio::bid_t fid = bcfio::bopen(filename, "r");
+    bcfio::bid_t fid = bcfio::bread(filename);
     if (!fid)
         return -2;
 
@@ -210,25 +231,11 @@ int bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
 
 
 bool bcfio::is_bcf(const char* filename) {
-    std::unique_ptr<bcfio::HFileReadConn> fh = bcfio::hread(filename);
-    if (!fh)
+    bcfio::hfile_conn_t fh = bcfio::hread(filename);
+    if (fh == nullptr)
         return false;
 
-    htslib::htsFormat fmt {};
-    if (htslib::hts_detect_format(fh->fid, &fmt) != 0)
-        return false;
-
-    if (fmt.format == htslib::bcf || fmt.format == htslib::vcf)
-        return true;
-
-    return false;
+    return fh->is_bcf();
 }
 
 
-std::unique_ptr<bcfio::HFileReadConn> bcfio::hread(const char* filename) {
-    htslib::hFILE* fh = htslib::hopen(filename, "r");
-    if (!fh)
-        return nullptr;
-
-    return std::make_unique<bcfio::HFileReadConn>(fh);
-}
