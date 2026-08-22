@@ -12,6 +12,7 @@ void signal_handler(int signal) {
     signal_received = 1;
 }
 
+
 // [[Rcpp::export]]
 Rcpp::RObject calc_grm(bcf_conn_t bid, const char* id) {
 

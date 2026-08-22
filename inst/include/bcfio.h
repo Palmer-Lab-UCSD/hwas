@@ -13,6 +13,7 @@
 #define BCFIO_H
 
 #include <cctype>
+#include <csignal>
 #include <cstdio>
 #include <cstddef>
 #include <cstdlib>
@@ -20,6 +21,7 @@
 #include <cstring>
 
 #include <memory>
+#include <new>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -36,6 +38,26 @@ extern "C" {
 
 namespace bcfio {
 
+enum struct Status: int {
+    Success         = 0,
+    ErrBcfNotOpen   = -3,
+    ErrInvalidArg   = -4,
+    ErrHtslib       = -5,
+    ErrNotBcf       = -6,
+    ErrNotEOF       = -7
+};
+
+
+struct SignalInterupt {
+    SignalInterupt() {
+        std::signal(SIGINT, handler)
+
+    void handler(int signal) {
+        signal_recieved = 1;
+    }
+
+    std::sig_atomic_t signal_recieved = 0;
+};
 
 // @title The meta data on a BCF attribute
 // @description BCF, VCF, and VCF.GZ files hold metadata in the
@@ -58,68 +80,34 @@ namespace bcfio {
 //  integer, real number, string, and 64 bit integers.  Note that HT 
 //  is header type.
 // @bitfield coltype:
-struct BcfHdrAttr { uint64_t number : 20, vl_type : 4, type : 4, coltype : 4; };
-
-
-struct HFileReadConn {
-    HFileReadConn(htslib::hFILE* h_fid): fid(h_fid) {};
-    ~HFileReadConn() { 
-        if (fid) 
-            static_cast<void>(htslib::hclose(fid)); 
-    }
-
-    htslib::hFILE* fid;
+struct BcfHdrAttr { 
+    uint64_t number : 20, vl_type : 4, type : 4, coltype : 4; 
 };
 
-std::unique_ptr<HFileReadConn> hread(const char* filename);
 
+class HFileReadConn {
+public:
+    HFileReadConn()                                 = delete;
+    HFileReadConn(const HFileReadConn&)             = delete;
+    HFileReadConn& operator=(const HFileReadConn&)  = delete;
+    HFileReadConn(HFileReadConn&&)                  = delete;
+    HFileReadConn& operator=(HFileReadConn&&)       = delete;
 
-// @title: Interface and manage htslib bcf1_t
-// @description: The htslib bcf1_t data structure requires manual memory
-//  management, knowledge of several bit-packed values, knowledge of
-//  several functions for querying data.  This class simplifies 
-//  memory management using C++ RAII idiom and provides a simplified,
-//  albeit non-comprehensive, interface for loading and querying data
-//  stored in the bcf1_t struct.
+    ~HFileReadConn()
+private:
+    HFileReadConn(htslib::hFILE* hfid): fid_(hfid) {};
+
+    htslib::hFILE* fid_;
+    bool closed_ = false;
+    int close_err_ = 0;
+
+    friend bool is_bcf(const char* filename);
+};
+
 template <typename T>
-struct BcfRecord {
-    BcfRecord(): rec(htslib::bcf_init()) {};
+using hfile_conn_t = std::unique_ptr<HFileReadConn>
 
-    BcfRecord(const BcfRecord&)=delete;
-    BcfRecord& operator=(const BcfRecord&)=delete;
-
-    BcfRecord(BcfRecord&&)=delete;
-    BcfRecord& operator=(BcfRecord&&)=delete;
-
-    ~BcfRecord() {
-        if (rec) htslib::bcf_destroy(rec);
-        if (data) free(data);
-        rec = nullptr;
-        data = nullptr;
-        data_cap = 0; 
-        ncol = 0;
-        nrow = 0;
-    }
-
-    htslib::bcf1_t* rec;
-
-    // These attributes below store htslib access points to rec data
-    // The number of values in memory
-    int data_cap = 0;
-
-    // an array of length ndata with values from the loaded record,
-    // data are stored in row major form, with a row being the data
-    // for a single sample.
-    T* data = nullptr;
-    
-    uint32_t nrow = 0;  // n samples
-    uint16_t ncol = 0;  // k_fmt
-};
-
-
-
-
-//     float qual() const { return rec_->qual; };
+hfile_conn_t hread(const char* filename);
 
 
 // @title Interface with htslib bcf
@@ -130,26 +118,179 @@ struct BcfRecord {
 // @param sample_fname: the path and filename of the text file listing
 //  samples id's of records to be retreived.  If this is not included
 //  all sample records are retrieved.
-struct Bcf
+class Bcf
 {
-    Bcf();
-    Bcf(htslib::htsFile* fid);
-
-    Bcf(const Bcf&)=delete;
-    Bcf& operator=(const Bcf&)=delete;
-
-    Bcf(Bcf&&)=delete;
-    Bcf& operator=(Bcf&&)=delete;
+public:
+    Bcf()                       = delete;
+    Bcf(const Bcf&)             = delete;
+    Bcf& operator=(const Bcf&)  = delete;
+    Bcf(Bcf&&)                  = delete;
+    Bcf& operator=(Bcf&&)       = delete;
 
     ~Bcf() { close(); };
 
-    void close() noexcept;
+    void close();
 
-    htslib::htsFile* fid;
-    htslib::bcf_hdr_t* hdr;
+    // @return C-string copy of Bcf filename
+    const char* filename() const;
+
+private:
+    Bcf(htslib::htsFile* fid) : hfid(fid) {};
+
+    htslib::htsFile* hfid;
+
+    bool closed = false;
+    int close_err = 0;
+
+    friend bid_t bopen(const char* filename, const char* mode);
+    friend void close(Bcf* bid);
+    friend bool is_open(const Bcf* bid);
+
+    friend Status num_pos(const Bcf* bid, int64_t* n);
+    friend const char* chrom(const Bcf* bid, 
+            const BcfRecord<T>* brec);
+
+    friend Status next_record<T>(Bcf* bid,
+            BcfRecord<T>* brec,
+            const char* id);
 };
 
 typedef std::unique_ptr<Bcf> bid_t;
+
+
+class BcfHeader {
+public:
+    static std::unique_ptr<BcfHeader> init(const Bcf* bid);
+
+    BcfHeader()                             = delete;
+    BcfHeader(const BcfHeader&)             = delete;
+    BcfHeader& operator=(const BcfHeader&)  = delete;
+    BcfHeader(BcfHeader&&)                  = delete;
+    BcfHeader& operator=(BcfHeader&&)       = delete;
+
+    ~BcfHeader();
+
+    // @title Retrieve the number of records for the specified format
+    // @param id: pointer to character string of a valid format id, e.g.
+    //  "GT" would recover genotypes, "HD" haplotype dose, etc.
+    // @param k: the allocated memory for which the result is stored
+    // @return see enum struct Status definition above
+    Status k_fmt(const char* id, uint16_t* k) const;
+
+    // @title Subset samples to samples enumerated in file
+    // @param filename: name of file with sample names enumerated
+    //  one per line
+    // @return ErrInvalidArg, ErrHtslib, WarnSampleListMismatch, Success
+    Status subset_samples_from_file(const char* filename);
+
+    // @title Subset samples to samples in comma delimited string
+    // @param samples: samples names to included in a comma delimited 
+    //  string, if the string starts with ^ then an exclusion list.  If
+    //  sample(s) in the list are not found in the bcf file, these names
+    //  are ignored.
+    // @return ErrHtslib, WarnSampleListMismatch, Success
+    Status subset_samples(const char* samples);
+
+    // @title Retrieve the number of samples 
+    // @description The number of samples is not the number of samples 
+    //  for which the bcf file holds records, but instead the number of
+    //  samples that hts header is configured to retrieve data.
+    // @param n: memory to write results
+    // @return ErrInvalidArg, Success
+    Status num_samples(uint32_t* n);
+
+private:
+    BcfHeader(htslib::bcf_hdr_t* hdr) hdr_(hdr) {};
+
+    htslib::bcf_hdr_t* hdr_;
+
+    friend Status num_pos(const Bcf* bid, int64_t* n);
+};
+
+typedef std::unique_ptr<BcfHeader> bhdr_t;
+
+
+// @title: Interface and manage htslib bcf1_t
+// @description: The htslib bcf1_t data structure requires manual memory
+//  management, knowledge of several bit-packed values, knowledge of
+//  several functions for querying data.  This class simplifies 
+//  memory management using C++ RAII idiom and provides a simplified,
+//  albeit non-comprehensive, interface for loading and querying data
+//  stored in the bcf1_t struct.
+template <typename T>
+class BcfRecord {
+public:
+    // no public class constructor, use factory function `init` 
+    static brec_t<T> init();
+
+    BcfRecord()=delete
+    BcfRecord(const BcfRecord&)=delete;
+    BcfRecord& operator=(const BcfRecord&)=delete;
+    BcfRecord(BcfRecord&&)=delete;
+    BcfRecord& operator=(BcfRecord&&)=delete;
+    ~BcfRecord() 
+
+private:
+    htslib::bcf1_t* rec;
+
+    // These attributes below store htslib access points to rec data
+    // The number of values in memory
+    int data_cap = 0;
+
+    // an array of length ndata with values copied from the loaded 
+    // record, data are stored in row major form, with a row being 
+    // the data for a single sample.  
+    //
+    // As the data are copies from the htslib::bcf1_t struct on
+    // the heap, freeing memory should have no effect on the bcf1_t
+    // data.  See htslib/vcf.c line 6228 for the copy operation in
+    // htslib::bcf_get_format_values function source code.  I did a
+    // quick validation test of this to confirm my understanding.
+    T* data = nullptr;
+    
+    uint32_t nrow = 0;  // n samples
+    uint16_t ncol = 0;  // k_fmt
+
+    BcfRecord(htslib::bcf1_t* bcf_rec): rec(bcf_rec) {};
+
+    friend const char* chrom(const Bcf* bid, 
+            const BcfRecord<T>* brec);
+    friend int pos(const BcfRecord<T>* brec, int64_t* p);
+    friend int next_record<T>(Bcf* bid,
+            BcfRecord<T>* brec,
+            const char* id);
+l
+};
+
+template <typename T>
+using brec_t = std::unique_ptr<BcfRecord<T>>;
+
+template <typename T>
+brec_t<T> BcfRecord<T>::init() {
+    htslib::bcf1_t* rec = htslib::bcf_init();
+    if (rec == nullptr)
+        return nullptr;
+
+    BcfRecord<T>* brec = new(std::nothrow) BcfRecord<T>(rec);
+    if (brec == nullptr) {
+        htslib::bcf_destroy(rec);
+        return nullptr
+    }
+
+    return brec_t<T>(brec);
+}
+
+template <typename T>
+BcfRecord<T>::~BcfRecord() {
+    if (rec != nullptr) htslib::bcf_destroy(rec);
+    if (data != nullptr) free(data);
+    rec = nullptr;
+    data = nullptr;
+    data_cap = 0; 
+    ncol = 0;
+    nrow = 0;
+}
+
 
 
 // @param bcf_dt_type: values are defined in htslib/vcf.h, they
@@ -186,57 +327,15 @@ bool is_bcf(const char* filename);
 bid_t bopen(const char* filename, const char* mode);
 bool is_open(const Bcf* bid);
 
-// @title Filename from Bcf class
-// @param bid: pointer to open file connection
-// @return C-string of Bcf filename
-const char* get_filename(const Bcf* bid);
-
-// @title Retrieve the number of records for the specified format
-// @param bid: pointer to open file connection
-// @param id: pointer to character string of a valid format id, e.g.
-//  "GT" would recover genotypes, "HD" haplotype dose, etc.
-// @param k: the allocated memory for which the result is stored
-// @return error code < 0, and 0 upon success
-int k_fmt(const Bcf* bid, const char* id, uint16_t* k);
-
-// @title Retrieve the number of samples 
-// @description The number of samples is not the number of samples for
-//  which the bcf file holds records, but instead the number of samples
-//  that bid is configured to retrieve data.
-// @param bid: pointer to open file connection
-// @param n: memory to write results
-// @return error code < 0 and 0 upon success
-int num_samples(const Bcf* bid, uint32_t* n);
-
-
 // @title Total number of genomic positions in bcf
 // @param bid: pointer to open file connection
 // @param n: pointer to integer that stores result
-// @return
-//  0   success
-//  -1  invalid input pointer
-//  -2  failed to open an additional file connection
-//  -3  htslib failure
-int num_pos(Bcf* bid, int64_t* n);
-
-
-// @title Subset samples to samples enumerated in file
-// @param bid: pointer to Bcf class
-// @param sample_filename: filename with sample names enumerated one
-//      per line
-// @return 0 success and < 0 upon error
-int subset_samples_from_file(Bcf* bid, const char* sample_filename);
-
-
-// @title Subset samples to samples in comma delimited string
-// @param bid: pointer to Bcf class
-// @param samples: samples names to included in a comma delimited 
-//  string, if the string starts with ^ then an exclusion list.  If
-//  sample(s) in the list are not found in the bcf file, these names
-//  are ignored.
-// @return 0 success, < 0 upon error, and > 0 if sample in list is
-//  not found in bcf file.
-int subset_samples(Bcf* bid, const char* samples);
+// @return Success,
+//  ErrInvalidArg,
+//  ErrBcfNotOpen,
+//  ErrHtslib, or
+//  WarnSampleListMismatch
+Status num_pos(Bcf* bid, int64_t* n);
 
 // int32_t exclude_samples(Bcf* bid, const char* sample_filename);
 
@@ -251,8 +350,24 @@ int next_record(Bcf* bid,
         BcfRecord<T>* brec, 
         const char* id) {
 
-    if (!is_open(bid))
+    if (!brec) {
+        fprintf(stderr,
+                "Error: brec is nullptr");
+        return -1;
+    }
+
+    // reset, so that failure modes report no data loaded.
+    brec->nrow = 0;
+    brec->ncol = 0;
+    
+    if (!is_open(bid) || !is_brec_open(brec) || !id) {
+        fprintf(stderr,
+                "Error: invalid input, one or more arguments are nullptr");
         return -2;
+    }
+
+    // reset bcf record to prepare reading for new data
+    htslib::bcf_clear(brec->rec);
 
     int status = htslib::bcf_read(bid->fid, 
             bid->hdr,
@@ -327,10 +442,12 @@ int next_record(Bcf* bid,
     htslib::bcf_fmt_t* fmt_cfg = htslib::bcf_get_fmt(bid->hdr, 
             brec->rec, id);
 
+    // detect error in reading data
     // recall that fmt_cfg->n is the number of values per sample
     // TODO: NEED TO CHECK for OVERFLOW
-    if (n_rec_vals != fmt_cfg->n * nsamps)
+    if (n_rec_vals != fmt_cfg->n * nsamps) {
         return -6;
+    }
 
     uint16_t k = 0;
     if (k_fmt(bid, id, &k) < 0) {
@@ -354,20 +471,20 @@ template <typename T>
 int pos(const BcfRecord<T>* brec, int64_t* p) {
     if (!brec) {
         fprintf(stderr,
-                "ERROR: BcfRecord is nullptr\n");
+                "Error: BcfRecord is nullptr\n");
         return -1;
     }
 
     if (!brec->rec) {
         fprintf(stderr,
-                "ERROR: BcfRecord invalid internal state."
+                "Error: BcfRecord invalid internal state."
                 "Reload record.\n");
         return -1;
     }
 
     if (p == nullptr) {
         fprintf(stderr,
-                "ERROR: pointer to int64_t encoded position is"
+                "Error: pointer to int64_t encoded position is"
                 "nullptr, an invalid value.");
         return -2;
     }
@@ -380,37 +497,23 @@ int pos(const BcfRecord<T>* brec, int64_t* p) {
 // @return nullptr upon error, cstring upon success
 template <typename T>
 const char* chrom(const Bcf* bid, const BcfRecord<T>* brec) {
-    if (!bid) {
-        fprintf(stderr,
-                "ERROR: pointer to Bcf is nullptr.\n");
+    if (!is_open(bid))
         return nullptr;
-    }
 
-    if (!bid->hdr) {
-        fprintf(stderr,
-                "ERROR: Bcf invalid internal state."
-                "Open a new file connection.\n");
+    if (!is_valid_brec(brec))
         return nullptr;
-    }
 
-    if (!brec) {
-        fprintf(stderr,
-                "ERROR: pointer to BcfRecord<T> is nullptr.\n");
+    const char* chr = htslib::bcf_hdr_id2name(bid->hdr, brec->rec->rid);
+    if (chr == nullptr)
         return nullptr;
-    }
 
-
-    if (!brec->rec) {
-        fprintf(stderr,
-                "ERROR: BcfRecord<T> invalid internal state."
-                "Reload a new record.\n");
-        return nullptr;
-    }
-
-    return htslib::bcf_hdr_id2name(bid->hdr, brec->rec->rid);
+    size_t n = strlen(chr);
+    char* chr_return_val = new(std::nothrow) char[n + 1];
+    if (chr_return_val == nullptr)
+        return nullptr
+    
+    return std::strncpy(chr_return_val, chr, n + 1);
 }
-
-
 
 }
 

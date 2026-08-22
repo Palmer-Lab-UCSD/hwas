@@ -3,6 +3,83 @@
 
 #include <bcfio.h>
 
+bcfio::HFileReadConn::~HFileReadConn() {
+    if (fid != nullptr) 
+        close_err_ = htslib::hclose(fid_);
+
+    if (fid_ != nullptr && close_err_ == 0) {
+        fid_ = nullptr;
+        closed_ = true;
+    }
+}
+
+bcfio::hfile_conn_t bcfio::hread(const char* filename) {
+    if (filename == nullptr)
+        return nullptr;
+
+    htslib::hFILE* fh = htslib::hopen(filename, "r");
+    if (fh == nullptr)
+        return nullptr;
+
+    bcfio::HFileReadConn* hconn = 
+        new(std::nothrow) bcfio::HFileReadConn(fh);
+    if (hconn == nullptr)
+        return nullptr;
+
+    return bcfio::hfile_conn_t(hconn);
+}
+
+
+void bcfio::Bcf::close() noexcept {
+    if (hfid_ != nullptr)
+        close_err = htslib::hts_close(hfid_);
+
+    if (hfid_ != nullptr && close_err == 0) {
+        closed = true;
+        hfid_ = nullptr;
+    }
+
+}
+
+
+const char* bcfio::Bcf::filename(const Bcf* bid) const {
+    if (fid == nullptr || closed)
+        return nullptr;
+
+    // remember that n does not include null character
+    size_t n = std::strlen(fid->fn) + 1;
+    char* fname = new(std::nothrow) char[n];
+
+    if (fname == nullptr)
+        return nullptr;
+
+    return std::strncpy(fname, fid->fn, n);
+}
+
+
+// TODO double check return statemnent
+bcfio::bid_t bcfio::bopen(const char* filename, const char* mode) {
+    if (!bcfio::is_bcf(filename))
+        return nullptr;
+
+    htslib::htsFile* fh = htslib::hts_open(filename, mode);
+    if (!fh)
+        return nullptr;
+
+    bcfio::Bcf* bid = new Bcf(fh);
+    if (!bcfio::is_open(bid)) {
+        delete bid;
+        return nullptr;
+    }
+
+    return bcfio::bid_t(bid);
+}
+
+
+bool bcfio::is_open(const bcfio::Bcf* bid) {
+    return bid != nullptr && bid->fid != nullptr && !bid->closed; 
+}
+
 
 int bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
         const char* id, 
@@ -38,184 +115,137 @@ int bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
 // //     return samp_names;
 // // }
 // // 
-// ///////////////////////////////////////////////////////////////////
-// // template <typename T> BcfRecord
-// ///////////////////////////////////////////////////////////////////
-// 
 
+bcfio::bhdr_t bcfio::BcfHeader::init() {
+    if (!is_open(bid))
+        return nullptr;
 
+    htslib::bcf_hdr_t* hdr = htslib::bcf_hdr_read(bid->hfid_);
+    if (hdr == nullptr)
+        return nullptr;
 
-// template <typename T>
-// std::optional<T> bcfio::BcfRecord<T>::get(const uint64_t row_idx,
-//         const uint64_t col_idx) const {
-//     size_t idx = row_idx * col_num_ + col_idx;
-//     if (idx >= size()) return std::nullopt;
-// 
-//     return *(dst_ + idx);
-// }
+    BcfHeader* bhdr = new(std::nothrow) BcfHeader(hdr);
+    if (bhdr == nullptr)
+        return nullptr;
 
- 
-/////////////////////////////////////////////////////////////////////
-//// Bcf
-/////////////////////////////////////////////////////////////////////
-// 
-//
-bcfio::Bcf::Bcf(): fid(nullptr), hdr(nullptr) {};
- 
-bcfio::Bcf::Bcf(htslib::htsFile* hts_fid)
-    : fid(hts_fid),
-    hdr(hts_fid ? htslib::bcf_hdr_read(hts_fid) : nullptr) {};
+    return bhdr_t(bhdr);
+}
 
-void bcfio::Bcf::close() noexcept {
-    if (fid) {
-        htslib::hts_close(fid);
-        fid = nullptr;
-    }
-
-    if (hdr) {
-        htslib::bcf_hdr_destroy(hdr);
-        hdr = nullptr;
+bcfio::BcfHeader::~BcfHeader() {
+    if (hdr_ != nullptr) {
+        htslib::bcf_hdr_destroy(hdr_);
+        hdr_ = nullptr;
     }
 }
 
 
-/////////////////////////////////////////////////////////////////////
-// API
-/////////////////////////////////////////////////////////////////////
-///
+bcfio::Status bcfio::BcfHeader::k_fmt(const char *id, 
+        uint16_t* k) const {
+    if (id == nullptr || k == nullptr)
+        return Status::ErrInvalidArg;
 
-const char* bcfio::get_filename(const Bcf* bid) {
-    if (!bid || !bid->fid)
-        return nullptr;
-    return bid->fid->fn;
-}
-
-
-// TODO double check return statemnent
-bcfio::bid_t bcfio::bopen(const char* filename, const char* mode) {
-    if (!bcfio::is_bcf(filename))
-        return nullptr;
-
-    htslib::htsFile* fh = htslib::hts_open(filename, mode);
-    if (!fh)
-        return nullptr;
-
-    bcfio::Bcf* bid = new Bcf(fh);
-    if (!bcfio::is_open(bid)) {
-        delete bid;
-        return nullptr;
-    }
-
-    return bcfio::bid_t(bid);
-}
-
-
-bool bcfio::is_open(const bcfio::Bcf* bid) {
-    return bid != nullptr && bid->fid != nullptr && bid->hdr != nullptr;
-}
-
-
-int bcfio::k_fmt(const bcfio::Bcf* bid, const char *id, uint16_t* k) {
-    if (!bcfio::is_open(bid) || !id || k == nullptr)
-        return -1;
-
-    BcfHdrAttr fmt {};
-    int status = bcfio::decode_hts_idinfo(bid->hdr, id, BCF_HL_FMT, &fmt);
+    bcfio::BcfHdrAttr fmt {};
+    int status = bcfio::decode_hts_idinfo(hdr_, id, BCF_HL_FMT, &fmt);
     if (status < 0)
-        return status;
+        return Status::ErrHtslib;
 
     *k = static_cast<uint16_t>(fmt.number);
-    return 0;
+    return Status::Success;
 }
 
-// title: load next record
-// @return -1 end of file, < -1 error, 0 success
-// 
-// TODO I don't remember why this is necessary, should this go
-// in header?
-// template struct bcfio::BcfRecord<float>;
-// template int bcfio::next_record<float> (bcfio::Bcf* bid,
-//         bcfio::BcfRecord<float>* ptr,
-//         const char* id);
 
 // htslib accepts a file name with samples to include / exclude or
 // a list of comma delimited sample names
-int bcfio::subset_samples_from_file(bcfio::Bcf* bid, 
-        const char* samples_filename){
-    if (!bid || !samples_filename || !bcfio::is_open(bid))
-        return -1;
+bcfio::Status bcfio::BcfHeader::subset_samples_from_file(bcfio::Bcf* bid, 
+        const char* filename) {
+    if (filename == nullptr)
+        return Status::ErrInvalidArg;
 
     // Recall that 1 indicates that samples are enumerated in file
-    return htslib::bcf_hdr_set_samples(bid->hdr,
-            samples_filename, 
+    int status = htslib::bcf_hdr_set_samples(hdr_,
+            filename, 
             1);
+    if (status < 0)
+        return Status::ErrHtslib;
+
+    if (status > 0)
+        return Status::WarnSampleListMismatch;
+
+    return Status::Success;
 }
 
 
-int bcfio::subset_samples(bcfio::Bcf* bid, const char* samples) {
-    if (!bid || !bcfio::is_open(bid))
-        return -1;
-
-    if (!samples)
+bcfio::Status bcfio::BcfHeader::subset_samples(const char* samples) {
+    if (samples == nullptr)
         samples = NULL;
 
-    // Recall that 1 indicates that samples are enumerated 
-    return htslib::bcf_hdr_set_samples(bid->hdr,
-            samples, 
-            0);
+    status = htslib::bcf_hdr_set_samples(hdr_, samples, 0);
+    if (status < 0)
+        return Status::ErrHtslib;
+
+    if (status > 0)
+        return Status::WarnSampleListMismatch;
+
+    return Status::Success;
 }
 
 
-int bcfio::num_samples(const bcfio::Bcf* bid, uint32_t* n) {
-    if (!bid || n == nullptr)
-        return -1;
-    *n = static_cast<uint32_t>(bid->hdr->n[BCF_DT_SAMPLE]);
-    return 0;
+int bcfio::BcfHeader::num_samples(uint32_t* n) {
+    if (n == nullptr)
+        return Status::ErrInvalidArg;
+    *n = static_cast<uint32_t>(hdr_->n[BCF_DT_SAMPLE]);
+    return Status::Success;
 }
 
 
-int bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
-    if (!bid)
-        return -1;
+bcfio::Status bcfio::num_pos(const bcfio::Bcf* bid, int64_t* n) {
+    if (!bcfio::is_open(bid) || n == nullptr)
+        return Status::ErrInvalidArg;
 
-    const char* filename = bcfio::get_filename(bid);
     // open a new file handle, then I can iterate without affecting
     // the current position of bid
-    bcfio::bid_t fid = bcfio::bopen(filename, "r");
+    bcfio::bid_t fid = bcfio::bopen(bid->filename(), "r");
     if (!fid)
-        return -2;
+        return Status::ErrBcfNotOpen;
 
+    bcfio::bhdr_t bhdr = bcfio::BcfHeader::init(fid);
     // bcf_hdr_set_samples
-    int status = bcfio::subset_samples(fid.get(), nullptr);
-    if (status != 0)
-        return -3;
+    bcfio::Status status = bhdr->subset_samples(nullptr);
+    if (status != Status::Success)
+        return status;
 
     // dummy record
     htslib::bcf1_t* brec = htslib::bcf_init();
     if (!brec)
-        return -3;
+        return Status::ErrHtslib;
 
-    status = htslib::bcf_read(fid->fid, fid->hdr, brec);
+    fprintf(stderr,
+            "Note: This may take a time."
+            "Expect ~ 30s per 250K positions in ~ 7GB file.\n");
+    bcfio::SignalInterupt sigint {};
+
+    status = htslib::bcf_read(fid->hfid_, bhdr->hdr_, brec);
     int64_t npos = 1;
     for (; status == 0; npos++)
-        status = htslib::bcf_read(fid->fid, fid->hdr, brec);
+        status = htslib::bcf_read(fid->hfid_, bhdr->hdr_, brec);
 
     htslib::bcf_destroy(brec);
     
-    if (status != -1) return -3;
+    // remember that status == -1 is EOF
+    if (status != -1) return Status::ErrNotEOF;
 
     *n = npos - 1;
-    return 0;
+    return Status::Success;
 }
 
 
 bool bcfio::is_bcf(const char* filename) {
-    std::unique_ptr<bcfio::HFileReadConn> fh = bcfio::hread(filename);
-    if (!fh)
+    bcfio::hfile_conn_t hconn = bcfio::hread(filename);
+    if (hconn == nullptr)
         return false;
 
     htslib::htsFormat fmt {};
-    if (htslib::hts_detect_format(fh->fid, &fmt) != 0)
+    if (htslib::hts_detect_format(hconn->fid_, &fmt) != 0)
         return false;
 
     if (fmt.format == htslib::bcf || fmt.format == htslib::vcf)
@@ -225,10 +255,3 @@ bool bcfio::is_bcf(const char* filename) {
 }
 
 
-std::unique_ptr<bcfio::HFileReadConn> bcfio::hread(const char* filename) {
-    htslib::hFILE* fh = htslib::hopen(filename, "r");
-    if (!fh)
-        return nullptr;
-
-    return std::make_unique<bcfio::HFileReadConn>(fh);
-}
