@@ -9,6 +9,8 @@ const char* bcfio::status_msg(bcfio::Status status) {
         return "Warning: Sample list contains names not in bcf";
     case Status::Success:
         return "Success";
+    case Status::EndOfFile:
+        return "Reached end of file.";
     case Status::ErrHtslib:
         return "Likely a problem with htslib interface, please"
             " contact the maintainers.";
