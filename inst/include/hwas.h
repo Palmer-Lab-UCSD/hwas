@@ -3,6 +3,7 @@
 #ifndef HWAS_H
 #define HWAS_H
 
+#include <cassert>
 #include <cstdio>
 #include <cstddef>
 #include <cstring>
@@ -13,7 +14,6 @@
 
 #include <optional>
 #include <memory>
-#include <string>
 #include <utility>
 
 #include <Rcpp.h>
@@ -27,7 +27,6 @@
 // TODO: GET R FRONT END FRO ASSOCATION AND 
 //  COMPUTE FOR A SINGLE LOCUS
 //
-
 
 
 /////////////////////////////////////////////////////////////////////
@@ -72,7 +71,7 @@ typedef Rcpp::XPtr<bcfio::Bcf> bcf_conn_t;
 //
 // End quote
 //
-bcf_conn_t bopen(const char* filename, const char* mode);
+bcf_conn_t bread(const char* filename);
 int bclose(bcf_conn_t bid);
 
 
@@ -92,61 +91,41 @@ Rcpp::RObject next_record(bcf_conn_t bid, const char* id);
 
 template <typename T>
 Rcpp::NumericMatrix get_matrix(bcfio::Bcf* bid, 
-        const char* id,
-        const htslib::bcf_fmt_t* fmt_cfg) {
+        const char* id) {
 
-    std::unique_ptr<bcfio::BcfRecord<T>> brec =
-        std::make_unique<bcfio::BcfRecord<T>>();
-    uint32_t nrow = 0;
-    uint16_t ncol = 0;
+    bcfio::brec_t<T> brec = bcfio::BcfRecord<T>::init();
+    bcfio::Status status = bcfio::next_record<T>(bid, brec.get(), id);
 
-    if (bcfio::num_samples(bid, &nrow) != 0) {
-        fprintf(stderr,
-                "ERROR: parse record errror\n");
-        return R_NilValue;
-    }
-
-    if (bcfio::k_fmt(bid, id, &ncol) != 0) {
-        fprintf(stderr,
-                "ERROR: parse record errror\n");
-        return R_NilValue;
-    }
-
-    if (ncol != fmt_cfg->n) {
-        fprintf(stderr, 
-                "ERROR: expected values per sample %d got %d\n",
-                ncol,
-                fmt_cfg->n);
-        return R_NilValue;
-    }
-
-    if (bcfio::next_record<T>(bid, brec.get(), id) != 0)
+    if (status != bcfio::Status::Success)
         return R_NilValue;
 
-    Rcpp::NumericMatrix data(nrow, ncol);
-    T* cur_samp_rec = nullptr;
+    Rcpp::NumericMatrix data(brec->nrow, brec->ncol);
+    uint16_t ncol = brec->ncol;
+    uint32_t nrow = brec->nrow;
+    T* cur_samp_rec = brec->data;
     for (uint32_t i = 0; i < nrow; i++) {
-
-        cur_samp_rec = brec->data + i;
 
         for (uint16_t j = 0; j < ncol; j++)
             data(i, j) = cur_samp_rec[j];
+
+        cur_samp_rec += ncol;
     }
 
-    data.attr("chrom") = bcfio::chrom(bid, brec.get());
+    const char* chr = bcfio::chrom(bid, brec.get());
+    if (chr == nullptr) return R_NilValue;
+    data.attr("chrom") = Rcpp::String(chr);
+
     int64_t p = -1;
-    bcfio::pos(brec.get(), &p);
+    if (bcfio::pos(brec.get(), &p) < 0) return R_NilValue;
     data.attr("pos") = p;
 
-    //data.attr("qual") = rec.qual();
-    //data.attr(
+    //TODO: data.attr("qual") = rec.qual();
+    //TODO: ref / alt allales
 
     return data;
 }
 
 
-// TODO: get ref allele
-// TODO: get alt allele
 // TODO: enumerate info keys and be able to query values
 // TODO: enumerate format keys and be able to query values
 
@@ -170,7 +149,7 @@ Rcpp::RObject calc_grm(bcf_conn_t bid, const char* id);
 /////////////////////////////////////////////////////////////////////
 ///
 
-Rcpp::NumericVector pg_sim(const char* bcf_filename,
-        float heritability);
+//Rcpp::NumericVector pg_sim(const char* bcf_filename,
+//        float heritability);
 
 #endif

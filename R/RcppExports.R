@@ -13,8 +13,8 @@ calc_grm <- function(bid, id) {
     .Call('_hwas_calc_grm', PACKAGE = 'hwas', bid, id)
 }
 
-bopen <- function(filename, mode) {
-    .Call('_hwas_bopen', PACKAGE = 'hwas', filename, mode)
+bread <- function(filename) {
+    .Call('_hwas_bread', PACKAGE = 'hwas', filename)
 }
 
 bclose <- function(bconn) {
@@ -199,9 +199,5 @@ matrix_x_vector <- function(X, y) {
 
 matrix_x_3darray <- function(X, A) {
     .Call('_hwas_matrix_x_3darray', PACKAGE = 'hwas', X, A)
-}
-
-pg_sim <- function(bcf_filename, heritability) {
-    .Call('_hwas_pg_sim', PACKAGE = 'hwas', bcf_filename, heritability)
 }
 

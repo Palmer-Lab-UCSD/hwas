@@ -35,7 +35,7 @@ bcfio::hfile_conn_t bcfio::hread(const char* filename) {
     return bcfio::hfile_conn_t(hfile);
 }
 
-int bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
+bcfio::Status bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
         const char* id, 
         const int bcf_dt_type, 
         bcfio::BcfHdrAttr* ptr) {
@@ -43,8 +43,8 @@ int bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
     // BCF_DT_ID is the C macro for the ID dictionary index defined 
     // by htslib see htslib/vcf.h line 86
     int idx = htslib::bcf_hdr_id2int(hdr, BCF_DT_ID, id);
-    if (idx < 0)
-        return idx;
+    if (idx == -1)
+        return bcfio::Status::ErrInvalidId;
 
     uint64_t val = hdr->id[BCF_DT_ID][idx].val->info[bcf_dt_type];
 
@@ -55,7 +55,7 @@ int bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
     // col type is the BCF_HL_* value (line 1252 in htslib/vcf.h)
     ptr->coltype = val & 0xf;
 
-    return 0;
+    return bcfio::Status::Success;
 }
 
 // // const std::unique_ptr<std::string[]> bcfio::BcfHeader::sample_names() const {
@@ -146,87 +146,121 @@ bool bcfio::is_open(const bcfio::Bcf* bid) {
 }
 
 
-int bcfio::k_fmt(const bcfio::Bcf* bid, const char *id, uint16_t* k) {
-    if (!bcfio::is_open(bid) || !id || k == nullptr)
-        return -1;
+bcfio::Status bcfio::k_fmt(const bcfio::Bcf* bid, 
+        const char *id, 
+        uint16_t* k) {
+
+    if (!bcfio::is_open(bid))
+        return bcfio::Status::ErrBcfNotOpen;
+    if (!id || k == nullptr)
+        return bcfio::Status::ErrInvalidInput;
 
     BcfHdrAttr fmt {};
-    int status = bcfio::decode_hts_idinfo(bid->hdr, id, BCF_HL_FMT, &fmt);
-    if (status < 0)
+    bcfio::Status status = bcfio::decode_hts_idinfo(bid->hdr, 
+            id, 
+            BCF_HL_FMT, 
+            &fmt);
+    if (status != bcfio::Status::Success)
         return status;
 
     *k = static_cast<uint16_t>(fmt.number);
-    return 0;
+    return bcfio::Status::Success;
 }
 
 // htslib accepts a file name with samples to include / exclude or
 // a list of comma delimited sample names
-int bcfio::subset_samples_from_file(bcfio::Bcf* bid, 
+bcfio::Status bcfio::subset_samples_from_file(bcfio::Bcf* bid, 
         const char* samples_filename){
-    if (!bid || !samples_filename || !bcfio::is_open(bid))
-        return -1;
+    if (!bcfio::is_open(bid))
+        return bcfio::Status::ErrBcfNotOpen;
+
+    if (samples_filename == nullptr)
+        return bcfio::Status::ErrInvalidInput;
 
     // Recall that 1 indicates that samples are enumerated in file
-    return htslib::bcf_hdr_set_samples(bid->hdr,
+    int status = htslib::bcf_hdr_set_samples(bid->hdr,
             samples_filename, 
             1);
+    if (status < 0)
+        return bcfio::Status::ErrHtslib;
+
+    if (status > 0)
+        return bcfio::Status::WarnSampleSetMismatch;
+
+    return bcfio::Status::Success;
 }
 
 
-int bcfio::subset_samples(bcfio::Bcf* bid, const char* samples) {
-    if (!bid || !bcfio::is_open(bid))
-        return -1;
+bcfio::Status bcfio::subset_samples(bcfio::Bcf* bid, 
+        const char* samples) {
+
+    if (!bcfio::is_open(bid))
+        return bcfio::Status::ErrBcfNotOpen;
 
     if (!samples)
         samples = NULL;
 
     // Recall that 1 indicates that samples are enumerated 
-    return htslib::bcf_hdr_set_samples(bid->hdr,
+    int status = htslib::bcf_hdr_set_samples(bid->hdr,
             samples, 
             0);
+
+    if (status < 0)
+        return bcfio::Status::ErrHtslib;
+
+    if (status > 0)
+        return bcfio::Status::WarnSampleSetMismatch;
+
+    return bcfio::Status::Success;
 }
 
 
-int bcfio::num_samples(const bcfio::Bcf* bid, uint32_t* n) {
-    if (!bid || n == nullptr)
-        return -1;
+bcfio::Status bcfio::num_samples(const bcfio::Bcf* bid, uint32_t* n) {
+    if (!bcfio::is_open(bid))
+        return bcfio::Status::ErrBcfNotOpen;
+       
+    if ( n == nullptr)
+        return bcfio::Status::ErrInvalidInput;
+
     *n = static_cast<uint32_t>(bid->hdr->n[BCF_DT_SAMPLE]);
-    return 0;
+    return bcfio::Status::Success;
 }
 
 
-int bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
-    if (!bid)
-        return -1;
+bcfio::Status bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
+    if (!bcfio::is_open(bid))
+        return bcfio::Status::ErrBcfNotOpen;
 
     const char* filename = bcfio::get_filename(bid);
     // open a new file handle, then I can iterate without affecting
     // the current position of bid
     bcfio::bid_t fid = bcfio::bread(filename);
-    if (!fid)
-        return -2;
+    if (fid == nullptr)
+        return bcfio::Status::ErrInternal;
 
     // bcf_hdr_set_samples
-    int status = bcfio::subset_samples(fid.get(), nullptr);
-    if (status != 0)
-        return -3;
+    bcfio::Status status = bcfio::subset_samples(fid.get(), nullptr);
+    if (status != bcfio::Status::Success)
+        return bcfio::Status::ErrInternal;
 
     // dummy record
     htslib::bcf1_t* brec = htslib::bcf_init();
     if (!brec)
-        return -3;
+        return bcfio::Status::ErrHtslib;
 
-    status = htslib::bcf_read(fid->fid, fid->hdr, brec);
+    int hts_status = htslib::bcf_read(fid->fid, fid->hdr, brec);
     int64_t npos = 1;
-    for (; status == 0; npos++)
-        status = htslib::bcf_read(fid->fid, fid->hdr, brec);
+    for (; hts_status == 0; npos++)
+        hts_status = htslib::bcf_read(fid->fid, fid->hdr, brec);
 
     htslib::bcf_destroy(brec);
     
-    if (status != -1) return -3;
+    // remember that -1 here is htslib signal for EOF
+    if (hts_status != -1) 
+        return bcfio::Status::ErrParseBcf;
 
     *n = npos - 1;
-    return 0;
+    return bcfio::Status::Success;
 }
 
 
@@ -237,5 +271,4 @@ bool bcfio::is_bcf(const char* filename) {
 
     return fh->is_bcf();
 }
-
 

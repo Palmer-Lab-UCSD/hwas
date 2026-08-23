@@ -59,15 +59,14 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// bopen
-bcf_conn_t bopen(const char* filename, const char* mode);
-RcppExport SEXP _hwas_bopen(SEXP filenameSEXP, SEXP modeSEXP) {
+// bread
+bcf_conn_t bread(const char* filename);
+RcppExport SEXP _hwas_bread(SEXP filenameSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const char* >::type filename(filenameSEXP);
-    Rcpp::traits::input_parameter< const char* >::type mode(modeSEXP);
-    rcpp_result_gen = Rcpp::wrap(bopen(filename, mode));
+    rcpp_result_gen = Rcpp::wrap(bread(filename));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -653,24 +652,12 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// pg_sim
-Rcpp::NumericVector pg_sim(const char* bcf_filename, float heritability);
-RcppExport SEXP _hwas_pg_sim(SEXP bcf_filenameSEXP, SEXP heritabilitySEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const char* >::type bcf_filename(bcf_filenameSEXP);
-    Rcpp::traits::input_parameter< float >::type heritability(heritabilitySEXP);
-    rcpp_result_gen = Rcpp::wrap(pg_sim(bcf_filename, heritability));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_hwas_fit1_pg_addcovar", (DL_FUNC) &_hwas_fit1_pg_addcovar, 7},
     {"_hwas_fit1_pg_intcovar", (DL_FUNC) &_hwas_fit1_pg_intcovar, 8},
     {"_hwas_calc_grm", (DL_FUNC) &_hwas_calc_grm, 2},
-    {"_hwas_bopen", (DL_FUNC) &_hwas_bopen, 2},
+    {"_hwas_bread", (DL_FUNC) &_hwas_bread, 1},
     {"_hwas_bclose", (DL_FUNC) &_hwas_bclose, 1},
     {"_hwas_is_open", (DL_FUNC) &_hwas_is_open, 1},
     {"_hwas_is_bcf", (DL_FUNC) &_hwas_is_bcf, 1},
@@ -717,7 +704,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_hwas_matrix_x_matrix", (DL_FUNC) &_hwas_matrix_x_matrix, 2},
     {"_hwas_matrix_x_vector", (DL_FUNC) &_hwas_matrix_x_vector, 2},
     {"_hwas_matrix_x_3darray", (DL_FUNC) &_hwas_matrix_x_3darray, 2},
-    {"_hwas_pg_sim", (DL_FUNC) &_hwas_pg_sim, 2},
     {NULL, NULL, 0}
 };
 

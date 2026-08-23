@@ -34,18 +34,63 @@ extern "C" {
 }
 }
 
+// TODO: I NEED TO ADD A FEATURE FOR LISTIING FORMAT ID's
 
 namespace bcfio {
 
 // TODO: migrate int return values for status codes to the 
 // enum struct Status element.  long term slowly integrate
 enum struct Status : int {
+    WarnSampleSetMismatch   = 4,
     Success                 = 0,
     ErrHtslib               = -4,
     ErrBcfNotOpen           = -5,
     ErrBcfRecordInvalid     = -6,
-    ErrInternal             = -7
+    ErrInternal             = -7,
+    ErrInvalidInput         = -8,
+    ErrParseBcf             = -9,
+    ErrInvalidId            = -10,
+    ErrBcfOpenFailure       = -11
 };
+
+const char* status_msg(Status status) {
+    if (status == Status::WarnSampleSetMismatch)
+        return "Warning: Sample list contains names not in bcf";
+
+    if (status == Status::Success)
+        return "Success";
+
+    if (status == Status::ErrHtslib)
+        return "Likely a problem with htslib interface, please"
+            " contact the maintainers.";
+
+    if (status == bcfio::Status::ErrBcfNotOpen)
+        return "Bcf file not open for reading";
+
+    if (status == Status::ErrBcfRecordInvalid)
+        return "Likely invalid Bcf Record.";
+
+    if (status == Status::ErrInternal)
+        return "Internal error, please contact maintainers.";
+
+    if (status == Status::ErrInvalidInput)
+        return "Invalid input value";
+    
+    if (status == Status::ErrParseBcf)
+        return "Error parsing Bcf file, please check whether"
+            " the file is correctly formatted.  If formatted"
+            " correctly please contact maintainers.";
+
+    if (status == Status::ErrInvalidId)
+        return "Invalid id for the bcf query";
+
+    if (status == Status::ErrBcfOpenFailure)
+        return "Failed trying to open file, please check that"
+            " the specified file is a valid vcf, vcf.gz, or bcf"
+            " formatted file.";
+
+    return "Unexpected status, please contact maintainers.";
+}
 
 // @title The meta data on a BCF attribute
 // @description BCF, VCF, and VCF.GZ files hold metadata in the
@@ -229,7 +274,8 @@ typedef std::unique_ptr<Bcf> bid_t;
 //
 // @param id: query name for a specific bcf meta data record
 // @param ptr: where to store the retrieved meta data
-int decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
+// @param status code of operation
+Status decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
         const char* id,
         const int bcf_dt_type,
         BcfHdrAttr* ptr);
@@ -260,7 +306,7 @@ const char* get_filename(const Bcf* bid);
 //  "GT" would recover genotypes, "HD" haplotype dose, etc.
 // @param k: the allocated memory for which the result is stored
 // @return error code < 0, and 0 upon success
-int k_fmt(const Bcf* bid, const char* id, uint16_t* k);
+Status k_fmt(const Bcf* bid, const char* id, uint16_t* k);
 
 // @title Retrieve the number of samples 
 // @description The number of samples is not the number of samples for
@@ -269,26 +315,22 @@ int k_fmt(const Bcf* bid, const char* id, uint16_t* k);
 // @param bid: pointer to open file connection
 // @param n: memory to write results
 // @return error code < 0 and 0 upon success
-int num_samples(const Bcf* bid, uint32_t* n);
+Status num_samples(const Bcf* bid, uint32_t* n);
 
 
 // @title Total number of genomic positions in bcf
 // @param bid: pointer to open file connection
 // @param n: pointer to integer that stores result
-// @return
-//  0   success
-//  -1  invalid input pointer
-//  -2  failed to open an additional file connection
-//  -3  htslib failure
-int num_pos(Bcf* bid, int64_t* n);
+// @return Status
+Status num_pos(Bcf* bid, int64_t* n);
 
 
 // @title Subset samples to samples enumerated in file
 // @param bid: pointer to Bcf class
 // @param sample_filename: filename with sample names enumerated one
 //      per line
-// @return 0 success and < 0 upon error
-int subset_samples_from_file(Bcf* bid, const char* sample_filename);
+// @return Status
+Status subset_samples_from_file(Bcf* bid, const char* sample_filename);
 
 
 // @title Subset samples to samples in comma delimited string
@@ -297,9 +339,9 @@ int subset_samples_from_file(Bcf* bid, const char* sample_filename);
 //  string, if the string starts with ^ then an exclusion list.  If
 //  sample(s) in the list are not found in the bcf file, these names
 //  are ignored.
-// @return 0 success, < 0 upon error, and > 0 if sample in list is
-//  not found in bcf file.
-int subset_samples(Bcf* bid, const char* samples);
+// @return Status
+Status subset_samples(Bcf* bid, const char* samples);
+
 
 // int32_t exclude_samples(Bcf* bid, const char* sample_filename);
 
@@ -390,7 +432,7 @@ Status next_record(Bcf* bid,
     uint32_t n_rec_vals = static_cast<uint32_t>(n);
 
     uint32_t nsamps = 0;
-    if (num_samples(bid, &nsamps) < 0)
+    if (num_samples(bid, &nsamps) != bcfio::Status::Success)
         return Status::ErrInternal;
 
     htslib::bcf_fmt_t* fmt_cfg = htslib::bcf_get_fmt(bid->hdr, 
@@ -404,7 +446,7 @@ Status next_record(Bcf* bid,
         return Status::ErrInternal;
 
     uint16_t k = 0;
-    if (k_fmt(bid, id, &k) < 0)
+    if (k_fmt(bid, id, &k) != bcfio::Status::Success)
         return Status::ErrInternal;
 
     if (k != fmt_cfg->n)
@@ -421,25 +463,8 @@ Status next_record(Bcf* bid,
 // @return < 0 upon error and 0 upon success
 template <typename T>
 int pos(const BcfRecord<T>* brec, int64_t* p) {
-    if (!brec) {
-        fprintf(stderr,
-                "ERROR: BcfRecord is nullptr\n");
+    if (!bcfio::is_valid_brec(brec) || p == nullptr)
         return -1;
-    }
-
-    if (!brec->rec) {
-        fprintf(stderr,
-                "ERROR: BcfRecord invalid internal state."
-                "Reload record.\n");
-        return -1;
-    }
-
-    if (p == nullptr) {
-        fprintf(stderr,
-                "ERROR: pointer to int64_t encoded position is"
-                "nullptr, an invalid value.");
-        return -2;
-    }
 
     *p = brec->rec->pos + 1;
     return 0;
@@ -457,8 +482,6 @@ const char* chrom(const Bcf* bid, const BcfRecord<T>* brec) {
 
     return htslib::bcf_hdr_id2name(bid->hdr, brec->rec->rid);
 }
-
-
 
 }
 
