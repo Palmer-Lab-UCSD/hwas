@@ -18,22 +18,24 @@
 
 namespace grm {
 
+// TODO: Double if constexpr is the right way to go.  I was getting
+//  duplicate symboles linker errors without it.
 // @title Compute index of one-dimension array from matrix indices
 // @param i: matrix row index
 // @param j: matrix col index, note that j >= i
 // @param n: number of cols, and as symmetric number of rows, of the
 //  matrix, note that n = max(i) + 1 = max(j) + 1
 // @return index
-uint32_t sym_matrix_idx_to_array(const uint32_t i, 
+constexpr uint32_t sym_matrix_idx_to_array(const uint32_t i, 
                         const uint32_t j, 
                         const uint32_t n) {
     return i*n - i*(i-1)/2 + j - i; 
-}
+};
 
 // n is the number of columns in the matrix
-uint32_t matrix_idx_to_array(const uint32_t i, 
+constexpr uint32_t matrix_idx_to_array(const uint32_t i, 
                              const uint32_t j,
-                             const uint32_t n) { 
+                             const uint32_t n) {
     return i*n + j; 
 };
 

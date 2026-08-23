@@ -50,7 +50,7 @@ filename <- system.file("exdata", "geno_test_data.bcf",
                         package = "hwas",
                         mustWork = TRUE)
 
-bid <- hwas::bopen(filename, "r")
+bid <- hwas::bread(filename)
 print(bid)
 @
 

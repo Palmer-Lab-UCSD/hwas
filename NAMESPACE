@@ -10,7 +10,7 @@ import(Rcpp)
 ## bcfio and htslib interface
 #########################################################
 # bcf connection utilities
-export(bopen)
+export(bread)
 export(bclose)
 export(is_bcf)
 export(is_open)

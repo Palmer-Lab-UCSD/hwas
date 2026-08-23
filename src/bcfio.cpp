@@ -3,6 +3,37 @@
 
 #include <bcfio.h>
 
+const char* bcfio::status_msg(bcfio::Status status) {
+    switch (status) {
+    case Status::WarnSampleSetMismatch:
+        return "Warning: Sample list contains names not in bcf";
+    case Status::Success:
+        return "Success";
+    case Status::ErrHtslib:
+        return "Likely a problem with htslib interface, please"
+            " contact the maintainers.";
+    case bcfio::Status::ErrBcfNotOpen:
+        return "Bcf file not open for reading";
+    case Status::ErrBcfRecordInvalid:
+        return "Likely invalid Bcf Record.";
+    case Status::ErrInternal:
+        return "Internal error, please contact maintainers.";
+    case Status::ErrInvalidInput:
+        return "Invalid input value";
+    case Status::ErrParseBcf:
+        return "Error parsing Bcf file, please check whether"
+            " the file is correctly formatted.  If formatted"
+            " correctly please contact maintainers.";
+    case Status::ErrInvalidId:
+        return "Invalid id for the bcf query";
+    case Status::ErrBcfOpenFailure:
+        return "Failed trying to open file, please check that"
+            " the specified file is a valid vcf, vcf.gz, or bcf"
+            " formatted file.";
+    }
+
+    return "Unexpected status, please contact maintainers.";
+}
 
 bcfio::HFileReadConn::~HFileReadConn() {
     if (fid_) 

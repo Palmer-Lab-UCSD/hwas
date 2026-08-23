@@ -368,8 +368,8 @@ TEST(TestBcf, Constructor) {
     EXPECT_TRUE(bcfio::is_open(bid.get()));
 
     uint32_t n = 0;
-    int status = bcfio::num_samples(bid.get(), &n);
-    EXPECT_EQ(status, 0);
+    bcfio::Status status = bcfio::num_samples(bid.get(), &n);
+    EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(n, N_SAMPS);
 }
 
@@ -428,23 +428,27 @@ TEST(TestBcf, Kfmt) {
     // DS is alt allele dosage, which is more clearly defined as 
     // the expected count of alt alleles under the trained HMM
     uint16_t k = 0;
-    int status = -1;
+    bcfio::Status status = bcfio::Status::ErrInternal;
 
     status = bcfio::k_fmt(bid.get(), "DS", &k);
-    EXPECT_EQ(status, 0);
+    EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(k, 1);
 
     status = bcfio::k_fmt(bid.get(), "HD", &k);
-    EXPECT_EQ(status, 0);
+    EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(k, K_FOUNDERS);
 
     // TODO: what happens if I submit "GT", it exists but is a string
     //      not float
     // error detection
-    EXPECT_TRUE(bcfio::k_fmt(bid.get(), "WRONG_ID", &k) < 0);
-    EXPECT_TRUE(bcfio::k_fmt(bid.get(), "", &k) < 0);
-    EXPECT_TRUE(bcfio::k_fmt(bid.get(), nullptr, &k) < 0);
-    EXPECT_TRUE(bcfio::k_fmt(bid.get(), "HD", nullptr) < 0);
+    EXPECT_EQ(bcfio::k_fmt(bid.get(), "WRONG_ID", &k),
+            bcfio::Status::ErrInvalidId);
+    EXPECT_EQ(bcfio::k_fmt(bid.get(), "", &k),
+            bcfio::Status::ErrInvalidId);
+    EXPECT_EQ(bcfio::k_fmt(bid.get(), nullptr, &k),
+            bcfio::Status::ErrInvalidInput);
+    EXPECT_EQ(bcfio::k_fmt(bid.get(), "HD", nullptr),
+            bcfio::Status::ErrInvalidInput);
 }
 
 
@@ -455,13 +459,13 @@ TEST(TestBcf, SubsetSamplesEasy) {
     const char* sample_subset[nsamps] = { "S01", "S07", "S08" };
     const char sample_list[] = "S01,S07,S08";
 
-    int status = bcfio::subset_samples(bid.get(), sample_list);
-    
-    ASSERT_TRUE(status == 0);
+    bcfio::Status status = bcfio::Status::ErrInternal;
+    status = bcfio::subset_samples(bid.get(), sample_list);
+    ASSERT_EQ(status, bcfio::Status::Success);
 
     uint32_t n = 0;
     status = bcfio::num_samples(bid.get(), &n);
-    EXPECT_EQ(status, 0);
+    EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(n, nsamps);
 
     for (int i = 0; i < nsamps; i++)
@@ -479,12 +483,12 @@ TEST(TestBcf, SubsetSamplesWrongSampName) {
     const uint32_t correct_samp_idx[nsamps_correct] = { 0, 2 };
     const char sample_list[] = "S01,S08";
 
-    int status = bcfio::subset_samples(bid.get(), sample_list);
-    ASSERT_TRUE(status == 0);
+    bcfio::Status status = bcfio::subset_samples(bid.get(), sample_list);
+    ASSERT_EQ(status, bcfio::Status::Success);
 
     uint32_t n = 0;
     status = bcfio::num_samples(bid.get(), &n);
-    EXPECT_EQ(status, 0);
+    EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(n, nsamps_correct);
 
     uint32_t idx;
@@ -498,13 +502,12 @@ TEST(TestBcf, SubsetSamplesWrongSampName) {
 TEST(TestBcf, SubsetSamplesNullptr) {
     bcfio::bid_t bid = bcfio::bread(BCF_NAME);
 
-    int status = bcfio::subset_samples(bid.get(), nullptr);
-    
-    ASSERT_TRUE(status == 0);
+    bcfio::Status status = bcfio::subset_samples(bid.get(), nullptr);
+    ASSERT_EQ(status, bcfio::Status::Success);
 
     uint32_t n = 0;
     status = bcfio::num_samples(bid.get(), &n);
-    EXPECT_EQ(status, 0);
+    EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(n, 0);
 }
 
@@ -607,15 +610,15 @@ TEST(TestBcf, SubsetSamplesSubsequentSets) {
     };
 
     // NewSampleStringData(4, "S02", "S03", "S04", "S07")
-    int status = -1;
+    bcfio::Status status = bcfio::Status::ErrInternal;
     uint32_t n = 0;
     for (int i = 0; i < ntests; i++) {
         status = bcfio::subset_samples(bid.get(), 
                 data[i]->samp_list);
-        ASSERT_EQ(status, 0);
+        ASSERT_EQ(status, bcfio::Status::Success);
 
         status = bcfio::num_samples(bid.get(), &n);
-        EXPECT_EQ(status, 0);
+        EXPECT_EQ(status, bcfio::Status::Success);
         EXPECT_EQ(n, data[i]->nsamps);
 
         for (int j = 0; j < data[i]->nsamps; j++)
@@ -630,7 +633,7 @@ TEST(TestBcf, SubsetSamplesDiffSubsequentSets) {
     bcfio::bid_t bid;
 
     uint32_t n = 0;
-    int status = -1;
+    bcfio::Status status = bcfio::Status::ErrInternal;
     for (int bcf_i = 0; bcf_i < 3; bcf_i++) {
         bid = bcfio::bread(bcf_names[bcf_i]);
     
@@ -642,15 +645,15 @@ TEST(TestBcf, SubsetSamplesDiffSubsequentSets) {
     
         status = bcfio::subset_samples(bid.get(), 
                     data[0]->samp_list);
-        ASSERT_EQ(status, 0);
+        ASSERT_EQ(status, bcfio::Status::Success);
 
         status = bcfio::num_samples(bid.get(), &n);
-        EXPECT_EQ(status, 0);
+        EXPECT_EQ(status, bcfio::Status::Success);
         EXPECT_EQ(n, data[0]->nsamps);
         
         status = bcfio::subset_samples(bid.get(), 
                     data[1]->samp_list);
-        EXPECT_TRUE(status > 0);
+        EXPECT_EQ(status, bcfio::Status::WarnSampleSetMismatch);
 
         bid->close();
     }
@@ -670,22 +673,22 @@ TEST(TestBcf, SamplesExclusion) {
         NewSampleStringData(1, "S08")
     };
 
-    int status = bcfio::subset_samples(bid.get(), 
+    bcfio::Status status = bcfio::subset_samples(bid.get(), 
                 data[0]->samp_list);
-    ASSERT_EQ(status, 0);
+    ASSERT_EQ(status, bcfio::Status::Success);
 
     uint32_t n = 0;
     status = bcfio::num_samples(bid.get(), &n);
-    EXPECT_EQ(status, 0);
+    EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(n, data[0]->nsamps);
     
     // Test simple sample exclusion
     status = bcfio::subset_samples(bid.get(), 
                 data[1]->samp_list);
-    ASSERT_EQ(status, 0);
+    ASSERT_EQ(status, bcfio::Status::Success);
 
     status = bcfio::num_samples(bid.get(), &n);
-    EXPECT_EQ(status, 0);
+    EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(n, data[2]->nsamps);
 
     for (int j = 0; j < data[2]->nsamps; j++)
@@ -695,16 +698,16 @@ TEST(TestBcf, SamplesExclusion) {
     // Can't mix and match exlcusion inclusion cases
     status = bcfio::subset_samples(bid.get(), 
                 data[3]->samp_list);
-    ASSERT_TRUE(status > 0);
+    ASSERT_EQ(status, bcfio::Status::WarnSampleSetMismatch);
 
 
     // Multiple sample exclusion
     status = bcfio::subset_samples(bid.get(), 
                 data[4]->samp_list);
+    ASSERT_EQ(status, bcfio::Status::Success);
 
-    ASSERT_EQ(status, 0);
     status = bcfio::num_samples(bid.get(), &n);
-    EXPECT_EQ(status, 0);
+    EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(n, data[5]->nsamps);
 
     for (uint32_t j = 0; j < n; j++)
@@ -739,25 +742,34 @@ TEST(TestBcfInfo, GetFilename) {
 
 
 TEST(TestBcfInfo, NumPositions) {
-    constexpr int num_files = 4;
+    constexpr int num_files = 5;
     bcfio::bid_t bids[num_files] = {
         nullptr,
         bcfio::bread(VCF_NAME),
         bcfio::bread(VCFGZ_NAME),
+        bcfio::bread(BCF_NAME),
         bcfio::bread(BCF_NAME)
     };
+    bids[4]->close();
 
     int64_t npos = 8;
     int64_t ntest = 0;
-    int statuses[num_files] = { -1, 0, 0, 0 };
-    int status = 0;
+    bcfio::Status statuses[num_files] = { 
+        bcfio::Status::ErrBcfNotOpen, 
+        bcfio::Status::Success, 
+        bcfio::Status::Success, 
+        bcfio::Status::Success,
+        bcfio::Status::ErrBcfNotOpen
+    };
+
+    bcfio::Status status = bcfio::Status::ErrInternal;
 
     for (int i = 0; i < num_files; i++) {
         status = bcfio::num_pos(bids[i].get(), &ntest);
 
         EXPECT_EQ(status, statuses[i]);
 
-        if (bids[i] == nullptr)
+        if (statuses[i] != bcfio::Status::Success)
             continue;
 
         EXPECT_EQ(ntest, npos);

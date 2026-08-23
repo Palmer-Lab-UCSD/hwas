@@ -53,44 +53,7 @@ enum struct Status : int {
     ErrBcfOpenFailure       = -11
 };
 
-const char* status_msg(Status status) {
-    if (status == Status::WarnSampleSetMismatch)
-        return "Warning: Sample list contains names not in bcf";
-
-    if (status == Status::Success)
-        return "Success";
-
-    if (status == Status::ErrHtslib)
-        return "Likely a problem with htslib interface, please"
-            " contact the maintainers.";
-
-    if (status == bcfio::Status::ErrBcfNotOpen)
-        return "Bcf file not open for reading";
-
-    if (status == Status::ErrBcfRecordInvalid)
-        return "Likely invalid Bcf Record.";
-
-    if (status == Status::ErrInternal)
-        return "Internal error, please contact maintainers.";
-
-    if (status == Status::ErrInvalidInput)
-        return "Invalid input value";
-    
-    if (status == Status::ErrParseBcf)
-        return "Error parsing Bcf file, please check whether"
-            " the file is correctly formatted.  If formatted"
-            " correctly please contact maintainers.";
-
-    if (status == Status::ErrInvalidId)
-        return "Invalid id for the bcf query";
-
-    if (status == Status::ErrBcfOpenFailure)
-        return "Failed trying to open file, please check that"
-            " the specified file is a valid vcf, vcf.gz, or bcf"
-            " formatted file.";
-
-    return "Unexpected status, please contact maintainers.";
-}
+const char* status_msg(Status status);
 
 // @title The meta data on a BCF attribute
 // @description BCF, VCF, and VCF.GZ files hold metadata in the

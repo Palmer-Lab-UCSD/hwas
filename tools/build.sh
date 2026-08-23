@@ -16,7 +16,7 @@ done
 
 
 only_compile=1
-if [ $1 = "--only-compile" ]; then
+if [ $# -ge 1 ] && [ "$1" = "--only-compile" ]; then
     only_compile=0
 fi
 

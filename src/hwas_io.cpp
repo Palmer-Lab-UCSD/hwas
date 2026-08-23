@@ -171,7 +171,7 @@ int subset_samples(bcf_conn_t bconn,
         sample_str = Rcpp::String(samples[i]).get_cstring();
         str_n = std::strlen(sample_str);
 
-        if (sample_list_elem + str_n <= end_point)
+        if (sample_list_elem + str_n > end_point)
             Rcpp::stop("yikes!");
 
         std::strncpy(sample_list_elem, sample_str, str_n);
