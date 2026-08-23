@@ -43,6 +43,7 @@ namespace bcfio {
 enum struct Status : int {
     WarnSampleSetMismatch   = 4,
     Success                 = 0,
+    EndOfFile               = -1,
     ErrHtslib               = -4,
     ErrBcfNotOpen           = -5,
     ErrBcfRecordInvalid     = -6,
@@ -328,10 +329,14 @@ Status next_record(Bcf* bid,
     if (!is_valid_brec(brec))
         return Status::ErrBcfRecordInvalid;
 
+    // htslib/vcf.h line 413 for bcf_read return values
     int status = htslib::bcf_read(bid->fid, 
             bid->hdr,
             brec->rec);
-    if (status != 0)
+    if (status != -1)
+        return Status::EndOfFile;
+    
+    if (status < -1)
         return Status::ErrHtslib;
 
     // Unpacking options defined in htslib/vcf.h line 429

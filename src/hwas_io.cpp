@@ -219,7 +219,8 @@ int set_threads(bcf_conn_t bconn, int n) {
 // [] Documentation: man/hts_records.Rd
 // TODO: update to new interface
 // [[Rcpp::export]]
-Rcpp::RObject next_record(bcf_conn_t bconn, const char* id) {
+Rcpp::Nullable<Rcpp::NumericMatrix> next_record(bcf_conn_t bconn, 
+        const char* id) {
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
     if (!bconn)
         Rcpp::stop(bcfio::status_msg(status));
@@ -227,8 +228,6 @@ Rcpp::RObject next_record(bcf_conn_t bconn, const char* id) {
     if (!bcfio::is_open(bconn.get()))
         Rcpp::stop(bcfio::status_msg(bcfio::Status::ErrBcfNotOpen));
 
-    Rcpp::NumericMatrix data;
-    
     bcfio::BcfHdrAttr hattr {};
     status = bcfio::decode_hts_idinfo(bconn->hdr,
             id,

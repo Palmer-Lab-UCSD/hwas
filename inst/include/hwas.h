@@ -87,17 +87,25 @@ int subset_samples_from_file(bcf_conn_t bid, const char* sample_filename);
 
 int set_threads(bcf_conn_t bid, int n);
 
-Rcpp::RObject next_record(bcf_conn_t bid, const char* id);
 
+Rcpp::Nullable<Rcpp::NumericMatrix> next_record(bcf_conn_t bid, 
+        const char* id);
+
+
+// return R_NilValue upon end of file
+//  matrix for computation
 template <typename T>
-Rcpp::NumericMatrix get_matrix(bcfio::Bcf* bid, 
+Rcpp::Nullable<Rcpp::NumericMatrix> get_matrix(bcfio::Bcf* bid, 
         const char* id) {
 
     bcfio::brec_t<T> brec = bcfio::BcfRecord<T>::init();
     bcfio::Status status = bcfio::next_record<T>(bid, brec.get(), id);
 
-    if (status != bcfio::Status::Success)
+    if (status == bcfio::Status::EndOfFile)
         return R_NilValue;
+
+    if (status != bcfio::Status::Success)
+        Rcpp::stop(bcfio::status_msg(status));
 
     Rcpp::NumericMatrix data(brec->nrow, brec->ncol);
     uint16_t ncol = brec->ncol;
