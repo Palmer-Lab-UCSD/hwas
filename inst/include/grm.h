@@ -18,6 +18,12 @@
 
 namespace grm {
 
+enum struct Status : int {
+    Success = 0,
+};
+
+const char* status_msg(Status status);
+
 // TODO: Double if constexpr is the right way to go.  I was getting
 //  duplicate symboles linker errors without it.
 // @title Compute index of one-dimension array from matrix indices
@@ -43,79 +49,98 @@ constexpr uint32_t matrix_idx_to_array(const uint32_t i,
 template <typename T>
 struct Grm {
     Grm(): nsamps(0), capacity(0), data(nullptr) {};
-    Grm(uint32_t n_samps): nsamps(n_samps),
-        capacity(n_samps == 0 ? 0 : n_samps * (n_samps + 1) / 2),
-        data(nsamps == 0 ? nullptr : new T[capacity]) {
+    Grm(uint32_t n_samps);
 
-        if (data) {
-            T default_val {};
-            std::memset(data, default_val, nsamps * sizeof(T));
-        }
-    }
+    Grm(const Grm&)                     = delete;
+    Grm& operator=(const Grm&)          = delete;
+    Grm(Grm&& other);
+    Grm& operator=(Grm&&);
+    ~Grm();
 
-    // Grm(const Grm&)=delete;                          
-    // Grm& operator=(const Grm&)=delete;
+    T operator()(const uint32_t i, const uint32_t j) const;
 
-    // Grm(Grm&&);
-    // grm::Grm::Grm(grm::Grm&& other)
-    // : n_samples(other.n_samples), data(std::move(other.data)) {
-    // other.n_samples = 0;    
-    // grm::Grm& grm::Grm::operator=(grm::Grm&& other) {
-    //     if (this == &other)
-    //         return *this;
-    // 
-    //     n_samples = other.n_samples;
-    //     other.n_samples = 0;
-    // 
-    //     data = std::move(other.data);
-    // 
-    //     return *this;
-    // }
-
-    // };
-    // Grm& operator=(Grm&&);
-
-    ~Grm() {
-        if (data)
-            delete[] data;
-        data = nullptr;
-        nsamps = 0;
-        capacity = 0;
-    }
-                                            
-    T operator()(const uint32_t i, const uint32_t j) const {
-        if (i > j)
-            return data[sym_matrix_idx_to_array(j, i, nsamps)];
-        return data[sym_matrix_idx_to_array(i, j, nsamps)];
-    }
-
-    T& operator()(const uint32_t i, const uint32_t j) {
-        if (i > j)
-            return data[sym_matrix_idx_to_array(j, i, nsamps)];
-
-        return data[sym_matrix_idx_to_array(i, j, nsamps)];
-    }
+    T& operator()(const uint32_t i, const uint32_t j);
 
     int midx_to_arr(const uint32_t i, 
             const uint32_t j, 
-            uint32_t* idx) const {
-
-        if (i >= nsamps || j >= nsamps)
-            return -1;
-
-        // remember that by symmetry, the matrix is equal to its transpose
-        if (i <= j)
-            *idx = sym_matrix_idx_to_array(i, j, nsamps);
-        else 
-            *idx = sym_matrix_idx_to_array(j, i, nsamps);
-
-        return 0;
-    }
+            uint32_t* idx) const;
 
     uint32_t nsamps;        
     uint32_t capacity;      // size of allocated memory for data
     T* data;
 };
+
+
+template <typename T>
+Grm<T>::Grm(uint32_t n_samps): nsamps(n_samps),
+    capacity(n_samps == 0 ? 0 : n_samps * (n_samps + 1) / 2),
+    data(nsamps == 0 ? nullptr : new T[capacity]) {
+
+    if (data) {
+        T default_val {};
+        std::memset(data, default_val, nsamps * sizeof(T));
+    }
+}
+
+template <typename T>
+Grm<T>::Grm(grm::Grm&& other)
+    : n_samples(other.n_samples),
+    data(std::move(other.data)) {
+
+    other.n_samples = 0;    
+    grm::Grm& grm::Grm::operator=(grm::Grm&& other) {
+        if (this == &other)
+            return *this;
+    
+        n_samples = other.n_samples;
+        other.n_samples = 0;
+    
+        data = std::move(other.data);
+    
+        return *this;
+}
+
+template <typename T>
+Grm<T>::~Grm() {
+    if (data)
+        delete[] data;
+    data = nullptr;
+    nsamps = 0;
+    capacity = 0;
+}
+
+template <typename T>
+T Grm<T>::operator()(const uint32_t i, const uint32_t j) const {
+    if (i > j)
+        return data[sym_matrix_idx_to_array(j, i, nsamps)];
+    return data[sym_matrix_idx_to_array(i, j, nsamps)];
+}
+
+template <typename T>
+T& Grm<T>::operator()(const uint32_t i, const uint32_t j) {
+    if (i > j)
+        return data[sym_matrix_idx_to_array(j, i, nsamps)];
+
+    return data[sym_matrix_idx_to_array(i, j, nsamps)];
+}
+
+
+template <typename T>
+int Grm<T>::midx_to_arr(const uint32_t i, 
+        const uint32_t j, 
+        uint32_t* idx) const {
+
+    if (i >= nsamps || j >= nsamps)
+        return -1;
+
+    // remember that by symmetry, the matrix is equal to its transpose
+    if (i <= j)
+        *idx = sym_matrix_idx_to_array(i, j, nsamps);
+    else 
+        *idx = sym_matrix_idx_to_array(j, i, nsamps);
+
+    return 0;
+}
 
 // int hap_update_kernel(Grm* grmat, const bcfio::BcfRecord<float>* rec);
 
