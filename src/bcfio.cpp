@@ -91,6 +91,79 @@ bcfio::Status bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
     return bcfio::Status::Success;
 }
 
+
+bcfio::cbuf_t bcfio::CharBuf::init(uint16_t capacity) {
+    char* buf = new(std::nothrow) char[capacity];
+    if (buf == nullptr)
+        return nullptr;
+
+    std::memset(buf, '\0', capacity);
+
+    bcfio::CharBuf* cbuf = new(std::nothrow) CharBuf(buf, capacity);
+    if (cbuf == nullptr) {
+        delete[] buf;
+        return nullptr;
+    }
+
+    return bcfio::cbuf_t(cbuf);
+}
+
+bcfio::CharBuf::~CharBuf() {
+    if (buf_ != nullptr) {
+        delete[] buf_;
+        buf_ = nullptr;
+        cap_ = 0;
+        len_ = 0;
+    }
+}
+
+void bcfio::CharBuf::reset() {
+    std::memset(buf_, '\0', len_);
+    len_= 0;
+}
+
+bcfio::Status append(
+
+bcfio::pos_file_t bcfio::PositionsFile::read(const char* filename) {
+    FILE* fid = std::fopen(filename, "r");
+    if (fid_ == nullptr)
+        return nullptr;
+    
+    PositionsFile pos_file = new(std::nothrow) PositionsFile(fid);
+    if (pos_file == nullptr) {
+        std::fclose(fid);
+        return nullptr;
+    }
+
+    pos_file->buf_ = bcfio::CharBuf::init(500);
+    if (pos_file->buf == nullptr) {
+        delete pos_file;
+        return nullptr;
+    }
+
+    return bcfio::pos_file_t(pos_file);
+}
+
+bool bcfio::PositionsFile::is_open() {
+    return fid_ == nullptr;
+}
+
+void bcfio::PositionsFile::close() {
+    if (fid_ != nullptr) {
+        std::fclose(fid_);
+        fid_ = nullptr;
+    }
+}
+
+bcfio::PositionsFile::~PositionsFile() {
+    close();
+}
+
+bcfio::Status bcfio::PositionsFile::next_record(bcfio::GenomicCoord* gc) {
+    buf_->reset();
+    gc->update(buf_.get(), pos);
+}
+
 // // const std::unique_ptr<std::string[]> bcfio::BcfHeader::sample_names() const {
 // // 
 // //     std::unique_ptr<std::string[]> samp_names = 
