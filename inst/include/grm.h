@@ -19,7 +19,7 @@
 namespace grm {
 
 enum struct Status : int {
-    Success = 0,
+    Success = 0
 };
 
 const char* status_msg(Status status);
@@ -44,7 +44,6 @@ constexpr uint32_t matrix_idx_to_array(const uint32_t i,
                              const uint32_t n) {
     return i*n + j; 
 };
-
 
 template <typename T>
 struct Grm {
@@ -82,23 +81,24 @@ Grm<T>::Grm(uint32_t n_samps): nsamps(n_samps),
     }
 }
 
-template <typename T>
-Grm<T>::Grm(grm::Grm&& other)
-    : n_samples(other.n_samples),
-    data(std::move(other.data)) {
-
-    other.n_samples = 0;    
-    grm::Grm& grm::Grm::operator=(grm::Grm&& other) {
-        if (this == &other)
-            return *this;
-    
-        n_samples = other.n_samples;
-        other.n_samples = 0;
-    
-        data = std::move(other.data);
-    
-        return *this;
-}
+// template <typename T>
+// Grm<T>::Grm(Grm&& other)
+//     : nsamps(other.nsamps),
+//     data(std::move(other.data)) {
+// 
+//     other.nsamps = 0;    
+//     grm::Grm& Grm::operator=(Grm&& other) {
+//         if (this == &other)
+//             return *this;
+//     
+//         nsamps = other.nsamps;
+//         other.nsamps = 0;
+//     
+//         data = std::move(other.data);
+//     
+//         return *this;
+//     }
+// }
 
 template <typename T>
 Grm<T>::~Grm() {

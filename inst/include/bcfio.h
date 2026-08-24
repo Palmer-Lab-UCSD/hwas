@@ -333,7 +333,7 @@ Status next_record(Bcf* bid,
     int status = htslib::bcf_read(bid->fid, 
             bid->hdr,
             brec->rec);
-    if (status != -1)
+    if (status == -1)
         return Status::EndOfFile;
     
     if (status < -1)
