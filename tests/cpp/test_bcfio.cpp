@@ -229,7 +229,12 @@ TEST(TestBcfRecord, Constructor) {
 
 
 TEST(TestBcfRecord, GetGenomicCoords) {
+    const char VCF_NAME[] { "inst/exdata/geno_test_data.vcf" };
+    const char VCFGZ_NAME[] { "inst/exdata/geno_test_data.vcf.gz" };
+    const char BCF_NAME[] { "inst/exdata/geno_test_data.bcf" };
+
     constexpr int nfiles = 3;
+
     bcfio::bid_t bids[nfiles] = {
         bcfio::bread(VCF_NAME),
         bcfio::bread(VCFGZ_NAME),
@@ -247,7 +252,7 @@ TEST(TestBcfRecord, GetGenomicCoords) {
 
     const char* chrom_out = nullptr;
     int64_t pos_out = -1;
-    int status = -1;
+    bcfio::Status status = bcfio::Status::ErrInternal;
     bcfio::Bcf* bid = nullptr;
 
     EXPECT_TRUE(bcfio::chrom<float>(nullptr, brec.get()) == nullptr);
@@ -260,17 +265,17 @@ TEST(TestBcfRecord, GetGenomicCoords) {
 
         for (int j = 0; bcfio::next_record<float>(bid, brec.get(), "DS") == bcfio::Status::Success; j++) {
             status = bcfio::pos<float>(brec.get(), &pos_out);
-            EXPECT_EQ(status, 0);
+            EXPECT_EQ(status, bcfio::Status::Success);
             EXPECT_EQ(pos_out, true_pos[j]);
 
             status = bcfio::pos<float>(nullptr, &pos_out);
-            EXPECT_TRUE(status < 0);
+            EXPECT_EQ(status, bcfio::Status::ErrInvalidInput);
 
             status = bcfio::pos<float>(nullptr, nullptr);
-            EXPECT_TRUE(status < 0);
+            EXPECT_EQ(status, bcfio::Status::ErrInvalidInput);
 
             status = bcfio::pos<float>(brec.get(), nullptr);
-            EXPECT_TRUE(status < 0);
+            EXPECT_EQ(status, bcfio::Status::ErrInvalidInput);
 
             chrom_out = bcfio::chrom<float>(bid, brec.get());
             EXPECT_STREQ(chrom_out, true_chrom_name);
@@ -777,9 +782,49 @@ TEST(TestBcfInfo, NumPositions) {
 
 }
 
-
 TEST(BcfUtils, IsBcf) {
     EXPECT_TRUE(bcfio::is_bcf(BCF_NAME));
+    EXPECT_TRUE(bcfio::is_bcf(VCF_NAME));
+}
+
+
+TEST(GenomicCoord, Comparison) {
+    struct GenomicCoordTestData {
+        bcfio::GenomicCoord lhs;
+        bcfio::GenomicCoord rhs;
+        int truth_val;
+    };
+
+    // the lhs compared to the rhs encoding:
+    //  -1: less than,
+    //  0: equality,
+    //  1: greater than,
+    
+    constexpr int ntests = 5;
+    GenomicCoordTestData gr[ntests] = {
+        { {"chr12", 2325}, {"chr12", 5422},      -1},
+        { {"chr12", 2325}, {"chr12", 2325},      0 },
+        { {"chr13", 2325}, {"chr12", 2325},      1 },
+        { {"chr13", 2325}, {"chr12", 42325},     1 },
+        { {"chr12", 2325}, {"chr13", 25},        -1}
+    };
+
+    for (int i = 0; i < ntests; i++) {
+        switch (gr[i].truth_val) {
+        case -1:
+            EXPECT_TRUE(gr[i].lhs < gr[i].rhs);
+            break;
+        case 0:
+            EXPECT_TRUE(gr[i].lhs == gr[i].rhs);
+            break;
+        case 1:
+            EXPECT_TRUE(gr[i].lhs > gr[i].rhs);
+            break;
+        default:
+            printf("Couldn't interpret the test.\n");
+            ASSERT_EQ(1,2);
+        }
+    }
 }
 
 // TEST(TestReadBcf, LoadRecord) {

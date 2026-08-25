@@ -21,10 +21,11 @@
 
 #include <memory>
 #include <new>
-#include <optional>
+#include <set>
 #include <string>
-#include <type_traits>
-#include <vector>
+
+// #include <optional>
+// #include <type_traits>
 
 namespace htslib {
 extern "C" {
@@ -38,20 +39,28 @@ extern "C" {
 
 namespace bcfio {
 
+
 // TODO: migrate int return values for status codes to the 
 // enum struct Status element.  long term slowly integrate
 enum struct Status : int {
-    WarnSampleSetMismatch   = 4,
-    Success                 = 0,
-    EndOfFile               = -1,
-    ErrHtslib               = -4,
-    ErrBcfNotOpen           = -5,
-    ErrBcfRecordInvalid     = -6,
-    ErrInternal             = -7,
-    ErrInvalidInput         = -8,
-    ErrParseBcf             = -9,
-    ErrInvalidId            = -10,
-    ErrBcfOpenFailure       = -11
+    WarnSampleSetMismatch                   = 4,
+    Success                                 = 0,
+    EndOfFile                               = -1,
+    ErrNotImplemented                       = -3,
+    ErrHtslib                               = -4,
+    ErrBcfNotOpen                           = -5,
+    ErrBcfRecordInvalid                     = -6,
+    ErrInternal                             = -7,
+    ErrInvalidInput                         = -8,
+    ErrParseBcf                             = -9,
+    ErrInvalidId                            = -10,
+    ErrBcfOpenFailure                       = -11,
+    ErrDuplicatePositions                   = -12,
+    ErrPositionsFileNotSorted               = -13,
+    ErrBcfContigNotSorted                   = -14,
+    ErrBcfPosNotSorted                      = -15,
+    ErrParsePositionsFileInvalidCoord       = -16,
+    ErrParsePositionsFileCoordStrTooLong    = -17
 };
 
 const char* status_msg(Status status);
@@ -107,35 +116,6 @@ typedef std::unique_ptr<HFileReadConn> hfile_conn_t;
 hfile_conn_t hread(const char* filename);
 
 
-// The CharBuf is just to help with simple strings
-class CharBuf {
-public:
-    CharBuf()                           = delete;
-    CharBuf(const CharBuf&)             = delete;
-    CharBuf& operator=(const CharBuf&)  = delete;
-    CharBuf(CharBuf&&)                  = delete;
-    CharBuf& operator=(CharBuf&&)       = delete;
-    
-    // CharBuf& operator=(const char* s);
-
-    static std::unique_ptr<CharBuf> init(uint16_t capacity);
-    ~CharBuf();
-    // copy() const;
-    void reset();
-    const char* get() const;
-    Status append(char c);
-    uint16_t len();
-
-private:
-    CharBuf(char* buf, uint16_t capacity): 
-        buf_(buf), cap_(capacity), len_(0) {};
-    char* buf_;
-    uint16_t cap_;
-    uint16_t len_;
-}
-
-typedef std::unique_ptr<CharBuf> cbuf_t;
-
 // @brief Store genomic coordinate and define comparison operations
 // @details A genomic coordinate is simply a the name of a contig
 //  and an integer position.  When we have a collection of coordinates
@@ -143,33 +123,14 @@ typedef std::unique_ptr<CharBuf> cbuf_t;
 //  the same? Are the two coordinates on the same contig?  Is the
 //  position of the second coordinate greater or less than the first?
 //  This class allows you to do this simply.
-//
-// ### Example
-// ```cpp
-// ```
-class GenomicCoord {
-public:
-    ~GenomicCoord();
+struct GenomicCoord {
+    std::string ctg;
+    int64_t pos;
 
-    bool operator< (const GenomicCoord& lhs, const GenomicCoord& rhs) const;
-    bool operator<=(const GenomicCoord& lhs, const GenomicCoord& rhs) const;
-    bool operator> (const GenomicCoord& lhs, const GenomicCoord& rhs) const;
-    bool operator>=(const GenomicCoord& lhs, const GenomicCoord& rhs) const;
-
-    bool operator==(const GenomicCoord& lhs, const GenomicCoord& rhs) const;
-    bool operator!=(const GenomicCoord& lhs, const GenomicCoord& rhs) const;
-
-    char* chrom() const;
-    int64_t pos() const;
-
-    bool gt(const char* chrom, const htslib::hts_pos_t pos);
-    bool eq(const char* chrom, const htslib::hts_pos_t pos);
-
-private:
-    CharBuf chrom_;
-    uint32_t chrom_cap_;
-    int64_t pos_;
-}
+    bool operator<(const GenomicCoord& other) const;
+    bool operator==(const GenomicCoord& other) const;
+    bool operator>(const GenomicCoord& other) const;
+};
 
 
 // @brief file access and loading position data
@@ -182,6 +143,7 @@ public:
     PositionsFile& operator=(PositionsFile&&)       = delete;
 
     static std::unique_ptr<PositionsFile> read(const char* filename);
+    static uint16_t buf_size();
     ~PositionsFile();
 
     bool is_open() const;
@@ -190,8 +152,12 @@ public:
 private:
     PositionsFile(FILE* fid): fid_(fid) {};
     FILE* fid_;
-    cbuf_t buf_;
-}
+
+    static const uint16_t buf_size_ = 250;
+    char* buf_[buf_size_];
+    
+    friend bool is_open(const PositionsFile*);
+};
 
 typedef std::unique_ptr<PositionsFile> pos_file_t;
 
@@ -278,9 +244,6 @@ bool is_valid_brec(const BcfRecord<T>* brec) {
 }
 
 
-
-
-
 //     float qual() const { return rec_->qual; };
 
 
@@ -308,11 +271,11 @@ struct Bcf
 
     htslib::htsFile* fid;
     htslib::bcf_hdr_t* hdr;
-    // int64_t
-    PositionsFile* pfid = nullptr;
+    std::set<GenomicCoord> pos;
+
 private:
     Bcf(htslib::htsFile* hfid, htslib::bcf_hdr_t* hhdr): 
-        fid(hfid), hdr(hhdr) {};
+        fid(hfid), hdr(hhdr), pos() {};
     friend std::unique_ptr<Bcf> bread(const char* filename);
 };
 
@@ -352,6 +315,7 @@ bool is_bcf(const char* filename);
 //  managed by the Bcf class
 bid_t bread(const char* filename);
 bool is_open(const Bcf* bid);
+bool is_open(const PositionsFile* pfid);
 
 // @brief Filename from Bcf class
 // @param bid: pointer to open file connection
@@ -375,22 +339,6 @@ Status k_fmt(const Bcf* bid, const char* id, uint16_t* k);
 // @return error code < 0 and 0 upon success
 Status num_samples(const Bcf* bid, uint32_t* n);
 
-
-// @brief Total number of genomic positions in bcf
-// @param bid: pointer to open file connection
-// @param n: pointer to integer that stores result
-// @return Status
-Status num_pos(Bcf* bid, int64_t* n);
-
-
-// @brief Subset samples to samples enumerated in file
-// @param bid: pointer to Bcf class
-// @param sample_filename: filename with sample names enumerated one
-//      per line
-// @return Status
-Status subset_samples_from_file(Bcf* bid, const char* sample_filename);
-
-
 // @brief Subset samples to samples in comma delimited string
 // @param bid: pointer to Bcf class
 // @param samples: samples names to included in a comma delimited 
@@ -400,8 +348,134 @@ Status subset_samples_from_file(Bcf* bid, const char* sample_filename);
 // @return Status
 Status subset_samples(Bcf* bid, const char* samples);
 
+// @brief Subset samples to samples enumerated in file
+// @param bid: pointer to Bcf class
+// @param sample_filename: filename with sample names enumerated one
+//      per line
+// @return Status
+Status subset_samples_from_file(Bcf* bid, const char* sample_filename);
+
+// @brief Total number of genomic positions in bcf
+// @param bid: pointer to open file connection
+// @param n: pointer to integer that stores result
+// @return Status
+Status num_pos(Bcf* bid, int64_t* n);
+
+// @brief Set of genomic coords, positions, that records will be queried 
+// @details Often, it is the case that we want to specify a subset
+//  of records to query by genomic coordinates.  For complex operations,
+//  like computing a grm, it is easiest to store the genomic coordinates
+//  in a file.  Such a file specifies one coordinate per line by
+//  `contig_name:position_integer`, for example
+//
+//  chr12:345323
+//  chr14:3452
+//  chr14:35452412
+//  
+//  etc.  The coordinates do not need to be sorted.  Note, there is
+//  no negation or exclusion, the set of coordinate specified are 
+//  an inclusion set.
+//
+// @param[in,out] bid->pos will be mutated.
+// @param[in] filename and path to the position inclusion file
+// @return Status::Success, Status::ErrInvalidInput, 
+Status set_pos_from_file(Bcf* bid, const char* filename);
+
+
 
 // int32_t exclude_samples(Bcf* bid, const char* sample_filename);
+
+
+// @brief read the next record
+// @details htslib provides a means to load genotype records one
+//  position at a time, however does not, to my knowledge, provide
+//  support for 
+// @param[in,out] bid
+// @param[in,out] brec
+// @param[in] id
+template <typename T>
+Status mutate_brec_to_next_pos_(Bcf* bid,
+        BcfRecord<T>* brec,
+        const char* id) {
+
+    int hts_status = htslib::bcf_read(bid->fid, 
+                bid->hdr,
+                brec->rec);
+
+    if (bid->pos.empty()) {
+        switch (hts_status) {
+        case 0:
+            return Status::Success;
+        case -1:
+            return Status::EndOfFile;
+        default:
+            return Status::ErrHtslib;
+        };
+    }
+    return Status::ErrNotImplemented;
+}
+//     GenomicCoord gc {};
+// 
+//     Status pfid_status = bid->pfid_->next_record(gc);
+// 
+//     const char* prev_chr = nullptr;
+//     const char* chr = chrom(bid, brec);
+//     if (chr == nullptr)
+//         return Status::ErrInternal;
+// 
+//     int64_t prev_p = 0
+//     int64_t p = 0;
+//     Status var_status = pos(brec, &p);
+//     if (var_status != Status::Success)
+//         return var_status;
+// 
+//     while (pfid_status == Status::Success && hts_status == 0) {
+//         if (gc->eq(chr, pos))
+//             return Status::Success;
+// 
+//         // if the position of the position file is less than that
+//         // of the bcf file, increment the position file.
+//         if (gc->lt(chr, pos)) {
+//             prev_gc = gc;
+//             status = bid->pfid_->next_record(gc);
+// 
+//             if (prev_gc == gc)
+//                 return Status::ErrDuplicatePositions;
+//             if (prev_gc > gc)
+//                 return Status::ErrPositionsFileNotSorted;
+//             continue;
+//         }
+// 
+//         // if the position in the bcf file is less than that of the
+//         // positions file, increment the bcf
+//         hts_status = htslib::bcf_read(bid->fid, 
+//                 bid->hdr,
+//                 brec->rec);
+// 
+//         prev_chr = chr;
+//         chr = chrom(bid, brec);
+//         if (chr == nullptr)
+//             return Status::ErrInternal;
+//         if (prev_chr > chr)
+//             return Status::ErrBcfContigNotSorted;
+// 
+//         prev_p = p;
+//         var_status = pos(brec, &p);
+//         if (var_status != Status::Success)
+//             return var_status;
+// 
+//         if (prev_p > p)
+//             return Status::ErrBcfPosNotSorted;
+//     }
+// 
+//     if (pfid_status == Status::EndOfFile || hts_status == -1)
+//         return Status::EndOfFile;
+// 
+//     if (hts_status < -1)
+//         return Status::ErrHtslib;
+// 
+//     return pfid_status;
+// }
 
 // @brief Query the next records at the next position
 // @param bid: the pointer to open htslib file
@@ -423,15 +497,9 @@ Status next_record(Bcf* bid,
     if (!is_valid_brec(brec))
         return Status::ErrBcfRecordInvalid;
 
-    // htslib/vcf.h line 413 for bcf_read return values
-    int status = htslib::bcf_read(bid->fid, 
-            bid->hdr,
-            brec->rec);
-    if (status != -1)
-        return Status::EndOfFile;
-    
-    if (status < -1)
-        return Status::ErrHtslib;
+    Status status = mutate_brec_to_next_pos_(bid, brec, id);
+    if (status != Status::Success)
+        return status;
 
     // Unpacking options defined in htslib/vcf.h line 429
     // BCF_UN_STR:      unpack up to ALT, inclusive
@@ -518,20 +586,19 @@ Status next_record(Bcf* bid,
     brec->ncol = k;
 
     return Status::Success;
-}
 
+}
 
 // @brief: Retrieve the genomic position of a record
 // @return < 0 upon error and 0 upon success
 template <typename T>
-int pos(const BcfRecord<T>* brec, int64_t* p) {
+Status pos(const BcfRecord<T>* brec, int64_t* p) {
     if (!bcfio::is_valid_brec(brec) || p == nullptr)
-        return -1;
+        return Status::ErrInvalidInput;
 
     *p = brec->rec->pos + 1;
-    return 0;
+    return Status::Success;
 }
-
 
 // @return nullptr upon error, cstring upon success
 template <typename T>
