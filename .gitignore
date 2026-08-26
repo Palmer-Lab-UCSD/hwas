@@ -20,3 +20,4 @@ vec
 *.pdf
 *.blg
 src/Makevars
+*.plist

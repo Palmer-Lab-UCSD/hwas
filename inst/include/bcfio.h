@@ -43,6 +43,7 @@ namespace bcfio {
 // TODO: migrate int return values for status codes to the 
 // enum struct Status element.  long term slowly integrate
 enum struct Status : int {
+    WarnEmptyLine                           = 5,
     WarnSampleSetMismatch                   = 4,
     Success                                 = 0,
     EndOfFile                               = -1,
@@ -56,11 +57,11 @@ enum struct Status : int {
     ErrInvalidId                            = -10,
     ErrBcfOpenFailure                       = -11,
     ErrDuplicatePositions                   = -12,
-    ErrPositionsFileNotSorted               = -13,
-    ErrBcfContigNotSorted                   = -14,
-    ErrBcfPosNotSorted                      = -15,
     ErrParsePositionsFileInvalidCoord       = -16,
-    ErrParsePositionsFileCoordStrTooLong    = -17
+    ErrParsePositionsFileCoordStrTooLong    = -17,
+    ErrCouldNotReadFile                     = -18,
+    ErrInsertCoordInPosSet                  = -19,
+    ErrParseUnrecoverable                   = -20
 };
 
 const char* status_msg(Status status);
@@ -128,12 +129,19 @@ struct GenomicCoord {
     int64_t pos;
 
     bool operator<(const GenomicCoord& other) const;
-    bool operator==(const GenomicCoord& other) const;
     bool operator>(const GenomicCoord& other) const;
+    bool operator==(const GenomicCoord& other) const;
+    bool operator!=(const GenomicCoord& other) const;
 };
 
 
 // @brief file access and loading position data
+// @details a position file is a human readable text file storing
+//  positions to include during data retrieval.  The format is
+//  to document a single genomic coordinate per line with the 
+//  genomic coordinate designated as <contig name>:<pos integer>.
+//  The coordinates in this file may span multiple contigs and
+//  do not need to be ordered.
 class PositionsFile {
 public:
     PositionsFile()                                 = delete;
@@ -142,19 +150,53 @@ public:
     PositionsFile(PositionsFile&&)                  = delete;
     PositionsFile& operator=(PositionsFile&&)       = delete;
 
+    // @brief open the file filename for reading
+    // @return one of the following upon:
+    //  success: unique_ptr to PositionsFile class instance 
+    //  nullptr: upon failure to open the file filename for reading
+    //      and instantiating buffer for reading from file 
     static std::unique_ptr<PositionsFile> read(const char* filename);
-    static uint16_t buf_size();
     ~PositionsFile();
 
     bool is_open() const;
     void close();
+
+    // @brief load the next record from file and store in GenomicCoord
+    // @return one of the following bcfio::Status values:
+    //  ErrParsePositionsFileInvalidCoord
+    //  ErrParsePositionsFileCoordStrTooLong,
+    //  ErrParseUnrecoverable
+    //  EndOfFile
+    //  WarnEmptyLine
+    //  Success
     Status next_record(GenomicCoord* gcoord);
+
+    // @brief load characters of current line in file stream to buffer
+    // @details loads the characters of the current line in the file
+    //  stream to the buffer, while being mindful of buffer size.  Each
+    //  character loaded into buffer increments the buf_len_ so that it
+    //  state upon return is the number of characters, excluding null
+    //  terminator, of the file's line string.  This value can be zero
+    //  if the line has no contents except for newline character, 
+    //  carriage return character, or EOF.
+    // @return one of the following bcfio::Status values:
+    //  ErrParsePositionsFileCoordStrTooLong,
+    //  ErrParseUnrecoverable
+    //  EndOfFile
+    //  WarnEmptyLine
+    //  Success
+    Status getline();
+
+    const char* buf() const;
 private:
     PositionsFile(FILE* fid): fid_(fid) {};
     FILE* fid_;
 
     static const uint16_t buf_size_ = 250;
-    char* buf_[buf_size_];
+
+    // buf_len_ is the number of characters excluding null terminator
+    uint16_t buf_len_ = 0;
+    char buf_[buf_size_];
     
     friend bool is_open(const PositionsFile*);
 };
@@ -360,6 +402,15 @@ Status subset_samples_from_file(Bcf* bid, const char* sample_filename);
 // @param n: pointer to integer that stores result
 // @return Status
 Status num_pos(Bcf* bid, int64_t* n);
+
+// @brief Load position inclusion set from file to STL set<GenomicCoord>
+// @param[in,out] bid will be mutated by adding values to the pos data
+//  member C++ STL std::set
+// @param[in] position file filename
+// @return one of the following bcfio::Status values:
+//  ErrInvalidInput
+//  Success
+Status set_pos_from_file(Bcf* bid, const char* filename);
 
 // @brief Set of genomic coords, positions, that records will be queried 
 // @details Often, it is the case that we want to specify a subset
