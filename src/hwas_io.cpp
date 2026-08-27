@@ -204,6 +204,19 @@ int subset_samples_from_file(bcf_conn_t bconn,
 }
 
 // [[Rcpp::export]]
+int subset_pos_from_file(bcf_conn_t bconn, const char* filename) {
+    bcfio::Status status = bcfio::Status::ErrInvalidInput;
+    if (!bconn || !filename)
+        Rcpp::stop(bcfio::status_msg(status));
+
+    status = bcfio::set_pos_from_file(bconn.get(), filename);
+    if (status != bcfio::Status::Success)
+        Rcpp::stop(bcfio::status_msg(status));
+
+    return bconn->pos.size();
+}
+
+// [[Rcpp::export]]
 int set_threads(bcf_conn_t bconn, int n) {
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
     if (!bconn)

@@ -5,33 +5,49 @@
 
 const char* bcfio::status_msg(bcfio::Status status) {
     switch (status) {
-    case Status::WarnSampleSetMismatch:
+    case bcfio::Status::WarnEmptyLine:
+        return "Warning: Line is empty";
+    case bcfio::Status::WarnSampleSetMismatch:
         return "Warning: Sample list contains names not in bcf";
-    case Status::Success:
+    case bcfio::Status::Success:
         return "Success";
-    case Status::EndOfFile:
+    case bcfio::Status::EndOfFile:
         return "Reached end of file.";
-    case Status::ErrHtslib:
+    case bcfio::Status::ErrNotImplemented:
+        return "Not implemented.";
+    case bcfio::Status::ErrHtslib:
         return "Likely a problem with htslib interface, please"
             " contact the maintainers.";
     case bcfio::Status::ErrBcfNotOpen:
         return "Bcf file not open for reading";
-    case Status::ErrBcfRecordInvalid:
+    case bcfio::Status::ErrBcfRecordInvalid:
         return "Likely invalid Bcf Record.";
-    case Status::ErrInternal:
+    case bcfio::Status::ErrInternal:
         return "Internal error, please contact maintainers.";
-    case Status::ErrInvalidInput:
+    case bcfio::Status::ErrInvalidInput:
         return "Invalid input value";
-    case Status::ErrParseBcf:
+    case bcfio::Status::ErrParseBcf:
         return "Error parsing Bcf file, please check whether"
             " the file is correctly formatted.  If formatted"
             " correctly please contact maintainers.";
-    case Status::ErrInvalidId:
+    case bcfio::Status::ErrInvalidId:
         return "Invalid id for the bcf query";
-    case Status::ErrBcfOpenFailure:
+    case bcfio::Status::ErrBcfOpenFailure:
         return "Failed trying to open file, please check that"
             " the specified file is a valid vcf, vcf.gz, or bcf"
             " formatted file.";
+    case bcfio::Status::ErrDuplicatePositions:
+        return "Positions file has dupliate positions.";
+    case bcfio::Status::ErrParsePositionsFileInvalidCoord:
+        return "Invalid contig:pos detected in positions file.";
+    case bcfio::Status::ErrParsePositionsFileCoordStrTooLong:
+        return "contig:pos string too long";
+    case bcfio::Status::ErrCouldNotReadFile:
+        return "Could not open file for reading.";
+    case bcfio::Status::ErrCouldNotInsertCoordInPosSet:
+        return "Could not add coordinate to position set, may be duplicate.";
+    case bcfio::Status::ErrParseUnrecoverable:
+        return "File egregiously violages expected contents, exit.";
     }
 
     return "Unexpected status, please contact maintainers.";
@@ -90,6 +106,165 @@ bcfio::Status bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
 
     return bcfio::Status::Success;
 }
+
+
+bool bcfio::GenomicCoord::operator<(const bcfio::GenomicCoord& other) const {
+    if (ctg < other.ctg)
+        return true;
+
+    if (ctg == other.ctg && pos < other.pos)
+        return true;
+
+    return false;
+}
+
+bool bcfio::GenomicCoord::operator==(const bcfio::GenomicCoord& other) const {
+    return ctg == other.ctg && pos == other.pos;
+}
+
+
+bool bcfio::GenomicCoord::operator!=(const bcfio::GenomicCoord& other) const {
+    return !(*this == other);
+}
+
+bool bcfio::GenomicCoord::operator>(const bcfio::GenomicCoord& other) const {
+    if (*this < other)
+        return false;
+    if (*this == other)
+        return false;
+    return true;
+}
+
+
+
+bcfio::pos_file_t bcfio::PositionsFile::read(const char* filename) {
+    if (filename == nullptr)
+        return nullptr;
+
+    FILE* fid = std::fopen(filename, "r");
+    if (fid == nullptr)
+        return nullptr;
+    
+    PositionsFile* pfid = 
+        new(std::nothrow) PositionsFile(fid);
+    if (pfid == nullptr) {
+        std::fclose(fid);
+        return nullptr;
+    }
+
+    std::memset(pfid->buf_, '\0', pfid->buf_size_ * sizeof(char));
+
+    return bcfio::pos_file_t(pfid);
+}
+
+
+void bcfio::PositionsFile::close() {
+    if (fid_ != nullptr) {
+        std::fclose(fid_);
+        fid_ = nullptr;
+    }
+}
+
+bcfio::PositionsFile::~PositionsFile() {
+    close();
+}
+
+
+bcfio::Status bcfio::PositionsFile::getline() {
+    buf_len_ = 0;
+    buf_[0] = '\0';
+    int c;
+    for (;buf_len_ < buf_size_; buf_len_++) {
+        c = std::fgetc(fid_); 
+        
+        if (c == '\n' || c == '\r' || c == EOF) {
+            buf_[buf_len_] = '\0';
+            break;
+        }
+
+        buf_[buf_len_] = c;
+    }
+
+    // note, the remaining characters in the line are still in read buffer
+    // we need to flush these values before returning;
+    if (buf_len_ == buf_size_) {
+
+        buf_[0] = '\0';
+        buf_len_ = 0;
+
+        const int max_itr = 10000;
+        int j = 0;
+        for (; j < max_itr; j++) {
+            c = std::fgetc(fid_);
+            if (c == '\n' || c == '\r' || c == EOF)
+                break;
+        }
+        if (j == max_itr)
+            return bcfio::Status::ErrParseUnrecoverable;
+
+        return bcfio::Status::ErrParsePositionsFileCoordStrTooLong;
+    }
+
+    if (c == EOF && buf_len_ == 0)
+        return bcfio::Status::EndOfFile;
+
+    if (buf_len_ == 0)
+        return bcfio::Status::WarnEmptyLine;
+
+    return bcfio::Status::Success;
+}
+
+
+bcfio::Status bcfio::PositionsFile::next_record(bcfio::GenomicCoord* gc) {
+
+    gc->ctg = std::string("");
+    gc->pos = 0;
+
+    bcfio::Status status = getline();
+    if (status != bcfio::Status::Success)
+        return status;
+
+    int i = 0;
+
+    // parse contig, remember that contig is terminated by ':'
+    // I don't need to check the last non-null element of the as
+    // if the character is or is not ':' there cannot be a position
+    // string present => Invalid coordinate
+    for (i = 0; i < buf_len_ && buf_[i] != ':'; i++)
+        ;
+
+    // Cases:
+    //  ':' is first character => no contig specified
+    //  ':' is last character => no position specified
+    if (i == 0 || i == buf_len_)
+        return bcfio::Status::ErrParsePositionsFileInvalidCoord;
+
+
+    // remember that atoll returns zero on failure.  Moreover, I think
+    // the coordinate numbers in the vcf/bcf are 1-based, so zero is
+    // not a valid contig position.
+    int64_t pos = std::atoll(buf_ + i+1);
+    if (pos == 0)
+        return bcfio::Status::ErrParsePositionsFileInvalidCoord;
+
+    buf_[i] = '\0';
+
+    gc->ctg = std::string(buf_);
+    gc->pos = pos;
+
+    return bcfio::Status::Success;
+}
+
+const char* bcfio::PositionsFile::buf() const {
+    return buf_;
+}
+
+bool bcfio::is_open(const PositionsFile* pfid) {
+    if (pfid == nullptr)
+        return false;
+    return pfid->fid_ != nullptr;
+}
+
 
 // // const std::unique_ptr<std::string[]> bcfio::BcfHeader::sample_names() const {
 // // 
@@ -200,26 +375,14 @@ bcfio::Status bcfio::k_fmt(const bcfio::Bcf* bid,
     return bcfio::Status::Success;
 }
 
-// htslib accepts a file name with samples to include / exclude or
-// a list of comma delimited sample names
-bcfio::Status bcfio::subset_samples_from_file(bcfio::Bcf* bid, 
-        const char* samples_filename){
+bcfio::Status bcfio::num_samples(const bcfio::Bcf* bid, uint32_t* n) {
     if (!bcfio::is_open(bid))
         return bcfio::Status::ErrBcfNotOpen;
-
-    if (samples_filename == nullptr)
+       
+    if ( n == nullptr)
         return bcfio::Status::ErrInvalidInput;
 
-    // Recall that 1 indicates that samples are enumerated in file
-    int status = htslib::bcf_hdr_set_samples(bid->hdr,
-            samples_filename, 
-            1);
-    if (status < 0)
-        return bcfio::Status::ErrHtslib;
-
-    if (status > 0)
-        return bcfio::Status::WarnSampleSetMismatch;
-
+    *n = static_cast<uint32_t>(bid->hdr->n[BCF_DT_SAMPLE]);
     return bcfio::Status::Success;
 }
 
@@ -247,15 +410,26 @@ bcfio::Status bcfio::subset_samples(bcfio::Bcf* bid,
     return bcfio::Status::Success;
 }
 
-
-bcfio::Status bcfio::num_samples(const bcfio::Bcf* bid, uint32_t* n) {
+// htslib accepts a file name with samples to include / exclude or
+// a list of comma delimited sample names
+bcfio::Status bcfio::subset_samples_from_file(bcfio::Bcf* bid, 
+        const char* samples_filename){
     if (!bcfio::is_open(bid))
         return bcfio::Status::ErrBcfNotOpen;
-       
-    if ( n == nullptr)
+
+    if (samples_filename == nullptr)
         return bcfio::Status::ErrInvalidInput;
 
-    *n = static_cast<uint32_t>(bid->hdr->n[BCF_DT_SAMPLE]);
+    // Recall that 1 indicates that samples are enumerated in file
+    int status = htslib::bcf_hdr_set_samples(bid->hdr,
+            samples_filename, 
+            1);
+    if (status < 0)
+        return bcfio::Status::ErrHtslib;
+
+    if (status > 0)
+        return bcfio::Status::WarnSampleSetMismatch;
+
     return bcfio::Status::Success;
 }
 
@@ -277,22 +451,89 @@ bcfio::Status bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
         return bcfio::Status::ErrInternal;
 
     // dummy record
-    htslib::bcf1_t* brec = htslib::bcf_init();
-    if (!brec)
+    htslib::bcf1_t* rec = htslib::bcf_init();
+    if (!rec)
         return bcfio::Status::ErrHtslib;
 
-    int hts_status = htslib::bcf_read(fid->fid, fid->hdr, brec);
-    int64_t npos = 1;
-    for (; hts_status == 0; npos++)
-        hts_status = htslib::bcf_read(fid->fid, fid->hdr, brec);
+    int hts_status = 0;
+    int64_t npos = 0;
+    if (bid->pos.empty()) {
+        while (true) {
+            hts_status = htslib::bcf_read(fid->fid, fid->hdr, rec);
+            if (hts_status != 0)
+                break;
+            npos++;
+        }
+    } else {
+        const char* ctg = nullptr;
+        while (true) {
+            hts_status = htslib::bcf_read(fid->fid, fid->hdr, rec);
+            if (hts_status != 0)
+                break;
 
-    htslib::bcf_destroy(brec);
+            ctg = htslib::bcf_hdr_id2name(fid->hdr, rec->rid);
+            bcfio::GenomicCoord gc {std::string(ctg), rec->pos + 1};
+
+            if (bid->pos.count(gc) == 1)
+                npos++;
+        }
+    }
     
+    htslib::bcf_destroy(rec);
+
     // remember that -1 here is htslib signal for EOF
     if (hts_status != -1) 
         return bcfio::Status::ErrParseBcf;
 
-    *n = npos - 1;
+    *n = npos;
+    return bcfio::Status::Success;
+}
+
+
+bcfio::Status bcfio::set_pos_from_file(bcfio::Bcf* bid, const char* filename) {
+    if (!bcfio::is_open(bid))
+        return bcfio::Status::ErrInvalidInput;
+
+    // empty all contents, if any, in the pos set
+    bid->pos.clear();
+
+    bcfio::pos_file_t pfid = bcfio::PositionsFile::read(filename);
+    if (pfid == nullptr)
+        return bcfio::Status::ErrCouldNotReadFile;
+
+    GenomicCoord gc {};
+
+    int64_t idx = 1;
+    bcfio::Status status = bcfio::Status::ErrInternal;
+    while ((status = pfid->next_record(&gc)) != bcfio::Status::EndOfFile) {
+
+        if (status == bcfio::Status::ErrParseUnrecoverable)
+            return status;
+
+        if (status != bcfio::Status::Success) {
+            fprintf(stderr, "Line %lld, record %s are excluded due"
+                    " to error:\n%s\n", 
+                    idx,
+                    pfid->buf(),
+                    bcfio::status_msg(status));
+            continue;
+        }
+        
+        // Assume that each insert makes a copy of gc
+        auto res = bid->pos.insert(gc);
+        if (!res.second) {
+            if (bid->pos.count(gc) == 0)
+                return bcfio::Status::ErrCouldNotInsertCoordInPosSet;
+            else {
+                fprintf(stderr, "Line %lld, record %s excluded due"
+                        " to error:\n%s\n", 
+                        idx,
+                        pfid->buf(),
+                        bcfio::status_msg(bcfio::Status::ErrDuplicatePositions));
+            }
+        }
+    }
+
     return bcfio::Status::Success;
 }
 

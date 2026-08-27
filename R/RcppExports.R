@@ -49,6 +49,10 @@ subset_samples <- function(bconn, samples) {
     .Call('_hwas_subset_samples', PACKAGE = 'hwas', bconn, samples)
 }
 
+subset_pos_from_file <- function(bconn, filename) {
+    .Call('_hwas_subset_pos_from_file', PACKAGE = 'hwas', bconn, filename)
+}
+
 set_threads <- function(bconn, n) {
     .Call('_hwas_set_threads', PACKAGE = 'hwas', bconn, n)
 }

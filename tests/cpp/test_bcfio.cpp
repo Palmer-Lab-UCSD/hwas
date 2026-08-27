@@ -18,12 +18,16 @@ extern "C" {
 
 #include <bcfio.h>
 
-char TEST_DATA_DIR[] { "intst/exdata" };
-char VCF_NAME[] { "inst/exdata/geno_test_data.vcf" };
-char VCFGZ_NAME[] { "inst/exdata/geno_test_data.vcf.gz" };
-char BCF_NAME[] { "inst/exdata/geno_test_data.bcf" };
+const char VCF_NAME[] { "inst/exdata/geno_test_data.vcf" };
+const char VCFGZ_NAME[] { "inst/exdata/geno_test_data.vcf.gz" };
+const char BCF_NAME[] { "inst/exdata/geno_test_data.bcf" };
+
 uint8_t K_FOUNDERS = 8;
 uint8_t N_SAMPS = 11;
+
+const char POS_FILE_VALID[] { "inst/exdata/pos.include" };
+const char POS_FILE_DUPLICATE[] { "inst/exdata/pos_duplicates.include" };
+const char POS_FILE_INVALID[] { "inst/exdata/pos_invalid.include" };
 
 
 // TODO:
@@ -229,7 +233,12 @@ TEST(TestBcfRecord, Constructor) {
 
 
 TEST(TestBcfRecord, GetGenomicCoords) {
+    const char VCF_NAME[] { "inst/exdata/geno_test_data.vcf" };
+    const char VCFGZ_NAME[] { "inst/exdata/geno_test_data.vcf.gz" };
+    const char BCF_NAME[] { "inst/exdata/geno_test_data.bcf" };
+
     constexpr int nfiles = 3;
+
     bcfio::bid_t bids[nfiles] = {
         bcfio::bread(VCF_NAME),
         bcfio::bread(VCFGZ_NAME),
@@ -247,7 +256,7 @@ TEST(TestBcfRecord, GetGenomicCoords) {
 
     const char* chrom_out = nullptr;
     int64_t pos_out = -1;
-    int status = -1;
+    bcfio::Status status = bcfio::Status::ErrInternal;
     bcfio::Bcf* bid = nullptr;
 
     EXPECT_TRUE(bcfio::chrom<float>(nullptr, brec.get()) == nullptr);
@@ -260,17 +269,17 @@ TEST(TestBcfRecord, GetGenomicCoords) {
 
         for (int j = 0; bcfio::next_record<float>(bid, brec.get(), "DS") == bcfio::Status::Success; j++) {
             status = bcfio::pos<float>(brec.get(), &pos_out);
-            EXPECT_EQ(status, 0);
+            EXPECT_EQ(status, bcfio::Status::Success);
             EXPECT_EQ(pos_out, true_pos[j]);
 
             status = bcfio::pos<float>(nullptr, &pos_out);
-            EXPECT_TRUE(status < 0);
+            EXPECT_EQ(status, bcfio::Status::ErrInvalidInput);
 
             status = bcfio::pos<float>(nullptr, nullptr);
-            EXPECT_TRUE(status < 0);
+            EXPECT_EQ(status, bcfio::Status::ErrInvalidInput);
 
             status = bcfio::pos<float>(brec.get(), nullptr);
-            EXPECT_TRUE(status < 0);
+            EXPECT_EQ(status, bcfio::Status::ErrInvalidInput);
 
             chrom_out = bcfio::chrom<float>(bid, brec.get());
             EXPECT_STREQ(chrom_out, true_chrom_name);
@@ -629,7 +638,7 @@ TEST(TestBcf, SubsetSamplesSubsequentSets) {
 
 TEST(TestBcf, SubsetSamplesDiffSubsequentSets) {
 
-    char* bcf_names[3] = { VCF_NAME, VCFGZ_NAME, BCF_NAME };
+    const char* bcf_names[3] = { VCF_NAME, VCFGZ_NAME, BCF_NAME };
     bcfio::bid_t bid;
 
     uint32_t n = 0;
@@ -715,6 +724,42 @@ TEST(TestBcf, SamplesExclusion) {
 }
 
 
+
+TEST(TestBcf, PosSubsetByFile) {
+    int64_t npos_total = 8;
+    bcfio::bid_t bid = bcfio::bread(BCF_NAME);
+    ASSERT_TRUE(bcfio::is_open(bid.get()));
+
+    int64_t npos = 0;
+    bcfio::Status status = bcfio::num_pos(bid.get(), &npos);
+    ASSERT_EQ(status, bcfio::Status::Success);
+    ASSERT_EQ(npos, npos_total);
+
+    bcfio::brec_t<float> brec = bcfio::BcfRecord<float>::init();
+    status = bcfio::next_record<float>(bid.get(), brec.get(), "GP");
+    int64_t p = 0;
+    printf("hts\tbcfio\n");
+    while (status == bcfio::Status::Success) {
+        status = bcfio::pos(brec.get(), &p);
+        ASSERT_EQ(status, bcfio::Status::Success);
+
+        printf("%lld\t%lld\n", brec->rec->pos, p);
+
+        status = bcfio::next_record<float>(bid.get(), brec.get(), "GP");
+    }
+
+    int64_t npos_subset = 3;
+    status = bcfio::set_pos_from_file(bid.get(), POS_FILE_VALID);
+    ASSERT_EQ(status, bcfio::Status::Success); 
+
+
+
+    status = num_pos(bid.get(), &npos);
+    EXPECT_EQ(npos, npos_subset);
+
+}
+
+
 TEST(TestBcfInfo, GetFilename) {
     constexpr int num_files = 4;
     bcfio::bid_t bids[num_files] = {
@@ -777,11 +822,187 @@ TEST(TestBcfInfo, NumPositions) {
 
 }
 
-
 TEST(BcfUtils, IsBcf) {
     EXPECT_TRUE(bcfio::is_bcf(BCF_NAME));
+    EXPECT_TRUE(bcfio::is_bcf(VCF_NAME));
 }
 
+
+TEST(GenomicCoord, Comparison) {
+    struct GenomicCoordTestData {
+        bcfio::GenomicCoord lhs;
+        bcfio::GenomicCoord rhs;
+        int truth_val;
+    };
+
+    // the lhs compared to the rhs encoding:
+    //  -1: less than,
+    //  0: equality,
+    //  1: greater than,
+    
+    constexpr int ntests = 5;
+    GenomicCoordTestData gr[ntests] = {
+        { {"chr12", 2325}, {"chr12", 5422},      -1},
+        { {"chr12", 2325}, {"chr12", 2325},      0 },
+        { {"chr13", 2325}, {"chr12", 2325},      1 },
+        { {"chr13", 2325}, {"chr12", 42325},     1 },
+        { {"chr12", 2325}, {"chr13", 25},        -1}
+    };
+
+    for (int i = 0; i < ntests; i++) {
+        switch (gr[i].truth_val) {
+        case -1:
+            EXPECT_TRUE(gr[i].lhs < gr[i].rhs);
+            break;
+        case 0:
+            EXPECT_TRUE(gr[i].lhs == gr[i].rhs);
+            break;
+        case 1:
+            EXPECT_TRUE(gr[i].lhs > gr[i].rhs);
+            break;
+        default:
+            printf("Couldn't interpret the test.\n");
+            ASSERT_EQ(1,2);
+        }
+    }
+}
+
+
+TEST(PositionsFile, FactoryFunction) {
+    struct ValidPosTestData {
+        bcfio::pos_file_t pfid;
+        bool is_null;
+    };
+
+    constexpr int num_files = 3;
+    ValidPosTestData pdata[num_files] = {
+        { bcfio::PositionsFile::read(POS_FILE_VALID), false },
+        { bcfio::PositionsFile::read(POS_FILE_DUPLICATE), false },
+        { nullptr, true }
+    };
+
+    for (int i = 0; i < num_files; i++) {
+        if (pdata[i].is_null) {
+            EXPECT_TRUE(pdata[i].pfid == nullptr);
+            EXPECT_FALSE(bcfio::is_open(pdata[i].pfid.get()));
+        } else {
+            EXPECT_FALSE(pdata[i].pfid == nullptr);
+            EXPECT_TRUE(bcfio::is_open(pdata[i].pfid.get()));
+        }
+    }
+}
+
+
+TEST(PositionsFile, GetLineValidRecords) {
+    struct GetLineTestData {
+        const char* tline;
+        bcfio::Status status;
+    };
+
+    bcfio::pos_file_t pfid = bcfio::PositionsFile::read(POS_FILE_VALID);
+    ASSERT_TRUE(pfid != nullptr);
+
+    constexpr int num_pos = 3;
+    GetLineTestData true_vals[num_pos] {
+        { "chr12:1321", bcfio::Status::Success },
+        { "chr12:1714", bcfio::Status::Success },
+        { "chr12:2631", bcfio::Status::Success }
+    };
+
+    bcfio::Status status = bcfio::Status::ErrInternal;
+    for (int i = 0; i < num_pos; i++) {
+        status = pfid->getline();
+        EXPECT_EQ(status, true_vals[i].status);
+        EXPECT_STREQ(pfid->buf(), true_vals[i].tline);
+    }
+
+    // repeated calls when EOF reach returns EndOfFile and empty buffer
+    status = pfid->getline();
+    EXPECT_EQ(status, bcfio::Status::EndOfFile);
+    EXPECT_STREQ("", pfid->buf());
+
+}
+
+TEST(PositionsFile, NextRecordValidFile) {
+    struct GetRecordTestData {
+        bcfio::GenomicCoord gc;
+        bcfio::Status status;
+    };
+
+    bcfio::pos_file_t pfid = bcfio::PositionsFile::read(POS_FILE_VALID);
+    ASSERT_TRUE(pfid != nullptr);
+
+    constexpr int num_pos = 3;
+    GetRecordTestData true_vals[num_pos] {
+        { { "chr12", 1321 }, bcfio::Status::Success },
+        { { "chr12", 1714 }, bcfio::Status::Success },
+        { { "chr12", 2631 }, bcfio::Status::Success }
+    };
+
+    bcfio::GenomicCoord null_gc {};
+    null_gc.ctg = std::string("");
+    null_gc.pos = 0;
+
+    bcfio::GenomicCoord wrong_gc {};
+    wrong_gc.ctg = std::string("wrong_ctg");
+    wrong_gc.pos = 35223523;
+
+    bcfio::GenomicCoord gc {};
+    bcfio::Status status = bcfio::Status::ErrInternal;
+    for (int i = 0; i < num_pos; i++) {
+        status = pfid->next_record(&gc);
+        EXPECT_EQ(status, true_vals[i].status);
+        EXPECT_EQ(gc, true_vals[i].gc);
+        EXPECT_NE(gc, wrong_gc);
+        EXPECT_NE(gc, null_gc);
+    }
+
+    // repeated calls when EOF reach returns EndOfFile and empty buffer
+    status = pfid->next_record(&gc);
+    EXPECT_EQ(status, bcfio::Status::EndOfFile);
+    EXPECT_EQ(gc, null_gc);
+    EXPECT_NE(gc, wrong_gc);
+}
+
+TEST(PositionsFile, GetlineInvalidFile) {
+    struct GetlineResultsData {
+        const char* tline;
+        bcfio::Status status;
+    };
+
+    constexpr int num_lines = 6;
+    GetlineResultsData truth_vals[num_lines] = {
+        { "", bcfio::Status::WarnEmptyLine },
+        { "chr12:1321", bcfio::Status::Success },
+        { "chr12:1714", bcfio::Status::Success },
+        { "", bcfio::Status::WarnEmptyLine },
+        { "", bcfio::Status::ErrParsePositionsFileCoordStrTooLong },
+        { "chr12:2631", bcfio::Status::Success }
+    };
+
+    bcfio::pos_file_t pfid = bcfio::PositionsFile::read(POS_FILE_INVALID);
+
+    bcfio::Status status = bcfio::Status::ErrInternal;
+    for (int i = 0; i < num_lines; i++) {
+        status = pfid->getline();
+        EXPECT_EQ(status, truth_vals[i].status);
+        EXPECT_STREQ(pfid->buf(), truth_vals[i].tline);
+    }
+
+    status = pfid->getline();
+    EXPECT_EQ(status, bcfio::Status::EndOfFile);
+    EXPECT_STREQ("", pfid->buf());
+}
+
+// TODO: test bcfio::PositionsFile::next_record for violation in 
+// coordinate string model
+//
+
+
+//
+//
+//
+//
 // TEST(TestReadBcf, LoadRecord) {
 // 
 //     bcfio::ReadBcf bcf = bcfio::open(VCF_NAME, "r");

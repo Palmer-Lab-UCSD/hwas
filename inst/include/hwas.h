@@ -82,8 +82,12 @@ uint16_t k_fmt(bcf_conn_t bid, const char* format_id);
 
 Rcpp::RObject sample_names(bcf_conn_t bid);
 
-int subset_samples(bcf_conn_t bid, Rcpp::CharacterVector samples);
-int subset_samples_from_file(bcf_conn_t bid, const char* sample_filename);
+int subset_samples(bcf_conn_t bconn, Rcpp::CharacterVector samples);
+int subset_samples_from_file(bcf_conn_t bconn, const char* sample_filename);
+
+// @brief register positions to retrieve data from file stream
+// @return the number of positions registered
+int subset_pos_from_file(bcf_conn_t bconn, const char* filename);
 
 int set_threads(bcf_conn_t bid, int n);
 
@@ -120,11 +124,15 @@ Rcpp::Nullable<Rcpp::NumericMatrix> get_matrix(bcfio::Bcf* bid,
     }
 
     const char* chr = bcfio::chrom(bid, brec.get());
-    if (chr == nullptr) return R_NilValue;
+    if (chr == nullptr) 
+        Rcpp::stop(bcfio::status_msg(bcfio::Status::ErrInternal));
     data.attr("chrom") = Rcpp::String(chr);
 
     int64_t p = -1;
-    if (bcfio::pos(brec.get(), &p) < 0) return R_NilValue;
+    status = bcfio::pos(brec.get(), &p);
+    if (status != bcfio::Status::Success)
+        Rcpp::stop(bcfio::status_msg(status));
+
     data.attr("pos") = p;
 
     //TODO: data.attr("qual") = rec.qual();

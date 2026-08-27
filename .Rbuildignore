@@ -1,11 +1,11 @@
 ^.gitignore$
-.swp
+.swp$
 .plist
 ^Makefile$
 ^htslib_env_var$
 
-^stash/
-^scatch/
-^build/
-^tools/
-^tests/cpp/
+^stash
+^scratch
+^build
+^tools
+^tests/cpp

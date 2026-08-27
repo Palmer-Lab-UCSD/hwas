@@ -48,13 +48,16 @@ constexpr uint32_t matrix_idx_to_array(const uint32_t i,
 template <typename T>
 struct Grm {
     Grm(): nsamps(0), capacity(0), data(nullptr) {};
-    Grm(uint32_t n_samps);
+    Grm(uint32_t n_samps) : 
+        nsamps(n_samps),
+        capacity(n_samps == 0 ? 0 : n_samps * (n_samps + 1) / 2),
+        data(n_samps == 0 ? nullptr : new T[capacity]) {
 
-    Grm(const Grm&)                     = delete;
-    Grm& operator=(const Grm&)          = delete;
-    Grm(Grm&& other);
-    Grm& operator=(Grm&&);
-    ~Grm();
+        if (data != nullptr) {
+            T default_val {};
+            std::memset(data, default_val, capacity * sizeof(T));
+        }
+    }
 
     T operator()(const uint32_t i, const uint32_t j) const;
 
