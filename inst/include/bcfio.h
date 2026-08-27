@@ -463,6 +463,39 @@ Status mutate_brec_to_next_pos_(Bcf* bid,
             return Status::ErrHtslib;
         };
     }
+
+    int64_t p = 0;
+    bcfio::Status status = pos(brec, &p);
+    if (status != bcfio::Status::Success)
+        return status;
+
+    const char* ctg = chrom(bid, brec);
+    if (ctg == nullptr)
+        return Status::ErrInternal;
+
+    GenomicCoord gc = { ctg, p };
+
+    while (bid->pos.count(gc) == 0) {
+        hts_status = htslib::bcf_read(bid->fid, 
+                    bid->hdr,
+                    brec->rec);
+
+        if (hts_status == -1)
+            return Status::EndOfFile;
+        if (hts_status < -1)
+            return Status::ErrHtslib;
+
+        status = pos(brec, &p);
+        if (status != bcfio::Status::Success)
+            return status;
+    
+        ctg = chrom(bid, brec);
+        if (ctg == nullptr)
+            return Status::ErrInternal;
+    
+        gc.ctg = std::string(ctg);
+        gc.pos = p;
+    }
     return Status::ErrNotImplemented;
 }
 //     GenomicCoord gc {};

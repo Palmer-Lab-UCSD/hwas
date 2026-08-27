@@ -29,6 +29,7 @@ TEST(TestGrm, DefaultConstructor) {
 TEST(TestGrm, ConstructorValidInput) {
     constexpr uint32_t nsamps_true = 4;
     constexpr uint32_t cap_true = nsamps_true * (nsamps_true + 1) / 2;
+
     float float_default {};
 
     grm::Grm<float> g { nsamps_true };
@@ -40,7 +41,6 @@ TEST(TestGrm, ConstructorValidInput) {
     // data should be zero-initialized
     for (uint64_t i = 0; i < g.capacity; i++)
         EXPECT_FLOAT_EQ(g.data[i], float_default);
-
 
     int int_default {};
     grm::Grm<int> gint { nsamps_true };

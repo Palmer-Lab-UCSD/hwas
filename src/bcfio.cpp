@@ -152,7 +152,7 @@ bcfio::pos_file_t bcfio::PositionsFile::read(const char* filename) {
         return nullptr;
     }
 
-    std::memset(pfid->buf_, '\0', pfid->buf_size_);
+    std::memset(pfid->buf_, '\0', pfid->buf_size_ * sizeof(char));
 
     return bcfio::pos_file_t(pfid);
 }
