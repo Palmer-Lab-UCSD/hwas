@@ -20,3 +20,5 @@ vec
 *.pdf
 *.blg
 src/Makevars
+*.plist
+htslib_env_var

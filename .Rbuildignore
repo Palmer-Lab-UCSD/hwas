@@ -1,6 +1,8 @@
 ^.gitignore$
 .swp
+.plist
 ^Makefile$
+^htslib_env_var$
 
 ^stash/
 ^scatch/
