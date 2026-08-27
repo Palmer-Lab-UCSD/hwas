@@ -160,6 +160,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// subset_pos_from_file
+int subset_pos_from_file(bcf_conn_t bconn, const char* filename);
+RcppExport SEXP _hwas_subset_pos_from_file(SEXP bconnSEXP, SEXP filenameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< const char* >::type filename(filenameSEXP);
+    rcpp_result_gen = Rcpp::wrap(subset_pos_from_file(bconn, filename));
+    return rcpp_result_gen;
+END_RCPP
+}
 // set_threads
 int set_threads(bcf_conn_t bconn, int n);
 RcppExport SEXP _hwas_set_threads(SEXP bconnSEXP, SEXP nSEXP) {
@@ -173,7 +185,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // next_record
-Rcpp::RObject next_record(bcf_conn_t bconn, const char* id);
+Rcpp::Nullable<Rcpp::NumericMatrix> next_record(bcf_conn_t bconn, const char* id);
 RcppExport SEXP _hwas_next_record(SEXP bconnSEXP, SEXP idSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -666,6 +678,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_hwas_num_positions", (DL_FUNC) &_hwas_num_positions, 1},
     {"_hwas_sample_names", (DL_FUNC) &_hwas_sample_names, 1},
     {"_hwas_subset_samples", (DL_FUNC) &_hwas_subset_samples, 2},
+    {"_hwas_subset_pos_from_file", (DL_FUNC) &_hwas_subset_pos_from_file, 2},
     {"_hwas_set_threads", (DL_FUNC) &_hwas_set_threads, 2},
     {"_hwas_next_record", (DL_FUNC) &_hwas_next_record, 2},
     {"_hwas_calc_rss_linreg", (DL_FUNC) &_hwas_calc_rss_linreg, 3},

@@ -724,6 +724,42 @@ TEST(TestBcf, SamplesExclusion) {
 }
 
 
+
+TEST(TestBcf, PosSubsetByFile) {
+    int64_t npos_total = 8;
+    bcfio::bid_t bid = bcfio::bread(BCF_NAME);
+    ASSERT_TRUE(bcfio::is_open(bid.get()));
+
+    int64_t npos = 0;
+    bcfio::Status status = bcfio::num_pos(bid.get(), &npos);
+    ASSERT_EQ(status, bcfio::Status::Success);
+    ASSERT_EQ(npos, npos_total);
+
+    bcfio::brec_t<float> brec = bcfio::BcfRecord<float>::init();
+    status = bcfio::next_record<float>(bid.get(), brec.get(), "GP");
+    int64_t p = 0;
+    printf("hts\tbcfio\n");
+    while (status == bcfio::Status::Success) {
+        status = bcfio::pos(brec.get(), &p);
+        ASSERT_EQ(status, bcfio::Status::Success);
+
+        printf("%lld\t%lld\n", brec->rec->pos, p);
+
+        status = bcfio::next_record<float>(bid.get(), brec.get(), "GP");
+    }
+
+    int64_t npos_subset = 3;
+    status = bcfio::set_pos_from_file(bid.get(), POS_FILE_VALID);
+    ASSERT_EQ(status, bcfio::Status::Success); 
+
+
+
+    status = num_pos(bid.get(), &npos);
+    EXPECT_EQ(npos, npos_subset);
+
+}
+
+
 TEST(TestBcfInfo, GetFilename) {
     constexpr int num_files = 4;
     bcfio::bid_t bids[num_files] = {
@@ -961,7 +997,8 @@ TEST(PositionsFile, GetlineInvalidFile) {
 // TODO: test bcfio::PositionsFile::next_record for violation in 
 // coordinate string model
 //
-// TODO: test bcfio::set_pos_from_file
+
+
 //
 //
 //

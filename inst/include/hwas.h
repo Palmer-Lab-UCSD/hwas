@@ -82,8 +82,12 @@ uint16_t k_fmt(bcf_conn_t bid, const char* format_id);
 
 Rcpp::RObject sample_names(bcf_conn_t bid);
 
-int subset_samples(bcf_conn_t bid, Rcpp::CharacterVector samples);
-int subset_samples_from_file(bcf_conn_t bid, const char* sample_filename);
+int subset_samples(bcf_conn_t bconn, Rcpp::CharacterVector samples);
+int subset_samples_from_file(bcf_conn_t bconn, const char* sample_filename);
+
+// @brief register positions to retrieve data from file stream
+// @return the number of positions registered
+int subset_pos_from_file(bcf_conn_t bconn, const char* filename);
 
 int set_threads(bcf_conn_t bid, int n);
 

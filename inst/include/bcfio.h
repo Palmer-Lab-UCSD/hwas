@@ -60,7 +60,7 @@ enum struct Status : int {
     ErrParsePositionsFileInvalidCoord       = -16,
     ErrParsePositionsFileCoordStrTooLong    = -17,
     ErrCouldNotReadFile                     = -18,
-    ErrInsertCoordInPosSet                  = -19,
+    ErrCouldNotInsertCoordInPosSet          = -19,
     ErrParseUnrecoverable                   = -20
 };
 
@@ -452,20 +452,22 @@ Status mutate_brec_to_next_pos_(Bcf* bid,
     int hts_status = htslib::bcf_read(bid->fid, 
                 bid->hdr,
                 brec->rec);
+    bcfio::Status status = Status::ErrHtslib;
 
-    if (bid->pos.empty()) {
-        switch (hts_status) {
-        case 0:
-            return Status::Success;
-        case -1:
-            return Status::EndOfFile;
-        default:
-            return Status::ErrHtslib;
-        };
+    switch(hts_status) {
+    case 0:
+        status = Status::Success;
+        break;
+    case -1:
+        status = Status::EndOfFile;
+        break;
     }
 
+    if (bid->pos.empty() || status != Status::Success)
+        return status;
+
     int64_t p = 0;
-    bcfio::Status status = pos(brec, &p);
+    status = pos(brec, &p);
     if (status != bcfio::Status::Success)
         return status;
 
@@ -480,10 +482,15 @@ Status mutate_brec_to_next_pos_(Bcf* bid,
                     bid->hdr,
                     brec->rec);
 
-        if (hts_status == -1)
+        switch(hts_status) {
+        case 0:
+            status = Status::Success;
+            break;
+        case -1:
             return Status::EndOfFile;
-        if (hts_status < -1)
+        default:
             return Status::ErrHtslib;
+        }
 
         status = pos(brec, &p);
         if (status != bcfio::Status::Success)
@@ -496,70 +503,10 @@ Status mutate_brec_to_next_pos_(Bcf* bid,
         gc.ctg = std::string(ctg);
         gc.pos = p;
     }
-    return Status::ErrNotImplemented;
+
+    return status;
 }
-//     GenomicCoord gc {};
-// 
-//     Status pfid_status = bid->pfid_->next_record(gc);
-// 
-//     const char* prev_chr = nullptr;
-//     const char* chr = chrom(bid, brec);
-//     if (chr == nullptr)
-//         return Status::ErrInternal;
-// 
-//     int64_t prev_p = 0
-//     int64_t p = 0;
-//     Status var_status = pos(brec, &p);
-//     if (var_status != Status::Success)
-//         return var_status;
-// 
-//     while (pfid_status == Status::Success && hts_status == 0) {
-//         if (gc->eq(chr, pos))
-//             return Status::Success;
-// 
-//         // if the position of the position file is less than that
-//         // of the bcf file, increment the position file.
-//         if (gc->lt(chr, pos)) {
-//             prev_gc = gc;
-//             status = bid->pfid_->next_record(gc);
-// 
-//             if (prev_gc == gc)
-//                 return Status::ErrDuplicatePositions;
-//             if (prev_gc > gc)
-//                 return Status::ErrPositionsFileNotSorted;
-//             continue;
-//         }
-// 
-//         // if the position in the bcf file is less than that of the
-//         // positions file, increment the bcf
-//         hts_status = htslib::bcf_read(bid->fid, 
-//                 bid->hdr,
-//                 brec->rec);
-// 
-//         prev_chr = chr;
-//         chr = chrom(bid, brec);
-//         if (chr == nullptr)
-//             return Status::ErrInternal;
-//         if (prev_chr > chr)
-//             return Status::ErrBcfContigNotSorted;
-// 
-//         prev_p = p;
-//         var_status = pos(brec, &p);
-//         if (var_status != Status::Success)
-//             return var_status;
-// 
-//         if (prev_p > p)
-//             return Status::ErrBcfPosNotSorted;
-//     }
-// 
-//     if (pfid_status == Status::EndOfFile || hts_status == -1)
-//         return Status::EndOfFile;
-// 
-//     if (hts_status < -1)
-//         return Status::ErrHtslib;
-// 
-//     return pfid_status;
-// }
+
 
 // @brief Query the next records at the next position
 // @param bid: the pointer to open htslib file

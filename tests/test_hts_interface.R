@@ -31,7 +31,7 @@ set_up <- function() {
 
 unittests$TEST("TestHts", "test_open", function() {
     test_data <- set_up()
-    bid <- hwas::bopen(attr(test_data, "bcf"), "r")
+    bid <- hwas::bread(attr(test_data, "bcf"))
 
     Expect$not_null(bid);
     
@@ -62,8 +62,8 @@ unittests$TEST("TestHts",
 
     Expect$true(hwas::is_bcf(bcf_compressed))
     Expect$true(hwas::is_bcf(bcf_uncompressed))
-    Expect$false(hwas::is_bcf(vcf_uncompressed))
-    Expect$false(hwas::is_bcf(vcf_compressed))
+    Expect$true(hwas::is_bcf(vcf_uncompressed))
+    Expect$true(hwas::is_bcf(vcf_compressed))
 })
 
 

@@ -24,6 +24,7 @@ export(sample_names)
 # set bcf metadata values
 export(subset_samples)
 export(set_threads)
+export(subset_pos_from_file)
 
 # query bcf data
 export(next_record)

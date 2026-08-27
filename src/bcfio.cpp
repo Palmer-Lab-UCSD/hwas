@@ -44,7 +44,7 @@ const char* bcfio::status_msg(bcfio::Status status) {
         return "contig:pos string too long";
     case bcfio::Status::ErrCouldNotReadFile:
         return "Could not open file for reading.";
-    case bcfio::Status::ErrInsertCoordInPosSet:
+    case bcfio::Status::ErrCouldNotInsertCoordInPosSet:
         return "Could not add coordinate to position set, may be duplicate.";
     case bcfio::Status::ErrParseUnrecoverable:
         return "File egregiously violages expected contents, exit.";
@@ -472,7 +472,7 @@ bcfio::Status bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
                 break;
 
             ctg = htslib::bcf_hdr_id2name(fid->hdr, rec->rid);
-            bcfio::GenomicCoord gc = {std::string(ctg), rec->pos};
+            bcfio::GenomicCoord gc {std::string(ctg), rec->pos + 1};
 
             if (bid->pos.count(gc) == 1)
                 npos++;
@@ -523,7 +523,7 @@ bcfio::Status bcfio::set_pos_from_file(bcfio::Bcf* bid, const char* filename) {
         auto res = bid->pos.insert(gc);
         if (!res.second) {
             if (bid->pos.count(gc) == 0)
-                return bcfio::Status::ErrInsertCoordInPosSet;
+                return bcfio::Status::ErrCouldNotInsertCoordInPosSet;
             else {
                 fprintf(stderr, "Line %lld, record %s excluded due"
                         " to error:\n%s\n", 
