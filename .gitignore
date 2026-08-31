@@ -3,22 +3,40 @@ build/
 scratch/
 stash/
 vec
-*.swp
-*.swo
-*~
+
+# apple
 *.DS_Store
+
+
+# R build artifacts
 *.tar
 *.tar.gz
 *Rcheck*
 *.o
 *.rds
 *.so
+
+
+# clang --analyze artifact
+*.plist
+
+# vim / emacs
+*.swp
+*.swo
+*~
+
+# user settings  
+src/Makevars
+htslib_env_var
+
+# TEX
 *.tex
 *.log
 *.aux
 *.bbl
 *.pdf
 *.blg
-src/Makevars
-*.plist
-htslib_env_var
+
+# CLANGD 
+.cache/ 
+compile_commands.json

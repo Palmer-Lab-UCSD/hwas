@@ -3,8 +3,7 @@
 
 #include <cctype>
 #include <cstring>
-#include <memory>
-#include <chrono>
+
 
 #include <bcfio.h>
 // Grm class manages storage and access of GRM matrix

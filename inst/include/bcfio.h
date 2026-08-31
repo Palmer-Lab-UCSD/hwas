@@ -12,7 +12,6 @@
 #ifndef BCFIO_H
 #define BCFIO_H
 
-#include <cctype>
 #include <cstdio>
 #include <cstddef>
 #include <cstdlib>
@@ -446,8 +445,7 @@ Status set_pos_from_file(Bcf* bid, const char* filename);
 // @param[in] id
 template <typename T>
 Status mutate_brec_to_next_pos_(Bcf* bid,
-        BcfRecord<T>* brec,
-        const char* id) {
+        BcfRecord<T>* brec) {
 
     int hts_status = htslib::bcf_read(bid->fid, 
                 bid->hdr,
@@ -528,7 +526,7 @@ Status next_record(Bcf* bid,
     if (!is_valid_brec(brec))
         return Status::ErrBcfRecordInvalid;
 
-    Status status = mutate_brec_to_next_pos_(bid, brec, id);
+    Status status = mutate_brec_to_next_pos_(bid, brec);
     if (status != Status::Success)
         return status;
 

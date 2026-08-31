@@ -511,7 +511,7 @@ bcfio::Status bcfio::set_pos_from_file(bcfio::Bcf* bid, const char* filename) {
             return status;
 
         if (status != bcfio::Status::Success) {
-            fprintf(stderr, "Line %lld, record %s are excluded due"
+            fprintf(stderr, "Line %ld, record %s are excluded due"
                     " to error:\n%s\n", 
                     idx,
                     pfid->buf(),
@@ -525,7 +525,7 @@ bcfio::Status bcfio::set_pos_from_file(bcfio::Bcf* bid, const char* filename) {
             if (bid->pos.count(gc) == 0)
                 return bcfio::Status::ErrCouldNotInsertCoordInPosSet;
             else {
-                fprintf(stderr, "Line %lld, record %s excluded due"
+                fprintf(stderr, "Line %ld, record %s excluded due"
                         " to error:\n%s\n", 
                         idx,
                         pfid->buf(),

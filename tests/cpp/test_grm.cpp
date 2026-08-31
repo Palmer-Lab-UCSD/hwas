@@ -15,13 +15,13 @@
 TEST(TestGrm, DefaultConstructor) {
     // verify default values
     grm::Grm<float> float_grm {};
-    EXPECT_EQ(float_grm.nsamps, 0);
-    EXPECT_EQ(float_grm.capacity, 0);
+    EXPECT_EQ(float_grm.nsamps, static_cast<uint32_t>(0));
+    EXPECT_EQ(float_grm.capacity, static_cast<uint32_t>(0));
     EXPECT_TRUE(float_grm.data == nullptr);
 
     grm::Grm<int> int_grm {};
-    EXPECT_EQ(int_grm.nsamps, 0);
-    EXPECT_EQ(int_grm.capacity, 0);
+    EXPECT_EQ(int_grm.nsamps, static_cast<uint32_t>(0));
+    EXPECT_EQ(int_grm.capacity, static_cast<uint32_t>(0));
     EXPECT_TRUE(int_grm.data == nullptr);
 }
 
@@ -82,32 +82,32 @@ TEST(TestGrm, MidxToArr) {
 
     // Upper triangle and diagonal
     EXPECT_EQ(g.midx_to_arr(0, 0, &idx), 0);
-    EXPECT_EQ(idx, 0);
+    EXPECT_EQ(idx, static_cast<uint32_t>(0));
 
     EXPECT_EQ(g.midx_to_arr(0, 1, &idx), 0);
-    EXPECT_EQ(idx, 1);
+    EXPECT_EQ(idx, static_cast<uint32_t>(1));
 
     EXPECT_EQ(g.midx_to_arr(0, 2, &idx), 0);
-    EXPECT_EQ(idx,2);
+    EXPECT_EQ(idx,static_cast<uint32_t>(2));
 
     EXPECT_EQ(g.midx_to_arr(1, 1, &idx), 0);
-    EXPECT_EQ(idx,3);
+    EXPECT_EQ(idx,static_cast<uint32_t>(3));
 
     EXPECT_EQ(g.midx_to_arr(1, 2, &idx), 0);
-    EXPECT_EQ(idx,4);
+    EXPECT_EQ(idx,static_cast<uint32_t>(4));
 
     EXPECT_EQ(g.midx_to_arr(2, 2, &idx), 0);
-    EXPECT_EQ(idx,5);
+    EXPECT_EQ(idx,static_cast<uint32_t>(5));
 
     // Lower triangle should map to same idx by symmetry
     EXPECT_EQ(g.midx_to_arr(1, 0, &idx), 0);
-    EXPECT_EQ(idx, 1);
+    EXPECT_EQ(idx, static_cast<uint32_t>(1));
 
     EXPECT_EQ(g.midx_to_arr(2, 0, &idx), 0);
-    EXPECT_EQ(idx, 2); 
+    EXPECT_EQ(idx, static_cast<uint32_t>(2)); 
 
     EXPECT_EQ(g.midx_to_arr(2, 1, &idx), 0);
-    EXPECT_EQ(idx, 4);
+    EXPECT_EQ(idx, static_cast<uint32_t>(4));
 }
 
 

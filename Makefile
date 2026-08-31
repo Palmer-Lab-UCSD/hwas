@@ -17,7 +17,8 @@
 
 ifneq ($(shell which clang++),)
 CXX					= clang++
-CXXFLAGS			= -pedantic -fsanitize=address
+CXXFLAGS			= -pedantic 
+# CXXFLAGS			= -pedantic -fsanitize=address
 else ifneq ($(shell which g++),)
 CXX					= g++
 CXXFLAGS			= -Wpedantic -Wextra 
@@ -92,7 +93,7 @@ $(BUILD_DIR)/test_%.o: $(TEST_DIR)/test_%.cpp | $(BUILD_DIR)
 
 .PHONY: static
 static: $(SRC_FILES)
-	clang --analyze $(CXXFLAGS) $(CXXLDFLAGS) $^
+	clang++ --analyze $(CXXFLAGS) $(CXXLDFLAGS) $^
 
 # $(TEST_TARGET_PRG): $(TEST_DIR)/main.cpp $(TEST_OBJS) $(APP_OBJS) | $(TARGET)
 # 	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) $(CXXLIBFLAGS) -o $@ $^ -lgtest -lhts

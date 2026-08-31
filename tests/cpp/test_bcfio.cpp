@@ -201,10 +201,11 @@ TEST(TestHFileRead, Initialise) {
         else
             EXPECT_FALSE(hfs[i] == nullptr);
 
-        if (results[i].is_bcf)
+        if (results[i].is_bcf) {
             EXPECT_TRUE(hfs[i]->is_bcf());
-        else if (!results[i].is_nullptr && !results[i].is_bcf)
+        } else if (!results[i].is_nullptr && !results[i].is_bcf) {
             EXPECT_FALSE(hfs[i]->is_bcf());
+        }
     }
 }
 
@@ -213,21 +214,21 @@ TEST(TestBcfRecord, Constructor) {
     ASSERT_TRUE(bfloat != nullptr);
     EXPECT_EQ(bfloat->data_cap, 0);
     EXPECT_EQ(bfloat->ncol, 0);
-    EXPECT_EQ(bfloat->nrow, 0);
+    EXPECT_EQ(bfloat->nrow, static_cast<uint32_t>(0));
     EXPECT_TRUE(bfloat->data == nullptr);
 
     bcfio::brec_t<int32_t> bint32 = bcfio::BcfRecord<int32_t>::init();
     ASSERT_TRUE(bint32 != nullptr);
     EXPECT_EQ(bint32->data_cap, 0);
     EXPECT_EQ(bint32->ncol, 0);
-    EXPECT_EQ(bint32->nrow, 0);
+    EXPECT_EQ(bint32->nrow, static_cast<uint32_t>(0));
     EXPECT_TRUE(bint32->data == nullptr);
 
     bcfio::brec_t<int> bint = bcfio::BcfRecord<int>::init();
     ASSERT_TRUE(bint != nullptr);
     EXPECT_EQ(bint->data_cap, 0);
     EXPECT_EQ(bint->ncol, 0);
-    EXPECT_EQ(bint->nrow, 0);
+    EXPECT_EQ(bint->nrow, static_cast<uint32_t>(0));
     EXPECT_TRUE(bint->data == nullptr);
 }
 
@@ -414,7 +415,7 @@ TEST(TestBcf, Closing) {
     };
 
     bcfio::Bcf* bid = nullptr;
-    for (int i = 0; i < nfiles; i++) {
+    for (uint32_t i = 0; i < nfiles; i++) {
         bid = bids[i].get();
         EXPECT_TRUE(bid->fid != nullptr);
         EXPECT_TRUE(bid->hdr != nullptr);
@@ -477,7 +478,7 @@ TEST(TestBcf, SubsetSamplesEasy) {
     EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(n, nsamps);
 
-    for (int i = 0; i < nsamps; i++)
+    for (uint32_t i = 0; i < nsamps; i++)
         EXPECT_STREQ(sample_subset[i], bid->hdr->samples[i]);
 }
 
@@ -517,7 +518,7 @@ TEST(TestBcf, SubsetSamplesNullptr) {
     uint32_t n = 0;
     status = bcfio::num_samples(bid.get(), &n);
     EXPECT_EQ(status, bcfio::Status::Success);
-    EXPECT_EQ(n, 0);
+    EXPECT_EQ(n, static_cast<uint32_t>(0));
 }
 
 
@@ -630,7 +631,7 @@ TEST(TestBcf, SubsetSamplesSubsequentSets) {
         EXPECT_EQ(status, bcfio::Status::Success);
         EXPECT_EQ(n, data[i]->nsamps);
 
-        for (int j = 0; j < data[i]->nsamps; j++)
+        for (uint32_t j = 0; j < data[i]->nsamps; j++)
             EXPECT_STREQ(data[i]->samp_names[j], 
                     bid->hdr->samples[j]);
     }
@@ -700,7 +701,7 @@ TEST(TestBcf, SamplesExclusion) {
     EXPECT_EQ(status, bcfio::Status::Success);
     EXPECT_EQ(n, data[2]->nsamps);
 
-    for (int j = 0; j < data[2]->nsamps; j++)
+    for (uint32_t j = 0; j < data[2]->nsamps; j++)
         EXPECT_STREQ(data[2]->samp_names[j], bid->hdr->samples[j]);
 
 
@@ -743,7 +744,7 @@ TEST(TestBcf, PosSubsetByFile) {
         status = bcfio::pos(brec.get(), &p);
         ASSERT_EQ(status, bcfio::Status::Success);
 
-        printf("%lld\t%lld\n", brec->rec->pos, p);
+        printf("%ld\t%ld\n", brec->rec->pos, p);
 
         status = bcfio::next_record<float>(bid.get(), brec.get(), "GP");
     }
