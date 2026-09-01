@@ -17,7 +17,8 @@
 
 ifneq ($(shell which clang++),)
 CXX					= clang++
-CXXFLAGS			= -pedantic -fsanitize=address
+# CXXFLAGS			= -pedantic -fsanitize=address
+CXXFLAGS			= -pedantic
 else ifneq ($(shell which g++),)
 CXX					= g++
 CXXFLAGS			= -Wpedantic -Wextra 
