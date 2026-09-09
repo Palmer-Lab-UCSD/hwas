@@ -55,43 +55,43 @@ const char* bcfio::status_msg(bcfio::Status status) {
 
 bcfio::HFileReadConn::~HFileReadConn() {
     if (fid_) 
-        static_cast<void>(htslib::hclose(fid_)); 
+        static_cast<void>(hclose(fid_)); 
 }
 
 bool bcfio::HFileReadConn::is_bcf() const {
-    htslib::htsFormat fmt {};
-    if (htslib::hts_detect_format(fid_, &fmt) != 0)
+    htsFormat fmt {};
+    if (hts_detect_format(fid_, &fmt) != 0)
         return false;
 
-    if (fmt.format == htslib::bcf || fmt.format == htslib::vcf)
+    if (fmt.format == bcf || fmt.format == vcf)
         return true;
 
     return false;
 }
 
 bcfio::hfile_conn_t bcfio::hread(const char* filename) {
-    htslib::hFILE* fh = htslib::hopen(filename, "r");
+    hFILE* fh = hopen(filename, "r");
     if (fh == nullptr)
         return nullptr;
 
     bcfio::HFileReadConn* hfile = 
         new(std::nothrow) bcfio::HFileReadConn(fh);
     if (hfile == nullptr) {
-        static_cast<void>(htslib::hclose(fh));
+        static_cast<void>(hclose(fh));
         return nullptr;
     }
 
     return bcfio::hfile_conn_t(hfile);
 }
 
-bcfio::Status bcfio::decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
+bcfio::Status bcfio::decode_hts_idinfo(const bcf_hdr_t* hdr,
         const char* id, 
         const int bcf_dt_type, 
         bcfio::BcfHdrAttr* ptr) {
 
     // BCF_DT_ID is the C macro for the ID dictionary index defined 
     // by htslib see htslib/vcf.h line 86
-    int idx = htslib::bcf_hdr_id2int(hdr, BCF_DT_ID, id);
+    int idx = bcf_hdr_id2int(hdr, BCF_DT_ID, id);
     if (idx == -1)
         return bcfio::Status::ErrInvalidId;
 
@@ -294,21 +294,55 @@ bool bcfio::is_open(const PositionsFile* pfid) {
 // }
 
  
-/////////////////////////////////////////////////////////////////////
-//// Bcf
-/////////////////////////////////////////////////////////////////////
-// 
-//
 void bcfio::Bcf::close() noexcept {
     if (fid != nullptr) {
-        static_cast<void>(htslib::hts_close(fid));
+        static_cast<void>(hts_close(fid));
         fid = nullptr;
     }
 
     if (hdr != nullptr) {
-        htslib::bcf_hdr_destroy(hdr);
+        bcf_hdr_destroy(hdr);
         hdr = nullptr;
     }
+}
+
+
+bcfio::bid_t bcfio::replicate(const bcfio::Bcf* bin) {
+    bcfio::bid_t bout = bcfio::bread(bcfio::get_filename(bin));
+    if (bout == nullptr) {
+        fprintf(stderr, "Could not open file for reading");
+        return nullptr;
+    }
+
+    int status = -1;
+
+    // Recall that subsetting samples in hdr variabler with type
+    // bcf_hdr_t updates the number of elements in the sample 
+    // dictionary.  Consequently, if the number of samples in the 
+    // newly created bcf_hdr_t in bid is equal to that of 
+    // this->hdr, then no sample subsetting had occured.
+    if (bout->hdr->n[BCF_DT_SAMPLE] != bin->hdr->n[BCF_DT_SAMPLE]) {
+        // make sample list from this->hdr
+        std::unique_ptr<char[]> samples = bcfio::sample_list_str(bin);
+
+        if (samples == nullptr) {
+            fprintf(stderr, "Failed generating sample list.\n");
+            return nullptr;
+        }
+
+        // subset samples
+        status = bcf_hdr_set_samples(bout->hdr, samples.get(), 0);
+        if (status != 0) {
+            fprintf(stderr, "Sample subset failure");
+            return nullptr;
+        }
+    }
+    
+    // std::set copy assignment is deep copy for non-pointer
+    // set elements
+    bout->pos = bin->pos;
+
+    return bout;
 }
 
 
@@ -328,20 +362,20 @@ bcfio::bid_t bcfio::bread(const char* filename) {
     if (!bcfio::is_bcf(filename))
         return nullptr;
 
-    htslib::htsFile* fh = htslib::hts_open(filename, "r");
+    htsFile* fh = hts_open(filename, "r");
     if (!fh)
         return nullptr;
 
-    htslib::bcf_hdr_t* hdr = htslib::bcf_hdr_read(fh);
+    bcf_hdr_t* hdr = bcf_hdr_read(fh);
     if (hdr == nullptr) {
-        static_cast<void>(htslib::hts_close(fh));
+        static_cast<void>(hts_close(fh));
         return nullptr;
     }
 
     bcfio::Bcf* bid = new(std::nothrow) bcfio::Bcf(fh, hdr);
     if (bid == nullptr) {
-        static_cast<void>(htslib::hts_close(fh));
-        htslib::bcf_hdr_destroy(hdr);
+        static_cast<void>(hts_close(fh));
+        bcf_hdr_destroy(hdr);
         return nullptr;
     }
 
@@ -387,6 +421,53 @@ bcfio::Status bcfio::num_samples(const bcfio::Bcf* bid, uint32_t* n) {
 }
 
 
+std::unique_ptr<char[]> bcfio::sample_list_str(const bcfio::Bcf* bid) {
+    size_t ntotal = 0;
+    int32_t nsamps = bid->hdr->n[BCF_DT_SAMPLE];
+    if (nsamps == 0)
+        return nullptr;
+
+    size_t* samp_nchar = new(std::nothrow) size_t[nsamps];
+
+    char** samp_names = bid->hdr->samples;
+    for (int32_t i = 0; i < nsamps; i++) {
+        samp_nchar[i] = std::strlen(samp_names[i]);
+
+        // I add 1 as strlen does not include the null character
+        // that terminates the string.
+        ntotal += samp_nchar[i] + 1;
+    }
+
+    if (ntotal == 0) {
+        delete[] samp_nchar;
+        return nullptr;
+    }
+
+    char* samp_list = new(std::nothrow) char[ntotal];
+    if (samp_list == nullptr) {
+        delete[] samp_nchar;
+        return nullptr;
+    }
+
+    char* samplist_ptr = samp_list;
+    for (int32_t i = 0; i < nsamps; i++) {
+        // get location of first character of the next word
+        if (i > 0)
+            samplist_ptr += 1;
+
+        strncpy(samplist_ptr, samp_names[i], samp_nchar[i]);
+        samplist_ptr[samp_nchar[i]] = ',';
+        // the pointer should now be pointing at the comma
+        samplist_ptr += samp_nchar[i];
+    }
+    // should overwrite the trailing comma
+    samp_list[ntotal - 1] = '\0';
+
+    delete[] samp_nchar;
+    return std::unique_ptr<char[]>(samp_list);
+}
+
+
 bcfio::Status bcfio::subset_samples(bcfio::Bcf* bid, 
         const char* samples) {
 
@@ -397,7 +478,7 @@ bcfio::Status bcfio::subset_samples(bcfio::Bcf* bid,
         samples = NULL;
 
     // Recall that 1 indicates that samples are enumerated 
-    int status = htslib::bcf_hdr_set_samples(bid->hdr,
+    int status = bcf_hdr_set_samples(bid->hdr,
             samples, 
             0);
 
@@ -421,7 +502,7 @@ bcfio::Status bcfio::subset_samples_from_file(bcfio::Bcf* bid,
         return bcfio::Status::ErrInvalidInput;
 
     // Recall that 1 indicates that samples are enumerated in file
-    int status = htslib::bcf_hdr_set_samples(bid->hdr,
+    int status = bcf_hdr_set_samples(bid->hdr,
             samples_filename, 
             1);
     if (status < 0)
@@ -451,7 +532,7 @@ bcfio::Status bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
         return bcfio::Status::ErrInternal;
 
     // dummy record
-    htslib::bcf1_t* rec = htslib::bcf_init();
+    bcf1_t* rec = bcf_init();
     if (!rec)
         return bcfio::Status::ErrHtslib;
 
@@ -459,7 +540,7 @@ bcfio::Status bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
     int64_t npos = 0;
     if (bid->pos.empty()) {
         while (true) {
-            hts_status = htslib::bcf_read(fid->fid, fid->hdr, rec);
+            hts_status = bcf_read(fid->fid, fid->hdr, rec);
             if (hts_status != 0)
                 break;
             npos++;
@@ -467,11 +548,11 @@ bcfio::Status bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
     } else {
         const char* ctg = nullptr;
         while (true) {
-            hts_status = htslib::bcf_read(fid->fid, fid->hdr, rec);
+            hts_status = bcf_read(fid->fid, fid->hdr, rec);
             if (hts_status != 0)
                 break;
 
-            ctg = htslib::bcf_hdr_id2name(fid->hdr, rec->rid);
+            ctg = bcf_hdr_id2name(fid->hdr, rec->rid);
             bcfio::GenomicCoord gc {std::string(ctg), rec->pos + 1};
 
             if (bid->pos.count(gc) == 1)
@@ -479,7 +560,7 @@ bcfio::Status bcfio::num_pos(bcfio::Bcf* bid, int64_t* n) {
         }
     }
     
-    htslib::bcf_destroy(rec);
+    bcf_destroy(rec);
 
     // remember that -1 here is htslib signal for EOF
     if (hts_status != -1) 

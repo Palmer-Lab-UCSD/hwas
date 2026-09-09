@@ -27,12 +27,10 @@
 // #include <optional>
 // #include <type_traits>
 
-namespace htslib {
 extern "C" {
 #include <htslib/hfile.h>
 #include <htslib/hts.h>
 #include <htslib/vcf.h>
-}
 }
 
 // TODO: I NEED TO ADD A FEATURE FOR LISTIING FORMAT ID's
@@ -107,10 +105,10 @@ public:
 
     bool is_bcf() const;
 private:
-    HFileReadConn(htslib::hFILE* hfid): fid_(hfid) {};
+    HFileReadConn(hFILE* hfid): fid_(hfid) {};
 
     friend std::unique_ptr<HFileReadConn> hread(const char* filename);
-    htslib::hFILE* fid_;
+    hFILE* fid_;
 };
 
 typedef std::unique_ptr<HFileReadConn> hfile_conn_t;
@@ -222,7 +220,7 @@ public:
     static std::unique_ptr<BcfRecord<T>> init(); 
     ~BcfRecord();
 
-    htslib::bcf1_t* rec;
+    bcf1_t* rec;
 
     // These attributes below store htslib access points to rec data
     // The number of values in memory
@@ -237,7 +235,7 @@ public:
     uint16_t ncol = 0;  // k_fmt
 
 private:
-    BcfRecord(htslib::bcf1_t* hrec): rec(hrec) {};
+    BcfRecord(bcf1_t* hrec): rec(hrec) {};
 };
 
 template <typename T>
@@ -245,13 +243,13 @@ using brec_t = std::unique_ptr<BcfRecord<T>>;
 
 template <typename T>
 brec_t<T> BcfRecord<T>::init() {
-    htslib::bcf1_t* hrec = htslib::bcf_init();
+    bcf1_t* hrec = bcf_init();
     if (hrec == nullptr)
         return nullptr;
 
     BcfRecord<T>* brec = new(std::nothrow) BcfRecord<T>(hrec);
     if (brec == nullptr) {
-        htslib::bcf_destroy(hrec);
+        bcf_destroy(hrec);
         return nullptr;
     }
 
@@ -261,7 +259,7 @@ brec_t<T> BcfRecord<T>::init() {
 template <typename T>
 BcfRecord<T>::~BcfRecord() {
     if (rec != nullptr) 
-        htslib::bcf_destroy(rec);
+        bcf_destroy(rec);
     if (data != nullptr) 
         free(data);
     rec = nullptr;
@@ -310,14 +308,15 @@ struct Bcf
     ~Bcf() { close(); };
 
     void close() noexcept;
-
-    htslib::htsFile* fid;
-    htslib::bcf_hdr_t* hdr;
+    
+    htsFile* fid;
+    bcf_hdr_t* hdr;
     std::set<GenomicCoord> pos;
 
 private:
-    Bcf(htslib::htsFile* hfid, htslib::bcf_hdr_t* hhdr): 
+    Bcf(htsFile* hfid, bcf_hdr_t* hhdr): 
         fid(hfid), hdr(hhdr), pos() {};
+
     friend std::unique_ptr<Bcf> bread(const char* filename);
 };
 
@@ -338,14 +337,10 @@ typedef std::unique_ptr<Bcf> bid_t;
 // @param id: query name for a specific bcf meta data record
 // @param ptr: where to store the retrieved meta data
 // @param status code of operation
-Status decode_hts_idinfo(const htslib::bcf_hdr_t* hdr,
+Status decode_hts_idinfo(const bcf_hdr_t* hdr,
         const char* id,
         const int bcf_dt_type,
         BcfHdrAttr* ptr);
-
-//////////////////////////////////////////////////////////////////
-// API
-//////////////////////////////////////////////////////////////////
 
 
 // Check whether file is vcf or bcf
@@ -358,6 +353,22 @@ bool is_bcf(const char* filename);
 bid_t bread(const char* filename);
 bool is_open(const Bcf* bid);
 bool is_open(const PositionsFile* pfid);
+
+// @brief Create a new Bcf with equivalent settings
+// @description Sometimes we want to open an additional handle to a
+//  bcf file.  The state of Bcf object consistes of the htslib
+//  file handle, sampling subseting, and position subsetting.  This
+//  function opens a new handle to the current file, creates a 
+//  fresh copy of the header from file, subsets samples to the 
+//  current sample list, and copies the position inclusion data
+//  member.  While similar to a deep copy, this isn't a copy of the
+//  bytes of the current object.
+// @param[in] Bcf a pointer to the Bcf instance to replicate
+// @return nullptr upon error, bid_t instance otherwise
+bid_t replicate(const Bcf*);
+
+
+std::unique_ptr<char[]> sample_list_str(const Bcf*);
 
 // @brief Filename from Bcf class
 // @param bid: pointer to open file connection
@@ -449,7 +460,7 @@ Status mutate_brec_to_next_pos_(Bcf* bid,
         BcfRecord<T>* brec,
         const char* id) {
 
-    int hts_status = htslib::bcf_read(bid->fid, 
+    int hts_status = bcf_read(bid->fid, 
                 bid->hdr,
                 brec->rec);
     bcfio::Status status = Status::ErrHtslib;
@@ -478,7 +489,7 @@ Status mutate_brec_to_next_pos_(Bcf* bid,
     GenomicCoord gc = { ctg, p };
 
     while (bid->pos.count(gc) == 0) {
-        hts_status = htslib::bcf_read(bid->fid, 
+        hts_status = bcf_read(bid->fid, 
                     bid->hdr,
                     brec->rec);
 
@@ -542,7 +553,7 @@ Status next_record(Bcf* bid,
     // BCF_UN_ALL ==> (BCF_UN_SHR | BCF_UN_FMT)
     //
     // For simplicity just unpack all values
-    if (htslib::bcf_unpack(brec->rec, BCF_UN_ALL) < 0)
+    if (bcf_unpack(brec->rec, BCF_UN_ALL) < 0)
         return Status::ErrHtslib;
 
     // The code below makes format values accssible to the users as
@@ -561,7 +572,7 @@ Status next_record(Bcf* bid,
     //
     int n = -4;
     if constexpr (std::is_same_v<T, int32_t>)
-        n = htslib::bcf_get_format_values(bid->hdr, 
+        n = bcf_get_format_values(bid->hdr, 
                 brec->rec, 
                 id, 
                 (void**)(&brec->data),
@@ -569,7 +580,7 @@ Status next_record(Bcf* bid,
                 BCF_HT_INT);
 
     if constexpr (std::is_same_v<T, float>)
-        n = htslib::bcf_get_format_values(bid->hdr, 
+        n = bcf_get_format_values(bid->hdr, 
                 brec->rec, 
                 id, 
                 (void**)(&brec->data),
@@ -580,7 +591,7 @@ Status next_record(Bcf* bid,
     // TODO: to add string support, I need to first come up with
     //  test examples.
     // if constexpr (std::is_same_v<T, char>)
-    //     n = htslib::bcf_get_format_values(bid->hdr, 
+    //     n = bcf_get_format_values(bid->hdr, 
     //             brec->rec, 
     //             id, 
     //             (void**)(&brec->data),
@@ -596,7 +607,7 @@ Status next_record(Bcf* bid,
     if (num_samples(bid, &nsamps) != bcfio::Status::Success)
         return Status::ErrInternal;
 
-    htslib::bcf_fmt_t* fmt_cfg = htslib::bcf_get_fmt(bid->hdr, 
+    bcf_fmt_t* fmt_cfg = bcf_get_fmt(bid->hdr, 
             brec->rec, id);
     if (fmt_cfg == nullptr)
         return Status::ErrHtslib;
@@ -640,7 +651,7 @@ const char* chrom(const Bcf* bid, const BcfRecord<T>* brec) {
     if (!is_valid_brec<T>(brec))
         return nullptr;
 
-    return htslib::bcf_hdr_id2name(bid->hdr, brec->rec->rid);
+    return bcf_hdr_id2name(bid->hdr, brec->rec->rid);
 }
 
 }

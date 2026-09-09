@@ -9,12 +9,10 @@
 
 #include <gtest/gtest.h>
 
-namespace htslib {
-extern "C" {
-#include <htslib/hts.h>
-#include <htslib/vcf.h>
-}
-}
+// extern "C" {
+// #include <htslib/hts.h>
+// #include <htslib/vcf.h>
+// }
 
 #include <bcfio.h>
 
@@ -40,7 +38,7 @@ const char POS_FILE_INVALID[] { "inst/exdata/pos_invalid.include" };
 ///////////////////////////////////////////////////////////////////////////
 
 // TEST(TestBcfHeader, BcfHdrFmtGt) {
-//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     htsFile *fid = hts_open(BCF_NAME, "r");
 //     bcfio::BcfHeader hdr { fid };
 // 
 //     EXPECT_FALSE(hdr.isnull());
@@ -53,12 +51,12 @@ const char POS_FILE_INVALID[] { "inst/exdata/pos_invalid.include" };
 //     EXPECT_EQ(attr.vl_type, static_cast<uint8_t>(BCF_VL_FIXED));
 //     EXPECT_EQ(attr.type, static_cast<uint8_t>(BCF_HT_STR));
 // 
-//     if (fid) htslib::hts_close(fid);
+//     if (fid) hts_close(fid);
 // }
 // 
 // 
 // TEST(TestBcfHeader, BcfHdrFmtGp) {
-//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     htsFile *fid = hts_open(BCF_NAME, "r");
 //     bcfio::BcfHeader hdr { fid };
 // 
 //     EXPECT_FALSE(hdr.isnull());
@@ -71,11 +69,11 @@ const char POS_FILE_INVALID[] { "inst/exdata/pos_invalid.include" };
 //     EXPECT_EQ(attr.vl_type, static_cast<uint8_t>(BCF_VL_FIXED));
 //     EXPECT_EQ(attr.type, static_cast<uint8_t>(BCF_HT_REAL));
 // 
-//     if (fid) htslib::hts_close(fid);
+//     if (fid) hts_close(fid);
 // }
 // 
 // TEST(TestBcfHeader, BcfHdrFmtDs) {
-//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     htsFile *fid = hts_open(BCF_NAME, "r");
 //     bcfio::BcfHeader hdr { fid };
 // 
 //     EXPECT_FALSE(hdr.isnull());
@@ -88,12 +86,12 @@ const char POS_FILE_INVALID[] { "inst/exdata/pos_invalid.include" };
 //     EXPECT_EQ(attr.vl_type, static_cast<uint8_t>(BCF_VL_FIXED));
 //     EXPECT_EQ(attr.type, static_cast<uint8_t>(BCF_HT_REAL));
 // 
-//     if (fid) htslib::hts_close(fid);
+//     if (fid) hts_close(fid);
 // }
 // 
 // 
 // TEST(TestBcfHeader, BcfHdrFmtErr) {
-//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     htsFile *fid = hts_open(BCF_NAME, "r");
 //     bcfio::BcfHeader hdr { fid };
 // 
 //     EXPECT_FALSE(hdr.isnull());
@@ -103,12 +101,12 @@ const char POS_FILE_INVALID[] { "inst/exdata/pos_invalid.include" };
 //     int status = hdr.get_format_attr("DOESNOTEXIST", &attr);
 //     EXPECT_NE(status, 0);
 // 
-//     if (fid) htslib::hts_close(fid);
+//     if (fid) hts_close(fid);
 // }
 // 
 // 
 // TEST(TestBcfHeader, BcfHdrFilter) {
-//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     htsFile *fid = hts_open(BCF_NAME, "r");
 //     bcfio::BcfHeader hdr { fid };
 // 
 //     EXPECT_FALSE(hdr.isnull());
@@ -121,12 +119,12 @@ const char POS_FILE_INVALID[] { "inst/exdata/pos_invalid.include" };
 //     status = hdr.get_filter_attr("PASSING", &attr);
 //     EXPECT_NE(status, 0);
 // 
-//     if (fid) htslib::hts_close(fid);
+//     if (fid) hts_close(fid);
 // }
 // 
 // 
 // TEST(TestBcfHeader, BcfHdrInfoEaf) {
-//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     htsFile *fid = hts_open(BCF_NAME, "r");
 //     bcfio::BcfHeader hdr { fid };
 // 
 //     EXPECT_FALSE(hdr.isnull());
@@ -138,12 +136,12 @@ const char POS_FILE_INVALID[] { "inst/exdata/pos_invalid.include" };
 //     EXPECT_EQ(attr.type, static_cast<uint8_t>(BCF_HT_REAL));
 //     EXPECT_EQ(attr.vl_type, static_cast<uint8_t>(BCF_VL_VAR));
 // 
-//     if (fid) htslib::hts_close(fid);
+//     if (fid) hts_close(fid);
 // }
 // 
 // 
 // TEST(TestBcfHeader, BcfHdrInfoErc) {
-//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     htsFile *fid = hts_open(BCF_NAME, "r");
 //     bcfio::BcfHeader hdr { fid };
 // 
 //     EXPECT_FALSE(hdr.isnull());
@@ -155,12 +153,12 @@ const char POS_FILE_INVALID[] { "inst/exdata/pos_invalid.include" };
 //     EXPECT_EQ(attr.type, static_cast<uint8_t>(BCF_HT_REAL));
 //     EXPECT_EQ(attr.vl_type, static_cast<uint8_t>(BCF_VL_VAR));
 // 
-//     if (fid) htslib::hts_close(fid);
+//     if (fid) hts_close(fid);
 // }
 // 
 // 
 // TEST(TestBcfHeader, BcfHdrInfoErr) {
-//     htslib::htsFile *fid = htslib::hts_open(BCF_NAME, "r");
+//     htsFile *fid = hts_open(BCF_NAME, "r");
 //     bcfio::BcfHeader hdr { fid };
 // 
 //     EXPECT_FALSE(hdr.isnull());
@@ -170,7 +168,7 @@ const char POS_FILE_INVALID[] { "inst/exdata/pos_invalid.include" };
 //     int status = hdr.get_info_attr("NOTAINFOMEMBER", &attr);
 //     EXPECT_NE(status, 0);
 // 
-//     if (fid) htslib::hts_close(fid);
+//     if (fid) hts_close(fid);
 // }
 // 
 // 
@@ -312,7 +310,7 @@ TEST(BcfRecord, ChromFailures) {
             brecs[1].get(), 
             "DS");
     ASSERT_EQ(status, bcfio::Status::ErrBcfNotOpen);
-    htslib::bcf_destroy(brecs[1]->rec);
+    bcf_destroy(brecs[1]->rec);
     brecs[1]->rec = nullptr;
 
     status = bcfio::next_record<float>(bids[2].get(), 
@@ -738,13 +736,9 @@ TEST(TestBcf, PosSubsetByFile) {
     bcfio::brec_t<float> brec = bcfio::BcfRecord<float>::init();
     status = bcfio::next_record<float>(bid.get(), brec.get(), "GP");
     int64_t p = 0;
-    printf("hts\tbcfio\n");
     while (status == bcfio::Status::Success) {
         status = bcfio::pos(brec.get(), &p);
         ASSERT_EQ(status, bcfio::Status::Success);
-
-        printf("%lld\t%lld\n", brec->rec->pos, p);
-
         status = bcfio::next_record<float>(bid.get(), brec.get(), "GP");
     }
 

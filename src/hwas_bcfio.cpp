@@ -1,6 +1,7 @@
 
-#include <hwas.h>
+#include <Rbcfio.h>
 
+// TODO do not print to stderr / stdour use R facilities for print
 
 // Open a file connection to bcf, vcf, or vcf.gz file
 //
@@ -11,7 +12,7 @@
 // 
 //
 // [[Rcpp::export]]
-bcf_conn_t bread(const char* filename) {
+bconn_t bread(const char* filename) {
     bcfio::bid_t bid = bcfio::bread(filename);
 
     if (bid == nullptr) {
@@ -19,11 +20,11 @@ bcf_conn_t bread(const char* filename) {
         Rcpp::stop(bcfio::status_msg(status));
     }
 
-    return bcf_conn_t(bid.release(), true);
+    return bconn_t(bid.release(), true);
 }
 
 // [[Rcpp::export]]
-int bclose(bcf_conn_t bconn) {
+int bclose(bconn_t bconn) {
     if (!bconn) {
         bcfio::Status status = bcfio::Status::ErrInvalidInput;
         Rcpp::stop(bcfio::status_msg(status));
@@ -34,7 +35,7 @@ int bclose(bcf_conn_t bconn) {
 }
 
 // [[Rcpp::export]]
-bool is_open(bcf_conn_t bconn) {
+bool is_open(const bconn_t bconn) {
     if (!bconn) {
         bcfio::Status status = bcfio::Status::ErrInvalidInput;
         Rcpp::stop(bcfio::status_msg(status));
@@ -54,7 +55,7 @@ bool is_bcf(const char* filename) {
 /////////////////////////////////////////////////////////////////////
 
 // [[Rcpp::export]]
-uint16_t k_fmt(bcf_conn_t bconn, const char* id) {
+uint16_t k_fmt(bconn_t bconn, const char* id) {
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
 
     if (!bconn)
@@ -69,7 +70,7 @@ uint16_t k_fmt(bcf_conn_t bconn, const char* id) {
 }
 
 // [[Rcpp::export]]
-uint32_t num_samples(bcf_conn_t bconn) {
+uint32_t num_samples(bconn_t bconn) {
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
     if (!bconn)
         Rcpp::stop(bcfio::status_msg(status));
@@ -83,7 +84,7 @@ uint32_t num_samples(bcf_conn_t bconn) {
 }
 
 // [[Rcpp::export]]
-int64_t num_positions(bcf_conn_t bconn) {
+int64_t num_positions(bconn_t bconn) {
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
     if (!bconn)
         Rcpp::stop(bcfio::status_msg(status));
@@ -97,7 +98,7 @@ int64_t num_positions(bcf_conn_t bconn) {
 }
 
 // [[Rcpp::export]]
-Rcpp::RObject sample_names(bcf_conn_t bconn) {
+Rcpp::RObject sample_names(bconn_t bconn) {
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
     if (!bconn)
         Rcpp::stop(bcfio::status_msg(status));
@@ -120,20 +121,41 @@ Rcpp::RObject sample_names(bcf_conn_t bconn) {
 /////////////////////////////////////////////////////////////////////
 
 // [[Rcpp::export]]
-int subset_samples(bcf_conn_t bconn, 
-        Rcpp::CharacterVector samples) {
+int subset_samples(bconn_t bconn, 
+        Rcpp::Nullable<Rcpp::CharacterVector> nullable_samples = R_NilValue) {
+
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
-    if (!bconn)
+    if (!is_open(bconn))
         Rcpp::stop(bcfio::status_msg(status));
+
+    uint32_t nsamps = 0;
+    if (nullable_samples.isNull()) {
+        status = bcfio::subset_samples(bconn.get(), nullptr);
+        if (status != bcfio::Status::Success)
+            Rcpp::stop(bcfio::status_msg(status));
+
+        status = bcfio::num_samples(bconn.get(), &nsamps);
+        if (status != bcfio::Status::Success)
+            Rcpp::stop(bcfio::status_msg(status));
+
+        return nsamps;
+    }
+
+    Rcpp::CharacterVector samples(nullable_samples);
 
     if (samples.size() == 1 && samples[0] == R_NaString) {
         status = bcfio::subset_samples(bconn.get(), nullptr);
-
         if (status != bcfio::Status::Success)
             Rcpp::stop(bcfio::status_msg(status));
+
+        status = bcfio::num_samples(bconn.get(), &nsamps);
+        if (status != bcfio::Status::Success)
+            Rcpp::stop(bcfio::status_msg(status));
+
+        return nsamps;
     }
 
-    // I need to figure out if all the elements of the CharacterVecor
+    // I need to figure out if all the elements of the CharacterVector
     // are NA values
     int i = 0;
     for (; i < samples.size() && samples[i] == R_NaString; i++)
@@ -155,12 +177,18 @@ int subset_samples(bcf_conn_t bconn,
         // will be replaced by a comma, the last element will retain 
         // null character meaning that we need to add 1 to strlen return
         // value.
-        ntotal += std::strlen(Rcpp::String(samples[i]).get_cstring()) + 1;
+        ntotal += std::strlen(Rcpp::String(samples[i]).get_cstring());
+        ntotal += 1;
     }
 
+    if (ntotal == 0)
+        Rcpp::stop("No valid samples detected");
+
     std::unique_ptr<char[]> sample_list = std::make_unique<char[]>(ntotal);
+
     char* sample_list_elem = sample_list.get();
-    char* end_point = sample_list_elem + ntotal - 1;
+    // end_point is not inclusive
+    char* end_point = sample_list_elem + ntotal;
     const char* sample_str = nullptr;
     size_t idx = 0;
     size_t str_n = 0;
@@ -171,8 +199,8 @@ int subset_samples(bcf_conn_t bconn,
         sample_str = Rcpp::String(samples[i]).get_cstring();
         str_n = std::strlen(sample_str);
 
-        if (sample_list_elem + str_n > end_point)
-            Rcpp::stop("yikes!");
+        if (sample_list_elem + str_n >= end_point)
+            Rcpp::stop("Index out of bounds, please contact maintainer.");
 
         std::strncpy(sample_list_elem, sample_str, str_n);
         sample_list_elem[str_n] = ',';
@@ -180,15 +208,23 @@ int subset_samples(bcf_conn_t bconn,
     }
     sample_list[ntotal-1] = '\0';
 
+    if (sample_list == nullptr)
+        return -2;
+
     status = bcfio::subset_samples(bconn.get(), sample_list.get());
+
     if (status != bcfio::Status::Success)
         Rcpp::stop(bcfio::status_msg(status));
 
-    return 0;
+    status = bcfio::num_samples(bconn.get(), &nsamps);
+    if (status != bcfio::Status::Success)
+        Rcpp::stop(bcfio::status_msg(status));
+
+    return nsamps;
 }
 
 
-int subset_samples_from_file(bcf_conn_t bconn,
+int subset_samples_from_file(bconn_t bconn,
         const char* samples_filename) {
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
     if (!bconn)
@@ -204,7 +240,7 @@ int subset_samples_from_file(bcf_conn_t bconn,
 }
 
 // [[Rcpp::export]]
-int subset_pos_from_file(bcf_conn_t bconn, const char* filename) {
+int subset_pos_from_file(bconn_t bconn, const char* filename) {
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
     if (!bconn || !filename)
         Rcpp::stop(bcfio::status_msg(status));
@@ -217,12 +253,12 @@ int subset_pos_from_file(bcf_conn_t bconn, const char* filename) {
 }
 
 // [[Rcpp::export]]
-int set_threads(bcf_conn_t bconn, int n) {
+int set_threads(bconn_t bconn, int n) {
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
     if (!bconn)
         Rcpp::stop(bcfio::status_msg(status));
 
-    if (htslib::hts_set_threads(bconn->fid, n) != 0)
+    if (hts_set_threads(bconn->fid, n) != 0)
         Rcpp::stop(bcfio::status_msg(bcfio::Status::ErrHtslib));
 
     return 0;
@@ -232,7 +268,7 @@ int set_threads(bcf_conn_t bconn, int n) {
 // [] Documentation: man/hts_records.Rd
 // TODO: update to new interface
 // [[Rcpp::export]]
-Rcpp::Nullable<Rcpp::NumericMatrix> next_record(bcf_conn_t bconn, 
+Rcpp::Nullable<Rcpp::NumericMatrix> next_record(bconn_t bconn, 
         const char* id) {
     bcfio::Status status = bcfio::Status::ErrInvalidInput;
     if (!bconn)
@@ -250,10 +286,10 @@ Rcpp::Nullable<Rcpp::NumericMatrix> next_record(bcf_conn_t bconn,
         Rcpp::stop(bcfio::status_msg(status));
 
     if (hattr.type == BCF_HT_REAL)
-        return get_matrix<float>(bconn.get(), id);
+        return get_record_matrix_<float>(bconn.get(), id);
 
     if (hattr.type == BCF_HT_INT)
-        return get_matrix<int>(bconn.get(), id);
+        return get_record_matrix_<int>(bconn.get(), id);
 
     Rcpp::stop("Unsupported Bcf Type"); 
 }

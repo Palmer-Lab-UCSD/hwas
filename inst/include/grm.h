@@ -3,8 +3,10 @@
 
 #include <cctype>
 #include <cstring>
+
 #include <memory>
-#include <chrono>
+#include <limits>
+#include <new>
 
 #include <bcfio.h>
 // Grm class manages storage and access of GRM matrix
@@ -19,136 +21,221 @@
 namespace grm {
 
 enum struct Status : int {
-    Success = 0
+    Success                         = 0,
+    ErrDimensionsNotEqual           = -2,
+    ErrIndexOutofBounds             = -3,
+    ErrInternal                     = -4
 };
 
 const char* status_msg(Status status);
 
-// TODO: Double if constexpr is the right way to go.  I was getting
-//  duplicate symboles linker errors without it.
-// @title Compute index of one-dimension array from matrix indices
-// @param i: matrix row index
-// @param j: matrix col index, note that j >= i
-// @param n: number of cols, and as symmetric number of rows, of the
-//  matrix, note that n = max(i) + 1 = max(j) + 1
-// @return index
-constexpr uint32_t sym_matrix_idx_to_array(const uint32_t i, 
-                        const uint32_t j, 
-                        const uint32_t n) {
-    return i*n - i*(i-1)/2 + j - i; 
-};
-
-// n is the number of columns in the matrix
-constexpr uint32_t matrix_idx_to_array(const uint32_t i, 
-                             const uint32_t j,
-                             const uint32_t n) {
-    return i*n + j; 
-};
 
 template <typename T>
-struct Grm {
-    Grm(): nsamps(0), capacity(0), data(nullptr) {};
-    Grm(uint32_t n_samps) : 
-        nsamps(n_samps),
-        capacity(n_samps == 0 ? 0 : n_samps * (n_samps + 1) / 2),
-        data(n_samps == 0 ? nullptr : new T[capacity]) {
+class UnnormalizedGrm {
+public:
+    UnnormalizedGrm<T>()                                        = delete;
+    UnnormalizedGrm<T>(const UnnormalizedGrm<T>&)               = delete;
+    UnnormalizedGrm<T>(UnnormalizedGrm<T>&&)                    = delete;
+    UnnormalizedGrm<T>& operator=(const UnnormalizedGrm<T>&)    = delete;
+    UnnormalizedGrm<T>& operator=(UnnormalizedGrm<T>&&)         = delete;
 
-        if (data != nullptr) {
-            T default_val {};
-            std::memset(data, default_val, capacity * sizeof(T));
-        }
-    }
+    ~UnnormalizedGrm<T>();
+    // T operator()(const uint32_t i, const uint32_t j) const;
+    
+    // @brief factory function for new UnnormalizedGrm<T>
+    // @param[in] n the number of samples for the grm
+    // @return unique_ptr to initialized Grm
+    static std::unique_ptr<UnnormalizedGrm<T>> init(uint32_t n);
 
+    // @brief Update the UnnormalizedGrm<T> data with a BcfRecord
+    // @description
+    // @param[in] brec is a record queried from a Bcf file
+    // @return Status:  Success, ErrDimensionsNotEqual, 
+    Status update(const bcfio::BcfRecord<T>* brec);
+
+    // @brief unsafe retrieval of values
     T operator()(const uint32_t i, const uint32_t j) const;
 
-    T& operator()(const uint32_t i, const uint32_t j);
+    // @brief safe get and set of values in grm
+    Status get(const uint32_t i, const uint32_t j, T* val) const;
+    Status set(const uint32_t i, const uint32_t j, T val);
 
-    int midx_to_arr(const uint32_t i, 
-            const uint32_t j, 
-            uint32_t* idx) const;
+    uint32_t nsamples() const { return nsamps_; };
+    uint32_t cap() const { return capacity_; };
 
-    uint32_t nsamps;        
-    uint32_t capacity;      // size of allocated memory for data
-    T* data;
+    bool is_null() const { return data_ == nullptr; };
+private:
+
+    // @brief Used by the init factor function
+    UnnormalizedGrm<T>(uint32_t n, uint32_t caps, T* data_array)
+        : nsamps_(n),
+        capacity_(caps),
+        data_(data_array) {};
+
+    // @brief unsafe mapping of symmetric matrix to data index
+    // @description mapping is unsafe on two accounts.  First, I assume
+    //  that i <= j, if this cannot be assumed use midx_to_arr_ instead.
+    //  Note, that the iltj in the function name is intended to
+    //  communicate this assumption as the acronym iltj represents "i" 
+    //  less than "j".
+    //  Second, I do not verify that the reulting bounds index is within 
+    //  the bounds of the data array.  I assume that the code calling this 
+    //  has integrating this logic.  
+    // @param[in] i matrix row index
+    // @param[in] j matrix col index
+    // @return index of data array of the requested data
+    uint32_t sym_midx_to_arr_iltj_(const uint32_t i, const uint32_t j) const;
+
+    // @brief unsafe mapping of symmetric matrix to data index
+    // @description mapping is unsafe as I do not verify that the reulting 
+    //  bounds index is within the bounds of the data array.  I assume that
+    //  the code calling this has integrating this logic.
+    // @param[in] i matrix row index
+    // @param[in] j matrix col index
+    // @return index of data array of the requ3ested data
+    uint32_t sym_midx_to_arr_(const uint32_t i, const uint32_t j) const;
+
+    uint32_t nsamps_;        
+    uint32_t capacity_;      // size of allocated memory for data
+    T* data_;
+};
+
+template <typename T>
+using ugrm_t = std::unique_ptr<UnnormalizedGrm<T>>;
+
+
+template <typename T>
+ugrm_t<T> UnnormalizedGrm<T>::init(uint32_t n) {
+    if (n == 0)
+        return nullptr;
+
+    uint32_t d = std::numeric_limits<uint32_t>::max() / n;
+    
+    // check for overflow issue
+    if (d < (n + 1) / 2) {
+        fprintf(stderr, 
+                "Number of samples exceeds max, contact maintainer\n");
+        return nullptr;
+    }
+
+    uint32_t capacity = n * (n + 1) / 2;
+
+    T* data_array = new(std::nothrow) T[capacity];
+    if (data_array == nullptr) 
+        return nullptr;
+
+    std::memset(data_array, static_cast<T>(0), sizeof(T) * capacity);
+
+    UnnormalizedGrm<T>* ugrm = new(std::nothrow) UnnormalizedGrm<T>(n,
+            capacity, data_array);
+
+    if (ugrm == nullptr) {
+        delete[] data_array;
+        return nullptr;
+    }
+
+    return std::unique_ptr<UnnormalizedGrm<T>>(ugrm);
+}
+
+
+template <typename T>
+UnnormalizedGrm<T>::~UnnormalizedGrm() {
+    if (data_)
+        delete[] data_;
+    data_ = nullptr;
+    nsamps_ = 0;
+    capacity_ = 0;
+}
+
+template <typename T>
+T UnnormalizedGrm<T>::operator()(const uint32_t i, const uint32_t j) const {
+    return data_[sym_midx_to_arr_(i, j)];
+}
+
+template <typename T>
+Status UnnormalizedGrm<T>::get(const uint32_t i, 
+        const uint32_t j,
+        T* val) const {
+    if (i >= nsamps_ || j >= nsamps_)
+        return Status::ErrIndexOutofBounds;
+
+    *val = data_[sym_midx_to_arr_(i, j)];
+
+    return Status::Success;
+}
+
+
+template <typename T>
+Status UnnormalizedGrm<T>::set(const uint32_t i, 
+        const uint32_t j,
+        T val) {
+    if (i >= nsamps_ || j >= nsamps_)
+        return Status::ErrIndexOutofBounds;
+
+    data_[sym_midx_to_arr_(i, j)] = val;
+    return Status::Success;
+}
+
+
+template <typename T>
+uint32_t UnnormalizedGrm<T>::sym_midx_to_arr_iltj_(const uint32_t i, 
+        const uint32_t j) const {
+    return i*nsamps_ - i*(i-1)/2 + j - i; 
 };
 
 
 template <typename T>
-Grm<T>::Grm(uint32_t n_samps): nsamps(n_samps),
-    capacity(n_samps == 0 ? 0 : n_samps * (n_samps + 1) / 2),
-    data(nsamps == 0 ? nullptr : new T[capacity]) {
-
-    if (data) {
-        T default_val {};
-        std::memset(data, default_val, nsamps * sizeof(T));
-    }
-}
-
-// template <typename T>
-// Grm<T>::Grm(Grm&& other)
-//     : nsamps(other.nsamps),
-//     data(std::move(other.data)) {
-// 
-//     other.nsamps = 0;    
-//     grm::Grm& Grm::operator=(Grm&& other) {
-//         if (this == &other)
-//             return *this;
-//     
-//         nsamps = other.nsamps;
-//         other.nsamps = 0;
-//     
-//         data = std::move(other.data);
-//     
-//         return *this;
-//     }
-// }
-
-template <typename T>
-Grm<T>::~Grm() {
-    if (data)
-        delete[] data;
-    data = nullptr;
-    nsamps = 0;
-    capacity = 0;
-}
-
-template <typename T>
-T Grm<T>::operator()(const uint32_t i, const uint32_t j) const {
-    if (i > j)
-        return data[sym_matrix_idx_to_array(j, i, nsamps)];
-    return data[sym_matrix_idx_to_array(i, j, nsamps)];
-}
-
-template <typename T>
-T& Grm<T>::operator()(const uint32_t i, const uint32_t j) {
-    if (i > j)
-        return data[sym_matrix_idx_to_array(j, i, nsamps)];
-
-    return data[sym_matrix_idx_to_array(i, j, nsamps)];
-}
-
-
-template <typename T>
-int Grm<T>::midx_to_arr(const uint32_t i, 
-        const uint32_t j, 
-        uint32_t* idx) const {
-
-    if (i >= nsamps || j >= nsamps)
-        return -1;
-
+uint32_t UnnormalizedGrm<T>::sym_midx_to_arr_(const uint32_t i, 
+        const uint32_t j) const {
     // remember that by symmetry, the matrix is equal to its transpose
     if (i <= j)
-        *idx = sym_matrix_idx_to_array(i, j, nsamps);
-    else 
-        *idx = sym_matrix_idx_to_array(j, i, nsamps);
+        return sym_midx_to_arr_iltj_(i, j);
 
-    return 0;
+    return sym_midx_to_arr_iltj_(j, i);
 }
 
 // int hap_update_kernel(Grm* grmat, const bcfio::BcfRecord<float>* rec);
+template <typename T>
+Status UnnormalizedGrm<T>::update(const bcfio::BcfRecord<T>* rec) {
 
-// compute_sum_grm();
-// compute_norm_grm();
+    // instantiate indexing variables used in for loops
+    // use static to prevent construction and destruction of variables
+    // between function calls
+    if (nsamps_ != rec->nrow)
+        return Status::ErrDimensionsNotEqual;
+
+    uint16_t k_cols = rec->ncol;
+    uint16_t k_col = 0;
+
+    const T* samp_i = rec->data;
+    const T* samp_j = nullptr;
+
+    T val = static_cast<T>(0);
+
+    // only iterate over upper triangle
+    // remember that record data is an n_sample by k haplotype matrix 
+    for (uint32_t i = 0; i < nsamps_; i++) {
+
+        samp_j = samp_i;
+        for (uint32_t j = i; j < nsamps_; j++) {
+
+            val = 0;
+
+            for (k_col = 0; k_col < k_cols; k_col++)
+                val += samp_i[k_col] * samp_j[k_col];
+
+            // note that sym_matrix_idx_to_array_ assumes that index
+            // i <= j this is implemented by the nested for loops.
+            data_[sym_midx_to_arr_iltj_(i, j)] += val;
+            samp_j += k_cols;
+        }
+
+
+        samp_i += k_cols;
+    }
+
+    return Status::Success;
+}
 
 }
 

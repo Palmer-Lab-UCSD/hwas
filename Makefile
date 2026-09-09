@@ -51,8 +51,9 @@ CXXLIBFLAGS = $(addprefix -L, $(LOCAL_LIB) $(CXXLIB))
 ######################################################################
 
 BUILD_DIR = build
-SRC_FILES = src/bcfio.cpp 
-OBJ_FILES = $(subst src, $(BUILD_DIR), $(SRC_FILES:.cpp=.o))
+SRC_DIR = src
+SRC_FILES = $(SRC_DIR)/grm.cpp $(SRC_DIR)/bcfio.cpp
+OBJ_FILES = $(subst $(SRC_DIR), $(BUILD_DIR), $(SRC_FILES:.cpp=.o))
 APP_DEPS = $(OBJ_FILES:.o=.d)
 
 TEST_DATA_DIR = $(PWD)/inst/exdata
@@ -65,12 +66,13 @@ TEST_OBJ = $(subst $(TEST_DIR), $(BUILD_DIR), $(TEST_SRC:.cpp=.o))
 # DO NOT EDIT BELOW
 ######################################################################
 
+
+.PHONY: hwas
+hwas: $(OBJ_FILES)
+
 -include $(APP_DEPS)
 
-.PHONY: hwas_cpp
-hwas: build/bcfio.o 
-
-build/bcfio.o: src/bcfio.cpp | $(BUILD_DIR)
+$(OBJ_FILES): $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) $(OBJ_OUTPUT_OPTIONS) $<
 
 $(BUILD_DIR):
@@ -91,101 +93,38 @@ $(BUILD_DIR)/test_%.o: $(TEST_DIR)/test_%.cpp | $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) $(OBJ_OUTPUT_OPTIONS) $<
 
 
+######################################################################
+# static analysis
+######################################################################
+
 .PHONY: static
 static: $(SRC_FILES)
 	clang --analyze $(CXXFLAGS) $(CXXLDFLAGS) $^
 
-# $(TEST_TARGET_PRG): $(TEST_DIR)/main.cpp $(TEST_OBJS) $(APP_OBJS) | $(TARGET)
-# 	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) $(CXXLIBFLAGS) -o $@ $^ -lgtest -lhts
-# 
-# $(BUILD_DIR)/test_%.o: $(TEST_DIR)/test_%.cpp
-# 	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) $(OBJ_OUTPUT_OPTIONS) $<
-# 
-# TEST_GRM_PRG = $(BUILD_DIR)/test_grm
-# test_grm: $(TEST_GRM_PRG)
-# 	./$(TEST_GRM_PRG)
-# 
-# $(TEST_GRM_PRG): $(BUILD_DIR)/test_grm.o $(BUILD_DIR)/grm.o | $(BUILD_DIR)
-# 	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) $(CXXLIBFLAGS) -o $@ $^ -lgtest -lgtest_main
-# 
-# data: | $(TEST_DATA_DST)
-# 
-# $(BUILD_DIR)/geno_test_data%: $(TEST_DIR)/geno_test_data%
-# 	rsync -avz $< $(BUILD_DIR)/
-# 
-# # tests: $(BUILD_DIR)/test_log #$(BUILD_DIR)/test_argparse
-# # 
-# # $(BUILD_DIR)/test_log: $(BUILD_DIR)/test_log.o $(BUILD_DIR)/logger.o ~/.local/lib/libgtest.a
-# # 	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) $(CXXLIBFLAGS) -o $@ $^
-# # 
-# # $(BUILD_DIR)/test_argparse: $(BUILD_DIR)/test_argparse.o \
-# # 	$(BUILD_DIR)/argparse.o \
-# # 	~/.local/lib/libgtest.a
-# # 	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) -I$(LOCAL_INCLUDE) -L$(LOCAL_LIB) -o $@ $^
-# 
-# # $(TEST_OBJS): $(TEST_SRC)
-# #	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) -I$(LOCAL_INCLUDE) $(OBJ_OUTPUT_OPTIONS) $<
-# #
-# # $(BUILD_DIR)/test_log.o: $(TEST_DIR)/test_log.cpp
-# # 	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) $(OBJ_OUTPUT_OPTIONS) $^
-# 
-# 
-# # $(TEST_OBJS): $(TEST_SRC)
-# #	$(CXX) $(CXXFLAGS) $(CXXLDFLAGS) -I$(LOCAL_INCLUDE) -L$(LOCAL_LIB) -o $@ $^
-# 
-# # $(CXX) $(CXXFLAGS) $(CXXLDFLAGS) $(CXXLIBFLAGS) $(OBJ_OUTPUT_OPTIONS) $^
-# 
-# 
-# ######################################################################
-# # 
-# ######################################################################
-# 
-# check:
-# 	./$(TEST_TARGET_PRG)
-# 
-# ######################################################################
-# # 
-# ######################################################################
-# 
-# 
-# -include $(APP_DEPS)
-# -include $(TEST_DEPS)
-# 
-# .PHONY: help
-# help:
-# 	-@echo "build grm"
-# 	-@echo "2025 Palmer Lab"
-# 	-@echo ""
-# 	-@echo "make grm executable"
-# 	-@echo "make libargparse"
+RCPP_HEADER = $(shell R --no-echo -e 'cat(system.file("include", package="Rcpp"))')
+RSYS_LDFLAGS = $(shell R CMD config --cppflags)
+
+.PHONY: static_rbcfio
+static_rbcfio: src/hwas_bcfio.cpp
+	clang --analyze -std=c++17 -I$(RCPP_HEADER) $(RSYS_LDFLAGS) -I$(LOCAL_LD) -I$(HEADER_DIR) $<
 
 
-######################################################################
-# install
-######################################################################
+.PHONY: static_rgrm
+static_rgrm: src/hwas_grm.cpp
+	clang --analyze -std=c++17 \
+		-I$(RCPP_HEADER) \
+		$(RSYS_LDFLAGS) \
+		-I$(LOCAL_LD) \
+		-I$(HEADER_DIR) \
+		$<
 
-# install:
-# 	dir_header=$${prefix%/}/include/stitchr; \
-# 	if [ ! -d $${dir_header} ]; then \
-# 		mkdir -p $${dir_header}; \
-# 	fi; \
-# 	for hfile in $$(ls $(HEADER_DIR)); do \
-# 		cp $$hfile $${dir_header}/$${hfile}; \
-# 	done; \
-# 	 \
-# 	dir_lib=$${prefix%/}/lib; \
-# 	if [ ! -d $${dir_lib} ]; then \
-# 		mkdir -p $${dir_lib}; \
-# 	fi; \
-# 	for libfile in $$(ls $(BUILD_DIR)/*.a); do
-# 		cp $$libfile $${dir_lib}/$${libfile}; \
-# 	done; \
-# 	 \
-# 	dir_bin = $${prefix%/}/bin; \
-# 	if [ ! -d $${dir_bin} ]; then \
-# 	   mkdir -p $${dir_bin}; \
-# 	fi; \
-# 	cp $(TARGET) $${dir_bin}/$(notdir $(TARGET))
-# 
+.PHONY: static_rpgsim
+static_rpgsim: src/hwas_pgsim.cpp src/hwas_rpgsim.cpp
+	clang --analyze -std=c++17 \
+		-I$(RCPP_HEADER) \
+		$(RSYS_LDFLAGS) \
+		-I$(LOCAL_LD) \
+		-I$(HEADER_DIR) \
+		$^
 
 

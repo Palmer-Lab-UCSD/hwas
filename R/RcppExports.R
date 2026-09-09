@@ -9,10 +9,6 @@ fit1_pg_intcovar <- function(genoprobs, pheno, addcovar, intcovar, eigenvec, wei
     .Call('_hwas_fit1_pg_intcovar', PACKAGE = 'hwas', genoprobs, pheno, addcovar, intcovar, eigenvec, weights, se, tol)
 }
 
-calc_grm <- function(bid, id) {
-    .Call('_hwas_calc_grm', PACKAGE = 'hwas', bid, id)
-}
-
 bread <- function(filename) {
     .Call('_hwas_bread', PACKAGE = 'hwas', filename)
 }
@@ -45,8 +41,8 @@ sample_names <- function(bconn) {
     .Call('_hwas_sample_names', PACKAGE = 'hwas', bconn)
 }
 
-subset_samples <- function(bconn, samples) {
-    .Call('_hwas_subset_samples', PACKAGE = 'hwas', bconn, samples)
+subset_samples <- function(bconn, nullable_samples = NULL) {
+    .Call('_hwas_subset_samples', PACKAGE = 'hwas', bconn, nullable_samples)
 }
 
 subset_pos_from_file <- function(bconn, filename) {
@@ -59,6 +55,14 @@ set_threads <- function(bconn, n) {
 
 next_record <- function(bconn, id) {
     .Call('_hwas_next_record', PACKAGE = 'hwas', bconn, id)
+}
+
+calc_unnormalized_grm <- function(bconn, id) {
+    .Call('_hwas_calc_unnormalized_grm', PACKAGE = 'hwas', bconn, id)
+}
+
+pg_sim_qtl <- function(bconn, grm, qtl_freq, qtl_effect_size, heritability, id) {
+    .Call('_hwas_pg_sim_qtl', PACKAGE = 'hwas', bconn, grm, qtl_freq, qtl_effect_size, heritability, id)
 }
 
 calc_rss_linreg <- function(X, Y, tol = 1e-12) {

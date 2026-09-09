@@ -34,7 +34,7 @@ export(next_record)
 ## HWAS computation
 #########################################################
 # grm
-export(calc_grm)
+export(calc_unnormalized_grm)
 
 
 # qtl2

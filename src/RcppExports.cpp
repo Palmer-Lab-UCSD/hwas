@@ -47,20 +47,8 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// calc_grm
-Rcpp::RObject calc_grm(bcf_conn_t bid, const char* id);
-RcppExport SEXP _hwas_calc_grm(SEXP bidSEXP, SEXP idSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bid(bidSEXP);
-    Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
-    rcpp_result_gen = Rcpp::wrap(calc_grm(bid, id));
-    return rcpp_result_gen;
-END_RCPP
-}
 // bread
-bcf_conn_t bread(const char* filename);
+bconn_t bread(const char* filename);
 RcppExport SEXP _hwas_bread(SEXP filenameSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -71,23 +59,23 @@ BEGIN_RCPP
 END_RCPP
 }
 // bclose
-int bclose(bcf_conn_t bconn);
+int bclose(bconn_t bconn);
 RcppExport SEXP _hwas_bclose(SEXP bconnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
     rcpp_result_gen = Rcpp::wrap(bclose(bconn));
     return rcpp_result_gen;
 END_RCPP
 }
 // is_open
-bool is_open(bcf_conn_t bconn);
+bool is_open(const bconn_t bconn);
 RcppExport SEXP _hwas_is_open(SEXP bconnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< const bconn_t >::type bconn(bconnSEXP);
     rcpp_result_gen = Rcpp::wrap(is_open(bconn));
     return rcpp_result_gen;
 END_RCPP
@@ -104,95 +92,123 @@ BEGIN_RCPP
 END_RCPP
 }
 // k_fmt
-uint16_t k_fmt(bcf_conn_t bconn, const char* id);
+uint16_t k_fmt(bconn_t bconn, const char* id);
 RcppExport SEXP _hwas_k_fmt(SEXP bconnSEXP, SEXP idSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
     Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
     rcpp_result_gen = Rcpp::wrap(k_fmt(bconn, id));
     return rcpp_result_gen;
 END_RCPP
 }
 // num_samples
-uint32_t num_samples(bcf_conn_t bconn);
+uint32_t num_samples(bconn_t bconn);
 RcppExport SEXP _hwas_num_samples(SEXP bconnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
     rcpp_result_gen = Rcpp::wrap(num_samples(bconn));
     return rcpp_result_gen;
 END_RCPP
 }
 // num_positions
-int64_t num_positions(bcf_conn_t bconn);
+int64_t num_positions(bconn_t bconn);
 RcppExport SEXP _hwas_num_positions(SEXP bconnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
     rcpp_result_gen = Rcpp::wrap(num_positions(bconn));
     return rcpp_result_gen;
 END_RCPP
 }
 // sample_names
-Rcpp::RObject sample_names(bcf_conn_t bconn);
+Rcpp::RObject sample_names(bconn_t bconn);
 RcppExport SEXP _hwas_sample_names(SEXP bconnSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
     rcpp_result_gen = Rcpp::wrap(sample_names(bconn));
     return rcpp_result_gen;
 END_RCPP
 }
 // subset_samples
-int subset_samples(bcf_conn_t bconn, Rcpp::CharacterVector samples);
-RcppExport SEXP _hwas_subset_samples(SEXP bconnSEXP, SEXP samplesSEXP) {
+int subset_samples(bconn_t bconn, Rcpp::Nullable<Rcpp::CharacterVector> nullable_samples);
+RcppExport SEXP _hwas_subset_samples(SEXP bconnSEXP, SEXP nullable_samplesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
-    Rcpp::traits::input_parameter< Rcpp::CharacterVector >::type samples(samplesSEXP);
-    rcpp_result_gen = Rcpp::wrap(subset_samples(bconn, samples));
+    Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< Rcpp::Nullable<Rcpp::CharacterVector> >::type nullable_samples(nullable_samplesSEXP);
+    rcpp_result_gen = Rcpp::wrap(subset_samples(bconn, nullable_samples));
     return rcpp_result_gen;
 END_RCPP
 }
 // subset_pos_from_file
-int subset_pos_from_file(bcf_conn_t bconn, const char* filename);
+int subset_pos_from_file(bconn_t bconn, const char* filename);
 RcppExport SEXP _hwas_subset_pos_from_file(SEXP bconnSEXP, SEXP filenameSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
     Rcpp::traits::input_parameter< const char* >::type filename(filenameSEXP);
     rcpp_result_gen = Rcpp::wrap(subset_pos_from_file(bconn, filename));
     return rcpp_result_gen;
 END_RCPP
 }
 // set_threads
-int set_threads(bcf_conn_t bconn, int n);
+int set_threads(bconn_t bconn, int n);
 RcppExport SEXP _hwas_set_threads(SEXP bconnSEXP, SEXP nSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
     Rcpp::traits::input_parameter< int >::type n(nSEXP);
     rcpp_result_gen = Rcpp::wrap(set_threads(bconn, n));
     return rcpp_result_gen;
 END_RCPP
 }
 // next_record
-Rcpp::Nullable<Rcpp::NumericMatrix> next_record(bcf_conn_t bconn, const char* id);
+Rcpp::Nullable<Rcpp::NumericMatrix> next_record(bconn_t bconn, const char* id);
 RcppExport SEXP _hwas_next_record(SEXP bconnSEXP, SEXP idSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< bcf_conn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
     Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
     rcpp_result_gen = Rcpp::wrap(next_record(bconn, id));
+    return rcpp_result_gen;
+END_RCPP
+}
+// calc_unnormalized_grm
+Rcpp::NumericMatrix calc_unnormalized_grm(const bconn_t bconn, const char* id);
+RcppExport SEXP _hwas_calc_unnormalized_grm(SEXP bconnSEXP, SEXP idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const bconn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
+    rcpp_result_gen = Rcpp::wrap(calc_unnormalized_grm(bconn, id));
+    return rcpp_result_gen;
+END_RCPP
+}
+// pg_sim_qtl
+Rcpp::NumericVector pg_sim_qtl(const bconn_t bconn, const Rcpp::NumericMatrix& grm, const float qtl_freq, const float qtl_effect_size, const float heritability, const char* id);
+RcppExport SEXP _hwas_pg_sim_qtl(SEXP bconnSEXP, SEXP grmSEXP, SEXP qtl_freqSEXP, SEXP qtl_effect_sizeSEXP, SEXP heritabilitySEXP, SEXP idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const bconn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type grm(grmSEXP);
+    Rcpp::traits::input_parameter< const float >::type qtl_freq(qtl_freqSEXP);
+    Rcpp::traits::input_parameter< const float >::type qtl_effect_size(qtl_effect_sizeSEXP);
+    Rcpp::traits::input_parameter< const float >::type heritability(heritabilitySEXP);
+    Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
+    rcpp_result_gen = Rcpp::wrap(pg_sim_qtl(bconn, grm, qtl_freq, qtl_effect_size, heritability, id));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -668,7 +684,6 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_hwas_fit1_pg_addcovar", (DL_FUNC) &_hwas_fit1_pg_addcovar, 7},
     {"_hwas_fit1_pg_intcovar", (DL_FUNC) &_hwas_fit1_pg_intcovar, 8},
-    {"_hwas_calc_grm", (DL_FUNC) &_hwas_calc_grm, 2},
     {"_hwas_bread", (DL_FUNC) &_hwas_bread, 1},
     {"_hwas_bclose", (DL_FUNC) &_hwas_bclose, 1},
     {"_hwas_is_open", (DL_FUNC) &_hwas_is_open, 1},
@@ -681,6 +696,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_hwas_subset_pos_from_file", (DL_FUNC) &_hwas_subset_pos_from_file, 2},
     {"_hwas_set_threads", (DL_FUNC) &_hwas_set_threads, 2},
     {"_hwas_next_record", (DL_FUNC) &_hwas_next_record, 2},
+    {"_hwas_calc_unnormalized_grm", (DL_FUNC) &_hwas_calc_unnormalized_grm, 2},
+    {"_hwas_pg_sim_qtl", (DL_FUNC) &_hwas_pg_sim_qtl, 6},
     {"_hwas_calc_rss_linreg", (DL_FUNC) &_hwas_calc_rss_linreg, 3},
     {"_hwas_calc_coef_linreg", (DL_FUNC) &_hwas_calc_coef_linreg, 3},
     {"_hwas_calc_coefSE_linreg", (DL_FUNC) &_hwas_calc_coefSE_linreg, 3},

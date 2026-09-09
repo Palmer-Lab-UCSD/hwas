@@ -78,26 +78,31 @@ only retrieve a subset of sample data by providing a sample inclusion
 file
 
 <<>>=
-samples_include_fname <- system.file("exdata", "samples.include",
-                                     package = "hwas",
-                                     mustWork = TRUE)
-status <- hwas::subset_samples(bid, c(samples[3], samples[5], samples[9]))
-if (status != 0) {
+sample_list <- c(samples[3],
+                 samples[5],
+                 samples[7],
+                 samples[9])
+n <- hwas::subset_samples(bid, sample_list)
+
+if (n != length(sample_list)) {
     cat(sprintf("ERROR in subsetting samples\n"))
 } else {
     hwas::sample_names(bid)
 }
 @
 
+Then to compute the grm
 
-%% grm <- calc_grm(bid, "HD")
+<<>>=
+grm <- calc_unnormalized_grm(bid, "HD")
+grm
+@
+
+Then we can compute the heritability from R/QTL2
+
 %% ```
-%% 
-%% then we can compute the heritability from R/QTL2
-%% 
-%% ```
-%% h <- est_herit(pheno, grm, addcovar=covariates, reml=TRUE)
-%% ```
+%%  h <- est_herit(pheno, grm, addcovar=covariates, reml=TRUE)
+%%  ```
 
 
 \bibliography{refs}
