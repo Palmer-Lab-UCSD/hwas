@@ -20,7 +20,6 @@ Rcpp::NumericMatrix calc_unnormalized_grm(const bconn_t bconn,
     if (status != bcfio::Status::Success)
         Rcpp::stop(bcfio::status_msg(status));
 
-    Rcpp::NumericMatrix data;
     switch (hattr.type) {
     case BCF_HT_REAL:
         return calc_unnormalized_grm_<float>(bid.get(), id);

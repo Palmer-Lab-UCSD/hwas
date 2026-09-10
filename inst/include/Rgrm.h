@@ -61,7 +61,7 @@ Rcpp::NumericMatrix calc_unnormalized_grm_(bcfio::Bcf* bid,
 
     const uint64_t idx_report_val = 1000;
 
-    bstatus = next_record(bid, brec.get(), id);
+    bstatus = bcfio::next_record(bid, brec.get(), id);
     for (uint64_t idx = 1; bstatus == bcfio::Status::Success; idx++) {
 
         gstatus = g->update(brec.get());
@@ -93,7 +93,7 @@ Rcpp::NumericMatrix calc_unnormalized_grm_(bcfio::Bcf* bid,
                     idx);
         }
 
-        bstatus = next_record(bid, brec.get(), id);
+        bstatus = bcfio::next_record(bid, brec.get(), id);
     }
     REprintf("\n");
 
