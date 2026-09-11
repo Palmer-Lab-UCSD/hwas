@@ -36,6 +36,7 @@ export(next_record)
 # grm
 export(calc_unnormalized_grm)
 
+export(pg_sim)
 
 # qtl2
 export(est_herit)

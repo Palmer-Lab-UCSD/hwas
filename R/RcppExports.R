@@ -61,8 +61,12 @@ calc_unnormalized_grm <- function(bconn, id) {
     .Call('_hwas_calc_unnormalized_grm', PACKAGE = 'hwas', bconn, id)
 }
 
-pg_sim_qtl <- function(bconn, grm, qtl_freq, qtl_effect_size, heritability, id) {
-    .Call('_hwas_pg_sim_qtl', PACKAGE = 'hwas', bconn, grm, qtl_freq, qtl_effect_size, heritability, id)
+pg_sim <- function(grmatrix, heritability) {
+    .Call('_hwas_pg_sim', PACKAGE = 'hwas', grmatrix, heritability)
+}
+
+pg_sim_qtl <- function(bconn, grmatrix, qtl_freq, qtl_effect_size, heritability, id, seed) {
+    .Call('_hwas_pg_sim_qtl', PACKAGE = 'hwas', bconn, grmatrix, qtl_freq, qtl_effect_size, heritability, id, seed)
 }
 
 calc_rss_linreg <- function(X, Y, tol = 1e-12) {

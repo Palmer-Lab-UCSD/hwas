@@ -102,6 +102,8 @@ static: $(SRC_FILES)
 	clang --analyze $(CXXFLAGS) $(CXXLDFLAGS) $^
 
 RCPP_HEADER = $(shell R --no-echo -e 'cat(system.file("include", package="Rcpp"))')
+RCPP_EIG_HEADER = $(shell R --no-echo -e 'cat(system.file("include", package="RcppEigen"))')
+
 RSYS_LDFLAGS = $(shell R CMD config --cppflags)
 
 .PHONY: static_rbcfio
@@ -119,9 +121,10 @@ static_rgrm: src/hwas_grm.cpp
 		$<
 
 .PHONY: static_rpgsim
-static_rpgsim: src/hwas_pgsim.cpp src/hwas_rpgsim.cpp
+static_rpgsim: src/hwas_rpgsim.cpp
 	clang --analyze -std=c++17 \
 		-I$(RCPP_HEADER) \
+		-I$(RCPP_EIG_HEADER) \
 		$(RSYS_LDFLAGS) \
 		-I$(LOCAL_LD) \
 		-I$(HEADER_DIR) \

@@ -41,20 +41,21 @@ echo "=========================================================="
 echo "CHECK"
 echo "=========================================================="
 
-if [ ! -f "hwas_0.0.1.tar.gz" ]; then
-    echo "Error: No hwas_0.0.1.tar.gz built"
+hwas_tarball="$(find -E . -iregex './hwas_[0-9]+.[0-9]+.[a-zA-Z0-9+]+.tar.gz' -type f)"
+if [ ! -f "$hwas_tarball" ]; then
+    echo "Error: No $hwas_tarball built"
     exit 1
 fi
 
 
 if [ $only_compile -eq 1 ]; then
-    R CMD check "hwas_0.0.1.tar.gz"
+    R CMD check "$hwas_tarball"
     success=$?
 else
     R CMD check --no-tests \
         --no-examples \
         --no-manual \
-        --no-vignettes "hwas_0.0.1.tar.gz"
+        --no-vignettes "$hwas_tarball"
 fi
 
 if [ $only_compile -eq 1 ] && [ $success -eq 0 ]; then

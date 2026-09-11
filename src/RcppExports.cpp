@@ -196,19 +196,32 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// pg_sim
+Rcpp::NumericVector pg_sim(const Rcpp::NumericMatrix& grmatrix, const float heritability);
+RcppExport SEXP _hwas_pg_sim(SEXP grmatrixSEXP, SEXP heritabilitySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type grmatrix(grmatrixSEXP);
+    Rcpp::traits::input_parameter< const float >::type heritability(heritabilitySEXP);
+    rcpp_result_gen = Rcpp::wrap(pg_sim(grmatrix, heritability));
+    return rcpp_result_gen;
+END_RCPP
+}
 // pg_sim_qtl
-Rcpp::NumericVector pg_sim_qtl(const bconn_t bconn, const Rcpp::NumericMatrix& grm, const float qtl_freq, const float qtl_effect_size, const float heritability, const char* id);
-RcppExport SEXP _hwas_pg_sim_qtl(SEXP bconnSEXP, SEXP grmSEXP, SEXP qtl_freqSEXP, SEXP qtl_effect_sizeSEXP, SEXP heritabilitySEXP, SEXP idSEXP) {
+Rcpp::NumericVector pg_sim_qtl(const bconn_t bconn, const Rcpp::NumericMatrix& grmatrix, const float qtl_freq, const float qtl_effect_size, const float heritability, const char* id, const int seed);
+RcppExport SEXP _hwas_pg_sim_qtl(SEXP bconnSEXP, SEXP grmatrixSEXP, SEXP qtl_freqSEXP, SEXP qtl_effect_sizeSEXP, SEXP heritabilitySEXP, SEXP idSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const bconn_t >::type bconn(bconnSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type grm(grmSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type grmatrix(grmatrixSEXP);
     Rcpp::traits::input_parameter< const float >::type qtl_freq(qtl_freqSEXP);
     Rcpp::traits::input_parameter< const float >::type qtl_effect_size(qtl_effect_sizeSEXP);
     Rcpp::traits::input_parameter< const float >::type heritability(heritabilitySEXP);
     Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
-    rcpp_result_gen = Rcpp::wrap(pg_sim_qtl(bconn, grm, qtl_freq, qtl_effect_size, heritability, id));
+    Rcpp::traits::input_parameter< const int >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(pg_sim_qtl(bconn, grmatrix, qtl_freq, qtl_effect_size, heritability, id, seed));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -697,7 +710,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_hwas_set_threads", (DL_FUNC) &_hwas_set_threads, 2},
     {"_hwas_next_record", (DL_FUNC) &_hwas_next_record, 2},
     {"_hwas_calc_unnormalized_grm", (DL_FUNC) &_hwas_calc_unnormalized_grm, 2},
-    {"_hwas_pg_sim_qtl", (DL_FUNC) &_hwas_pg_sim_qtl, 6},
+    {"_hwas_pg_sim", (DL_FUNC) &_hwas_pg_sim, 2},
+    {"_hwas_pg_sim_qtl", (DL_FUNC) &_hwas_pg_sim_qtl, 7},
     {"_hwas_calc_rss_linreg", (DL_FUNC) &_hwas_calc_rss_linreg, 3},
     {"_hwas_calc_coef_linreg", (DL_FUNC) &_hwas_calc_coef_linreg, 3},
     {"_hwas_calc_coefSE_linreg", (DL_FUNC) &_hwas_calc_coefSE_linreg, 3},
