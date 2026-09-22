@@ -1,2 +1,3 @@
-PKG_CPPFLAGS = @HTSLIB_CFLAGS@ -I../inst/include
-PKG_LIBS     = @HTSLIB_LIBS@ -lhts
+PKG_CPPFLAGS = @htslib_cflags@ -I../inst/include
+PKG_LIBS     = @htslib_libs@
+CXX_STD      = @cxx_standard@

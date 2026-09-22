@@ -9,3 +9,4 @@
 ^build
 ^tools
 ^tests/cpp
+^lib

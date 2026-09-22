@@ -48,12 +48,12 @@ Rcpp::NumericMatrix calc_unnormalized_grm_(bcfio::Bcf* bid,
     if (bstatus != bcfio::Status::Success)
         Rcpp::stop(bcfio::status_msg(bstatus));
 
-    bcfio::brec_t brec = bcfio::BcfRecord<T>::init();
+    bcfio::brec_t<T> brec = bcfio::BcfRecord<T>::init();
     if (brec == nullptr)
         Rcpp::stop("Internal Error, could not initialize bcf record"
                 " for reading bcf data.");
 
-    grm::ugrm_t g = grm::UnnormalizedGrm<T>::init(nsamps);
+    grm::ugrm_t<T> g = grm::UnnormalizedGrm<T>::init(nsamps);
     if (g == nullptr)
         Rcpp::stop("Internal Error,k could not initialize grm.");
     

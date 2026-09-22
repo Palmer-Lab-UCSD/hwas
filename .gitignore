@@ -3,6 +3,10 @@ build/
 scratch/
 stash/
 vec
+.renv/
+.Renviron
+Renviron
+logs
 *.swp
 *.swo
 *~
@@ -22,3 +26,6 @@ vec
 src/Makevars
 *.plist
 htslib_env_var
+lib/
+Rprofile
+.Rprofile

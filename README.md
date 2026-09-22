@@ -28,19 +28,18 @@ Please checkout the package vignettes for examples using the
 
 **HTSLIB** 
 
-This package depends on the systems htslib you need to tell R 
-where to find the header and library files.  To do this set 
-the following environment variables
+This package depends on the systems `htslib`.  The location
+of `htslib` header and library files may be determined by
+`pkg-config` or setting environment variables:
 
 ```
-export HTSLIB_LIBS=-L<PATH_TO_LIB>
-export HTSLIB_CFLAGS=-isystem<PATH_TO_HEADER_DIR>
+export HTSLIB_CPATH=<PATH_TO_HEADER_FILES>
+export HTSLIB_LIB_PATH=<PATH_TO_LIBRARY_FILE>
 ```
 
-Note, we use `-isystem` instead of `-I` to specify the path 
-to header files, because we want the header files in R 
-packages to be discovered before packages locally
-installed on our system.
+Note, that if both are configured the variables defined
+in `pkg-config` are used.  
+
 
 **R LIBRARY TREE**
 
