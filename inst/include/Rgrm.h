@@ -115,8 +115,12 @@ Rcpp::NumericMatrix calc_unnormalized_grm_(bcfio::Bcf* bid,
 
 
     data.attr("class") = "unnormalized_grm";
-    // Use the sample_names implemented in inst/include/Rbcfio.h
-    data.attr("samples") = sample_names(bid);
+    // Get sample names from bcf
+    Rcpp::CharacterVector snames(nsamps);
+    for (uint32_t i = 0; i < nsamps; i++)
+        snames[i] = bid->hdr->samples[i];
+
+    data.attr("samples") = snames;
     data.attr("m_pos") = idx - 1;
     return data;
 }
