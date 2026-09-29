@@ -62,7 +62,8 @@ Rcpp::NumericMatrix calc_unnormalized_grm_(bcfio::Bcf* bid,
     const uint64_t idx_report_val = 1000;
 
     bstatus = bcfio::next_record(bid, brec.get(), id);
-    for (uint64_t idx = 1; bstatus == bcfio::Status::Success; idx++) {
+    uint64_t idx = 1;
+    for (; bstatus == bcfio::Status::Success; idx++) {
 
         gstatus = g->update(brec.get());
 
@@ -112,6 +113,11 @@ Rcpp::NumericMatrix calc_unnormalized_grm_(bcfio::Bcf* bid,
         }
     }
 
+
+    data.attr("class") = "unnormalized_grm";
+    // Use the sample_names implemented in inst/include/Rbcfio.h
+    data.attr("samples") = sample_names(bid);
+    data.attr("m_pos") = idx - 1;
     return data;
 }
 
