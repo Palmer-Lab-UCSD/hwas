@@ -1,35 +1,11 @@
 #ifndef RPGSIM_H
 #define RPGSIM_H
 
+#include <status.h>
 #include <Rcpp.h>
 #include <RcppEigen.h>
 #include <Rbcfio.h>
-
-
-namespace rpgsim {
-enum struct Status : int {
-    Success                     = 0,
-    ErrNotSymmetricMatrix       = -2,
-    ErrNotSquareMatrix          = -3,
-    ErrHeritabilityOutOfRange   = -4
-};
-
-const char* status_msg(Status status);
-}
-
-bool is_symm_(const Rcpp::NumericMatrix& A);
-
-// @brief compute the sum over all matrix elements
-// @param[in] A the matrix 
-// @param sum of elements of A
-rpgsim::Status matrix_sum(const Rcpp::NumericMatrix& A, double& val);
-
-
-// @brief compute the trace of a square matrix
-// @param[in] the square matrix for computing trace
-// @return < 0 upon error, otherwise positive double equal to the 
-//  matrix trace
-rpgsim::Status matrix_trace(const Rcpp::NumericMatrix& A, double& val);
+#include <Rmatutils.h>
 
 
 struct PgSimParams {
@@ -117,7 +93,7 @@ struct PgSimParams {
 // @param[in,out] params are the simulation parameters updated by the
 //  this function
 // @return rpgsim namespace status code
-rpgsim::Status calc_pgsim_pars_(const Rcpp::NumericMatrix& grm,
+Status calc_pgsim_pars_(const Rcpp::NumericMatrix& grm,
         PgSimParams& params);
 
 

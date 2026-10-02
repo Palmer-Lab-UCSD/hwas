@@ -16,8 +16,8 @@ bconn_t bread(const char* filename) {
     bcfio::bid_t bid = bcfio::bread(filename);
 
     if (bid == nullptr) {
-        bcfio::Status status = bcfio::Status::ErrInvalidInput;
-        Rcpp::stop(bcfio::status_msg(status));
+        Status status = Status::ErrInvalidInput;
+        Rcpp::stop(status_msg(status));
     }
 
     return bconn_t(bid.release(), true);
@@ -26,8 +26,8 @@ bconn_t bread(const char* filename) {
 // [[Rcpp::export]]
 int bclose(bconn_t bconn) {
     if (!bconn) {
-        bcfio::Status status = bcfio::Status::ErrInvalidInput;
-        Rcpp::stop(bcfio::status_msg(status));
+        Status status = Status::ErrInvalidInput;
+        Rcpp::stop(status_msg(status));
     }
 
     bconn->close();
@@ -37,8 +37,8 @@ int bclose(bconn_t bconn) {
 // [[Rcpp::export]]
 bool is_open(const bconn_t bconn) {
     if (!bconn) {
-        bcfio::Status status = bcfio::Status::ErrInvalidInput;
-        Rcpp::stop(bcfio::status_msg(status));
+        Status status = Status::ErrInvalidInput;
+        Rcpp::stop(status_msg(status));
     }
     return bcfio::is_open(bconn.get());
 }
@@ -56,57 +56,57 @@ bool is_bcf(const char* filename) {
 
 // [[Rcpp::export]]
 uint16_t k_fmt(bconn_t bconn, const char* id) {
-    bcfio::Status status = bcfio::Status::ErrInvalidInput;
+    Status status = Status::ErrInvalidInput;
 
     if (!bconn)
-        Rcpp::stop(bcfio::status_msg(status));
+        Rcpp::stop(status_msg(status));
 
     uint16_t k = 0;
     status = bcfio::k_fmt(bconn.get(), id, &k);
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     return k;
 }
 
 // [[Rcpp::export]]
 uint32_t num_samples(bconn_t bconn) {
-    bcfio::Status status = bcfio::Status::ErrInvalidInput;
+    Status status = Status::ErrInvalidInput;
     if (!bconn)
-        Rcpp::stop(bcfio::status_msg(status));
+        Rcpp::stop(status_msg(status));
 
     uint32_t nsamps = 0;
     status = bcfio::num_samples(bconn.get(), &nsamps);
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     return nsamps;
 }
 
 // [[Rcpp::export]]
 int64_t num_positions(bconn_t bconn) {
-    bcfio::Status status = bcfio::Status::ErrInvalidInput;
+    Status status = Status::ErrInvalidInput;
     if (!bconn)
-        Rcpp::stop(bcfio::status_msg(status));
+        Rcpp::stop(status_msg(status));
 
     int64_t npos = 0;
     status = bcfio::num_pos(bconn.get(), &npos);
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     return npos;
 }
 
 // [[Rcpp::export]]
 Rcpp::RObject sample_names(bconn_t bconn) {
-    bcfio::Status status = bcfio::Status::ErrInvalidInput;
+    Status status = Status::ErrInvalidInput;
     if (!bconn)
-        Rcpp::stop(bcfio::status_msg(status));
+        Rcpp::stop(status_msg(status));
 
     uint32_t nsamples = 0;
     status = bcfio::num_samples(bconn.get(), &nsamples);
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     Rcpp::CharacterVector samp_names(nsamples);
 
@@ -124,19 +124,19 @@ Rcpp::RObject sample_names(bconn_t bconn) {
 int subset_samples(bconn_t bconn, 
         Rcpp::Nullable<Rcpp::CharacterVector> nullable_samples = R_NilValue) {
 
-    bcfio::Status status = bcfio::Status::ErrInvalidInput;
+    Status status = Status::ErrInvalidInput;
     if (!is_open(bconn))
-        Rcpp::stop(bcfio::status_msg(status));
+        Rcpp::stop(status_msg(status));
 
     uint32_t nsamps = 0;
     if (nullable_samples.isNull()) {
         status = bcfio::subset_samples(bconn.get(), nullptr);
-        if (status != bcfio::Status::Success)
-            Rcpp::stop(bcfio::status_msg(status));
+        if (status != Status::Success)
+            Rcpp::stop(status_msg(status));
 
         status = bcfio::num_samples(bconn.get(), &nsamps);
-        if (status != bcfio::Status::Success)
-            Rcpp::stop(bcfio::status_msg(status));
+        if (status != Status::Success)
+            Rcpp::stop(status_msg(status));
 
         return nsamps;
     }
@@ -145,12 +145,12 @@ int subset_samples(bconn_t bconn,
 
     if (samples.size() == 1 && samples[0] == R_NaString) {
         status = bcfio::subset_samples(bconn.get(), nullptr);
-        if (status != bcfio::Status::Success)
-            Rcpp::stop(bcfio::status_msg(status));
+        if (status != Status::Success)
+            Rcpp::stop(status_msg(status));
 
         status = bcfio::num_samples(bconn.get(), &nsamps);
-        if (status != bcfio::Status::Success)
-            Rcpp::stop(bcfio::status_msg(status));
+        if (status != Status::Success)
+            Rcpp::stop(status_msg(status));
 
         return nsamps;
     }
@@ -213,12 +213,12 @@ int subset_samples(bconn_t bconn,
 
     status = bcfio::subset_samples(bconn.get(), sample_list.get());
 
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     status = bcfio::num_samples(bconn.get(), &nsamps);
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     return nsamps;
 }
@@ -226,40 +226,40 @@ int subset_samples(bconn_t bconn,
 
 int subset_samples_from_file(bconn_t bconn,
         const char* samples_filename) {
-    bcfio::Status status = bcfio::Status::ErrInvalidInput;
+    Status status = Status::ErrInvalidInput;
     if (!bconn)
-        Rcpp::stop(bcfio::status_msg(status));
+        Rcpp::stop(status_msg(status));
 
     status = bcfio::subset_samples_from_file(bconn.get(), 
             samples_filename);
 
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     return 0;
 }
 
 // [[Rcpp::export]]
 int subset_pos_from_file(bconn_t bconn, const char* filename) {
-    bcfio::Status status = bcfio::Status::ErrInvalidInput;
+    Status status = Status::ErrInvalidInput;
     if (!bconn || !filename)
-        Rcpp::stop(bcfio::status_msg(status));
+        Rcpp::stop(status_msg(status));
 
     status = bcfio::set_pos_from_file(bconn.get(), filename);
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     return bconn->pos.size();
 }
 
 // [[Rcpp::export]]
 int set_threads(bconn_t bconn, int n) {
-    bcfio::Status status = bcfio::Status::ErrInvalidInput;
+    Status status = Status::ErrInvalidInput;
     if (!bconn)
-        Rcpp::stop(bcfio::status_msg(status));
+        Rcpp::stop(status_msg(status));
 
     if (hts_set_threads(bconn->fid, n) != 0)
-        Rcpp::stop(bcfio::status_msg(bcfio::Status::ErrHtslib));
+        Rcpp::stop(status_msg(Status::ErrHtslib));
 
     return 0;
 }
@@ -270,20 +270,20 @@ int set_threads(bconn_t bconn, int n) {
 // [[Rcpp::export]]
 Rcpp::Nullable<Rcpp::NumericMatrix> next_record(bconn_t bconn, 
         const char* id) {
-    bcfio::Status status = bcfio::Status::ErrInvalidInput;
+    Status status = Status::ErrInvalidInput;
     if (!bconn)
-        Rcpp::stop(bcfio::status_msg(status));
+        Rcpp::stop(status_msg(status));
 
     if (!bcfio::is_open(bconn.get()))
-        Rcpp::stop(bcfio::status_msg(bcfio::Status::ErrBcfNotOpen));
+        Rcpp::stop(status_msg(Status::ErrBcfNotOpen));
 
     bcfio::BcfHdrAttr hattr {};
     status = bcfio::decode_hts_idinfo(bconn->hdr,
             id,
             BCF_HL_FMT,
             &hattr);
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     if (hattr.type == BCF_HT_REAL)
         return get_record_matrix_<float>(bconn.get(), id);

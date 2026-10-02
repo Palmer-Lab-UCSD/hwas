@@ -12,38 +12,19 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// fit1_pg_addcovar
-List fit1_pg_addcovar(const NumericMatrix& genoprobs, const NumericVector& pheno, const NumericMatrix& addcovar, const NumericMatrix& eigenvec, const NumericVector& weights, const bool se, const double tol);
-RcppExport SEXP _hwas_fit1_pg_addcovar(SEXP genoprobsSEXP, SEXP phenoSEXP, SEXP addcovarSEXP, SEXP eigenvecSEXP, SEXP weightsSEXP, SEXP seSEXP, SEXP tolSEXP) {
+// stream_assoc_analysis
+Rcpp::NumericVector stream_assoc_analysis(bconn_t bconn, const Rcpp::NumericVector& phenotypes, const Rcpp::NumericMatrix& covariates, const Rcpp::NumericMatrix& eig_vec, const Rcpp::NumericVector& eig_vals, const char* format_id);
+RcppExport SEXP _hwas_stream_assoc_analysis(SEXP bconnSEXP, SEXP phenotypesSEXP, SEXP covariatesSEXP, SEXP eig_vecSEXP, SEXP eig_valsSEXP, SEXP format_idSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type genoprobs(genoprobsSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type pheno(phenoSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type addcovar(addcovarSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type eigenvec(eigenvecSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type weights(weightsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type se(seSEXP);
-    Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
-    rcpp_result_gen = Rcpp::wrap(fit1_pg_addcovar(genoprobs, pheno, addcovar, eigenvec, weights, se, tol));
-    return rcpp_result_gen;
-END_RCPP
-}
-// fit1_pg_intcovar
-List fit1_pg_intcovar(const NumericMatrix& genoprobs, const NumericVector& pheno, const NumericMatrix& addcovar, const NumericMatrix& intcovar, const NumericMatrix& eigenvec, const NumericVector& weights, const bool se, const double tol);
-RcppExport SEXP _hwas_fit1_pg_intcovar(SEXP genoprobsSEXP, SEXP phenoSEXP, SEXP addcovarSEXP, SEXP intcovarSEXP, SEXP eigenvecSEXP, SEXP weightsSEXP, SEXP seSEXP, SEXP tolSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type genoprobs(genoprobsSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type pheno(phenoSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type addcovar(addcovarSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type intcovar(intcovarSEXP);
-    Rcpp::traits::input_parameter< const NumericMatrix& >::type eigenvec(eigenvecSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type weights(weightsSEXP);
-    Rcpp::traits::input_parameter< const bool >::type se(seSEXP);
-    Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
-    rcpp_result_gen = Rcpp::wrap(fit1_pg_intcovar(genoprobs, pheno, addcovar, intcovar, eigenvec, weights, se, tol));
+    Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type phenotypes(phenotypesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type covariates(covariatesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type eig_vec(eig_vecSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type eig_vals(eig_valsSEXP);
+    Rcpp::traits::input_parameter< const char* >::type format_id(format_idSEXP);
+    rcpp_result_gen = Rcpp::wrap(stream_assoc_analysis(bconn, phenotypes, covariates, eig_vec, eig_vals, format_id));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -184,16 +165,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// calc_unnormalized_grm
-Rcpp::NumericMatrix calc_unnormalized_grm(const bconn_t bconn, const char* id);
-RcppExport SEXP _hwas_calc_unnormalized_grm(SEXP bconnSEXP, SEXP idSEXP) {
+// calc_gsim
+Rcpp::NumericMatrix calc_gsim(const bconn_t bconn, const char* id);
+RcppExport SEXP _hwas_calc_gsim(SEXP bconnSEXP, SEXP idSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const bconn_t >::type bconn(bconnSEXP);
     Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
-    rcpp_result_gen = Rcpp::wrap(calc_unnormalized_grm(bconn, id));
+    rcpp_result_gen = Rcpp::wrap(calc_gsim(bconn, id));
     return rcpp_result_gen;
+END_RCPP
+}
+// gsim_to_grm
+void gsim_to_grm(Rcpp::NumericMatrix& gsim);
+RcppExport SEXP _hwas_gsim_to_grm(SEXP gsimSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix& >::type gsim(gsimSEXP);
+    gsim_to_grm(gsim);
+    return R_NilValue;
 END_RCPP
 }
 // pg_sim
@@ -222,6 +213,41 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const char* >::type id(idSEXP);
     Rcpp::traits::input_parameter< const int >::type seed(seedSEXP);
     rcpp_result_gen = Rcpp::wrap(pg_sim_qtl(bconn, grmatrix, qtl_freq, qtl_effect_size, heritability, id, seed));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fit1_pg_addcovar
+List fit1_pg_addcovar(const NumericMatrix& genoprobs, const NumericVector& pheno, const NumericMatrix& addcovar, const NumericMatrix& eigenvec, const NumericVector& weights, const bool se, const double tol);
+RcppExport SEXP _hwas_fit1_pg_addcovar(SEXP genoprobsSEXP, SEXP phenoSEXP, SEXP addcovarSEXP, SEXP eigenvecSEXP, SEXP weightsSEXP, SEXP seSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type genoprobs(genoprobsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type pheno(phenoSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type addcovar(addcovarSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type eigenvec(eigenvecSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type weights(weightsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type se(seSEXP);
+    Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(fit1_pg_addcovar(genoprobs, pheno, addcovar, eigenvec, weights, se, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+// fit1_pg_intcovar
+List fit1_pg_intcovar(const NumericMatrix& genoprobs, const NumericVector& pheno, const NumericMatrix& addcovar, const NumericMatrix& intcovar, const NumericMatrix& eigenvec, const NumericVector& weights, const bool se, const double tol);
+RcppExport SEXP _hwas_fit1_pg_intcovar(SEXP genoprobsSEXP, SEXP phenoSEXP, SEXP addcovarSEXP, SEXP intcovarSEXP, SEXP eigenvecSEXP, SEXP weightsSEXP, SEXP seSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type genoprobs(genoprobsSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type pheno(phenoSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type addcovar(addcovarSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type intcovar(intcovarSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type eigenvec(eigenvecSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type weights(weightsSEXP);
+    Rcpp::traits::input_parameter< const bool >::type se(seSEXP);
+    Rcpp::traits::input_parameter< const double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(fit1_pg_intcovar(genoprobs, pheno, addcovar, intcovar, eigenvec, weights, se, tol));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -695,8 +721,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_hwas_fit1_pg_addcovar", (DL_FUNC) &_hwas_fit1_pg_addcovar, 7},
-    {"_hwas_fit1_pg_intcovar", (DL_FUNC) &_hwas_fit1_pg_intcovar, 8},
+    {"_hwas_stream_assoc_analysis", (DL_FUNC) &_hwas_stream_assoc_analysis, 6},
     {"_hwas_bread", (DL_FUNC) &_hwas_bread, 1},
     {"_hwas_bclose", (DL_FUNC) &_hwas_bclose, 1},
     {"_hwas_is_open", (DL_FUNC) &_hwas_is_open, 1},
@@ -709,9 +734,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_hwas_subset_pos_from_file", (DL_FUNC) &_hwas_subset_pos_from_file, 2},
     {"_hwas_set_threads", (DL_FUNC) &_hwas_set_threads, 2},
     {"_hwas_next_record", (DL_FUNC) &_hwas_next_record, 2},
-    {"_hwas_calc_unnormalized_grm", (DL_FUNC) &_hwas_calc_unnormalized_grm, 2},
+    {"_hwas_calc_gsim", (DL_FUNC) &_hwas_calc_gsim, 2},
+    {"_hwas_gsim_to_grm", (DL_FUNC) &_hwas_gsim_to_grm, 1},
     {"_hwas_pg_sim", (DL_FUNC) &_hwas_pg_sim, 2},
     {"_hwas_pg_sim_qtl", (DL_FUNC) &_hwas_pg_sim_qtl, 7},
+    {"_hwas_fit1_pg_addcovar", (DL_FUNC) &_hwas_fit1_pg_addcovar, 7},
+    {"_hwas_fit1_pg_intcovar", (DL_FUNC) &_hwas_fit1_pg_intcovar, 8},
     {"_hwas_calc_rss_linreg", (DL_FUNC) &_hwas_calc_rss_linreg, 3},
     {"_hwas_calc_coef_linreg", (DL_FUNC) &_hwas_calc_coef_linreg, 3},
     {"_hwas_calc_coefSE_linreg", (DL_FUNC) &_hwas_calc_coefSE_linreg, 3},

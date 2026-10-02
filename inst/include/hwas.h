@@ -6,6 +6,6 @@
 #include <Rbcfio.h>
 #include <Rgrm.h>
 #include <Rpgsim.h>
-
+#include <Rassoc.h>
 
 #endif

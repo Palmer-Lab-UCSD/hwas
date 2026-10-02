@@ -20,6 +20,7 @@
 #include <map>
 
 // RCPP INDEPENDENT HEADERS
+#include <status.h>
 #include <bcfio.h>
 
 // RCPP AND RCPP DEPENDENT HEADERS
@@ -123,13 +124,13 @@ Rcpp::Nullable<Rcpp::NumericMatrix> get_record_matrix_(bcfio::Bcf* bid,
         const char* id) {
 
     bcfio::brec_t<T> brec = bcfio::BcfRecord<T>::init();
-    bcfio::Status status = bcfio::next_record<T>(bid, brec.get(), id);
+    Status status = bcfio::next_record<T>(bid, brec.get(), id);
 
-    if (status == bcfio::Status::EndOfFile)
+    if (status == Status::EndOfFile)
         return R_NilValue;
 
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     Rcpp::NumericMatrix data(brec->nrow, brec->ncol);
     uint16_t ncol = brec->ncol;
@@ -145,13 +146,13 @@ Rcpp::Nullable<Rcpp::NumericMatrix> get_record_matrix_(bcfio::Bcf* bid,
 
     const char* chr = bcfio::chrom(bid, brec.get());
     if (chr == nullptr) 
-        Rcpp::stop(bcfio::status_msg(bcfio::Status::ErrInternal));
+        Rcpp::stop(status_msg(Status::ErrInternal));
     data.attr("contig") = Rcpp::String(chr);
 
     int64_t p = -1;
     status = bcfio::pos(brec.get(), &p);
-    if (status != bcfio::Status::Success)
-        Rcpp::stop(bcfio::status_msg(status));
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     data.attr("pos") = p;
 

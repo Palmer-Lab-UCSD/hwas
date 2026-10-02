@@ -94,7 +94,7 @@ if (n != length(sample_list)) {
 Then to compute the grm
 
 <<>>=
-grm <- calc_unnormalized_grm(bid, "HD")
+grm <- calc_gsim(bid, "HD")
 grm
 @
 

@@ -34,8 +34,14 @@ export(next_record)
 ## HWAS computation
 #########################################################
 # grm
-export(calc_unnormalized_grm)
+export(calc_gsim)
+export(gsim_to_grm)
+export(mk_loco_grm)
 
+# association analysis
+export(assoc)
+
+# simulation
 export(pg_sim)
 
 # qtl2

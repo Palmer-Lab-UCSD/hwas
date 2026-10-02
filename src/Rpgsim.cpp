@@ -1,75 +1,7 @@
 #include <Rpgsim.h>
 
 
-const char* rpgsim::status_msg(rpgsim::Status status) {
-    switch (status) {
-    case rpgsim::Status::Success:
-        return "Success";
-    case rpgsim::Status::ErrNotSymmetricMatrix:
-        return "Not a symmetric matrix";
-    case rpgsim::Status::ErrNotSquareMatrix:
-        return "Not a square matrix";
-    case rpgsim::Status::ErrHeritabilityOutOfRange:
-        return "Heritability must be on interval (0,1).";
-    default:
-        break;
-    }
-
-    return "Unexpected status, please contact maintainers.";
-}
-
-
-bool is_symm_(const Rcpp::NumericMatrix& A) {
-    double tol = 1e-10;
-
-    int nrow = A.nrow();
-    if (nrow != A.ncol())
-        return false;
-
-    double upper_bound = 0;
-    double lower_bound = 0;
-
-    for (int i = 0; i < nrow; i++) {
-        for (int j = i+1; j < nrow; j++) {
-
-            lower_bound = A(j, i) - tol;
-            upper_bound = A(j, i) + tol;
-
-            if (A(i, j) < lower_bound || A(i, j) > upper_bound)
-                return false;
-        }
-    }
-
-    return true;
-}
-
-rpgsim::Status matrix_sum(const Rcpp::NumericMatrix& A, double& val) {
-    double s = 0;
-    for (int i = 0; i < A.nrow(); i++) {
-        for (int j = 0; j < A.ncol(); j++)
-            s += A(i, j);
-    }
-
-    val = s;
-
-    return rpgsim::Status::Success;
-}
-
-
-rpgsim::Status matrix_trace(const Rcpp::NumericMatrix& A, double& val) {
-    if (A.nrow() != A.ncol())
-        return rpgsim::Status::ErrNotSquareMatrix;
-
-    double mtrace = 0;
-    for (int i = 0; i < A.nrow(); i++)
-        mtrace += A(i, i);
-
-    val = mtrace;
-    return rpgsim::Status::Success;
-}
-
-
-rpgsim::Status calc_pgsim_pars_(const Rcpp::NumericMatrix& grmatrix,
+Status calc_pgsim_pars_(const Rcpp::NumericMatrix& grmatrix,
         PgSimParams& params) {
 
     // n represents number of samples
@@ -77,13 +9,13 @@ rpgsim::Status calc_pgsim_pars_(const Rcpp::NumericMatrix& grmatrix,
     double ndouble = static_cast<double>(n);
     
     double grm_trace = 0;
-    rpgsim::Status status = matrix_trace(grmatrix, grm_trace);
-    if (status != rpgsim::Status::Success)
+    Status status = matutils::matrix_trace(grmatrix, grm_trace);
+    if (status != Status::Success)
         return status;
 
     double grm_sum = 0;
-    status = matrix_sum(grmatrix, grm_sum);
-    if (status != rpgsim::Status::Success)
+    status = matutils::matrix_sum(grmatrix, grm_sum);
+    if (status != Status::Success)
         return status;
 
     double numerator = params.heritability * static_cast<double>(n * (n - 1));
@@ -92,7 +24,7 @@ rpgsim::Status calc_pgsim_pars_(const Rcpp::NumericMatrix& grmatrix,
 
     params.var_e = 1;
     params.var_u = numerator / denom;
-    return rpgsim::Status::Success;
+    return Status::Success;
 }
 
 
@@ -116,15 +48,15 @@ Rcpp::NumericVector pg_sim(const Rcpp::NumericMatrix& grmatrix,
     if (heritability <= 0 || heritability >=1)
         Rcpp::stop("Heritability, h, must be 0 < h < 1");
 
-    if (!is_symm_(grmatrix))
-        Rcpp::stop(rpgsim::status_msg(rpgsim::Status::ErrNotSymmetricMatrix));
+    if (!matutils::is_symm_(grmatrix))
+        Rcpp::stop(status_msg(Status::ErrNotSymmetricMatrix));
 
     PgSimParams params {};
     params.heritability = heritability;
 
-    rpgsim::Status status = calc_pgsim_pars_(grmatrix, params);
-    if (status != rpgsim::Status::Success)
-        Rcpp::stop(rpgsim::status_msg(status));
+    Status status = calc_pgsim_pars_(grmatrix, params);
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
 
     // Constructing covariance matrix from grm and model parameters
     // Recall that:
@@ -197,10 +129,10 @@ Rcpp::NumericVector pg_sim_qtl(const bconn_t bconn,
 
     Rcpp::stop("not yet implemented");
     // if (!is_open(bconn))
-    //     Rcpp::stop(bcfio::status_msg(bcfio::Status::ErrBcfNotOpen));
+    //     Rcpp::stop(status_msg(bcfio::Status::ErrBcfNotOpen));
 
     // if (heritability <= 0 || heritability >= 1)
-    //     Rcpp::stop(rpgsim::status_msg(rpgsim::Status::ErrHeritabilityOutOfRange));
+    //     Rcpp::stop(status_msg(Status::ErrHeritabilityOutOfRange));
 
     // uint32_t nsamps = num_samples(bconn);
     // bcfio::bid_t bid = bcfio::replicate(bconn.get());
@@ -208,7 +140,7 @@ Rcpp::NumericVector pg_sim_qtl(const bconn_t bconn,
     //     Rcpp::stop("Internal data structure error");
 
     // PgSimParams pars { 1, 1, qtl_freq, qtl_effect_size, heritability }; 
-    // rpgsim::Status status = calc_pgsim_pars_(grmatrix, pars);
-    // if (status == rpgsim::Status::Success)
-    //     Rcpp::stop(rpgsim::status_msg(status));
+    // Status status = calc_pgsim_pars_(grmatrix, pars);
+    // if (status == Status::Success)
+    //     Rcpp::stop(status_msg(status));
 }

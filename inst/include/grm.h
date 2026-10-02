@@ -20,16 +20,6 @@
 
 namespace grm {
 
-enum struct Status : int {
-    Success                         = 0,
-    ErrDimensionsNotEqual           = -2,
-    ErrIndexOutofBounds             = -3,
-    ErrInternal                     = -4
-};
-
-const char* status_msg(Status status);
-
-
 template <typename T>
 class UnnormalizedGrm {
 public:

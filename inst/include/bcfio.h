@@ -26,6 +26,10 @@
 
 // #include <optional>
 // #include <type_traits>
+//
+
+#include <status.h>
+
 
 extern "C" {
 #include <htslib/hfile.h>
@@ -37,32 +41,6 @@ extern "C" {
 
 namespace bcfio {
 
-
-// TODO: migrate int return values for status codes to the 
-// enum struct Status element.  long term slowly integrate
-enum struct Status : int {
-    WarnEmptyLine                           = 5,
-    WarnSampleSetMismatch                   = 4,
-    Success                                 = 0,
-    EndOfFile                               = -1,
-    ErrNotImplemented                       = -3,
-    ErrHtslib                               = -4,
-    ErrBcfNotOpen                           = -5,
-    ErrBcfRecordInvalid                     = -6,
-    ErrInternal                             = -7,
-    ErrInvalidInput                         = -8,
-    ErrParseBcf                             = -9,
-    ErrInvalidId                            = -10,
-    ErrBcfOpenFailure                       = -11,
-    ErrDuplicatePositions                   = -12,
-    ErrParsePositionsFileInvalidCoord       = -16,
-    ErrParsePositionsFileCoordStrTooLong    = -17,
-    ErrCouldNotReadFile                     = -18,
-    ErrCouldNotInsertCoordInPosSet          = -19,
-    ErrParseUnrecoverable                   = -20
-};
-
-const char* status_msg(Status status);
 
 // @brief The meta data on a BCF attribute
 // @description BCF, VCF, and VCF.GZ files hold metadata in the
@@ -160,7 +138,7 @@ public:
     void close();
 
     // @brief load the next record from file and store in GenomicCoord
-    // @return one of the following bcfio::Status values:
+    // @return one of the following Status values:
     //  ErrParsePositionsFileInvalidCoord
     //  ErrParsePositionsFileCoordStrTooLong,
     //  ErrParseUnrecoverable
@@ -177,7 +155,7 @@ public:
     //  terminator, of the file's line string.  This value can be zero
     //  if the line has no contents except for newline character, 
     //  carriage return character, or EOF.
-    // @return one of the following bcfio::Status values:
+    // @return one of the following Status values:
     //  ErrParsePositionsFileCoordStrTooLong,
     //  ErrParseUnrecoverable
     //  EndOfFile
@@ -418,7 +396,7 @@ Status num_pos(Bcf* bid, int64_t* n);
 // @param[in,out] bid will be mutated by adding values to the pos data
 //  member C++ STL std::set
 // @param[in] position file filename
-// @return one of the following bcfio::Status values:
+// @return one of the following Status values:
 //  ErrInvalidInput
 //  Success
 Status set_pos_from_file(Bcf* bid, const char* filename);
@@ -463,7 +441,7 @@ Status mutate_brec_to_next_pos_(Bcf* bid,
     int hts_status = bcf_read(bid->fid, 
                 bid->hdr,
                 brec->rec);
-    bcfio::Status status = Status::ErrHtslib;
+    Status status = Status::ErrHtslib;
 
     switch(hts_status) {
     case 0:
@@ -479,7 +457,7 @@ Status mutate_brec_to_next_pos_(Bcf* bid,
 
     int64_t p = 0;
     status = pos(brec, &p);
-    if (status != bcfio::Status::Success)
+    if (status != Status::Success)
         return status;
 
     const char* ctg = chrom(bid, brec);
@@ -504,7 +482,7 @@ Status mutate_brec_to_next_pos_(Bcf* bid,
         }
 
         status = pos(brec, &p);
-        if (status != bcfio::Status::Success)
+        if (status != Status::Success)
             return status;
     
         ctg = chrom(bid, brec);
@@ -604,7 +582,7 @@ Status next_record(Bcf* bid,
     uint32_t n_rec_vals = static_cast<uint32_t>(n);
 
     uint32_t nsamps = 0;
-    if (num_samples(bid, &nsamps) != bcfio::Status::Success)
+    if (num_samples(bid, &nsamps) != Status::Success)
         return Status::ErrInternal;
 
     bcf_fmt_t* fmt_cfg = bcf_get_fmt(bid->hdr, 
@@ -618,7 +596,7 @@ Status next_record(Bcf* bid,
         return Status::ErrInternal;
 
     uint16_t k = 0;
-    if (k_fmt(bid, id, &k) != bcfio::Status::Success)
+    if (k_fmt(bid, id, &k) != Status::Success)
         return Status::ErrInternal;
 
     if (k != fmt_cfg->n)
