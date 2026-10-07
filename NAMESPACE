@@ -38,15 +38,12 @@ export(calc_gsim)
 export(gsim_to_grm)
 export(mk_loco_grm)
 
+
+export(estimate_var_comps)
+
 # association analysis
-export(assoc)
+# export(assoc)
 
 # simulation
 export(pg_sim)
 
-# qtl2
-export(est_herit)
-export(batch_cols)
-export(get_common_ids)
-export(decomp_kinship)
-# export(fit1_pg)
