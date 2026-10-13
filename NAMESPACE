@@ -39,8 +39,8 @@ export(gsim_to_grm)
 export(mk_loco_grm)
 
 
-export(estimate_var_comps)
-
+export(est_reml_vars)
+export(stream_ctg_assoc)
 # association analysis
 # export(assoc)
 
