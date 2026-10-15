@@ -12,19 +12,19 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// stream_assoc_analysis
-Rcpp::NumericVector stream_assoc_analysis(bconn_t bconn, const Rcpp::NumericVector& phenotypes, const Rcpp::NumericMatrix& covariates, const Rcpp::NumericMatrix& eig_vec, const Rcpp::NumericVector& eig_vals, const char* format_id);
-RcppExport SEXP _hwas_stream_assoc_analysis(SEXP bconnSEXP, SEXP phenotypesSEXP, SEXP covariatesSEXP, SEXP eig_vecSEXP, SEXP eig_valsSEXP, SEXP format_idSEXP) {
+// stream_ctg_assoc_
+Rcpp::List stream_ctg_assoc_(bconn_t bconn, const char* format_id, const Rcpp::NumericVector& phenotypes, const Rcpp::NumericMatrix& covariates, const Rcpp::NumericMatrix& grm, const Rcpp::List& var_components);
+RcppExport SEXP _hwas_stream_ctg_assoc_(SEXP bconnSEXP, SEXP format_idSEXP, SEXP phenotypesSEXP, SEXP covariatesSEXP, SEXP grmSEXP, SEXP var_componentsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< bconn_t >::type bconn(bconnSEXP);
+    Rcpp::traits::input_parameter< const char* >::type format_id(format_idSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type phenotypes(phenotypesSEXP);
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type covariates(covariatesSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type eig_vec(eig_vecSEXP);
-    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type eig_vals(eig_valsSEXP);
-    Rcpp::traits::input_parameter< const char* >::type format_id(format_idSEXP);
-    rcpp_result_gen = Rcpp::wrap(stream_assoc_analysis(bconn, phenotypes, covariates, eig_vec, eig_vals, format_id));
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type grm(grmSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type var_components(var_componentsSEXP);
+    rcpp_result_gen = Rcpp::wrap(stream_ctg_assoc_(bconn, format_id, phenotypes, covariates, grm, var_components));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -218,7 +218,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_hwas_stream_assoc_analysis", (DL_FUNC) &_hwas_stream_assoc_analysis, 6},
+    {"_hwas_stream_ctg_assoc_", (DL_FUNC) &_hwas_stream_ctg_assoc_, 6},
     {"_hwas_bread", (DL_FUNC) &_hwas_bread, 1},
     {"_hwas_bclose", (DL_FUNC) &_hwas_bclose, 1},
     {"_hwas_is_open", (DL_FUNC) &_hwas_is_open, 1},

@@ -57,6 +57,18 @@ const char* status_msg(Status status) {
         return "Dimension(s) of data objects are not equal.";
     case Status::ErrIndexOutofBounds:
         return "Index out of bounds";
+    case Status::ErrQRdecompFailed:
+        return "Eigen::ColPivHouseholderQR decomposition failed";
+    case Status::ErrSampleMismatch:
+        return "Samples do not match across data structures.";
+    case Status::ErrSampleSizeMismatch:
+        return "Sample sizes between components do not match.";
+    case Status::ErrOverflow:
+        return "Number overflow detected";
+    case Status::ErrUnderflow:
+        return "Number underflow detected";
+    case Status::ErrHeapAllocation:
+        return "Failed to dynamically allocate an object.";
     default:
         break;
     }

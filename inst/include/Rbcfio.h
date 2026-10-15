@@ -154,7 +154,8 @@ Rcpp::Nullable<Rcpp::NumericMatrix> get_record_matrix_(bcfio::Bcf* bid,
     if (status != Status::Success)
         Rcpp::stop(status_msg(status));
 
-    data.attr("pos") = p;
+    // Remember that R integers are 32 bit
+    data.attr("pos") = static_cast<double>(p);
 
     //TODO: data.attr("qual") = rec.qual();
     //TODO: ref / alt allales

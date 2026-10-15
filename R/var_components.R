@@ -155,17 +155,17 @@ est_reml_vars <- function(phenotypes,
                           grm,
                           covariates = NULL) {
 
-    if (!is_class(grm, "grm") || !is_class(grm, "loco_grm"))
+    if (!is_class(grm, "grm"))
         stop("Input is not a valid the grm class")
 
     samp_names <- names(phenotypes)
 
     # note we get sample vector length checks with these validation
-    if (!all(samp_names == rownames(loco_grm)))
-        stop("Phenotype sample names not aligned with loco_grm")
+    if (!all(samp_names == rownames(grm)))
+        stop("Phenotype sample names not aligned with grm")
 
-    if (!all(samp_names == colnames(loco_grm)))
-        stop("Phenotype sample names not aligned with loco_grm")
+    if (!all(samp_names == colnames(grm)))
+        stop("Phenotype sample names not aligned with grm")
 
     if (!is.null(covariates) && !all(samp_names == rownames(covariates)))
         stop("Phenotype sample names not aligned with covariates")

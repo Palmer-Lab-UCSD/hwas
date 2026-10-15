@@ -27,6 +27,12 @@ enum struct Status : int {
     ErrHeritabilityOutOfRange               = -24,
     ErrDimensionsNotEqual                   = -25,
     ErrIndexOutofBounds                     = -26,
+    ErrQRdecompFailed                       = -27,
+    ErrSampleMismatch                       = -28,
+    ErrSampleSizeMismatch                   = -29,
+    ErrOverflow                             = -30,
+    ErrUnderflow                            = -31,
+    ErrHeapAllocation                       = -32
 };
 
 const char* status_msg(Status status);

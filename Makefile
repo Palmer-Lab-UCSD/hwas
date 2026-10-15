@@ -130,4 +130,13 @@ static_rpgsim: src/hwas_rpgsim.cpp
 		-I$(HEADER_DIR) \
 		$^
 
+.PHONY: static_assoc
+static_assoc: src/Rassoc.cpp
+	clang --analyze -std=c++17 \
+		-I$(RCPP_HEADER) \
+		-I$(RCPP_EIG_HEADER) \
+		$(RSYS_LDFLAGS) \
+		-I$(LOCAL_LD) \
+		-I$(HEADER_DIR) \
+		$^
 
