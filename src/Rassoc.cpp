@@ -3,25 +3,13 @@
 
 
 CtgAssociations::~CtgAssociations() {
-    if (fstats_ != nullptr)
-        delete[] fstats_;
-
-    if (pvals_ != nullptr)
-        delete[] pvals_;
-
-    if (pos_ != nullptr)
-        delete[] pos_;
-
-    if (status_ != nullptr)
-        delete[] status_;
+    if (recs_ != nullptr)
+        delete[] recs_;
 
     if (contig_ != nullptr)
         delete[] contig_;
 
-    fstats_ = nullptr;
-    pvals_ = nullptr;
-    pos_ = nullptr;
-    status_ = nullptr;
+    recs_ = nullptr;
     contig_ = nullptr;
 }
 
@@ -34,47 +22,20 @@ ctg_assoc_t CtgAssociations::init(const char* contig, uint32_t cap) {
     char* new_contig = new(std::nothrow) char[contig_len + 1];
     if (new_contig == nullptr)
         return nullptr;
+    std::memset(new_contig, '\0', contig_len+1);
     std::strncpy(new_contig, contig, contig_len);
 
-    double* fstats = new(std::nothrow) double[cap];
-    if (fstats == nullptr) {
+    AssocRec* new_recs = new(std::nothrow) AssocRec[cap];
+    if (new_recs == nullptr) {
         delete[] new_contig;
         return nullptr;
     }
-
-    double* pvals = new(std::nothrow) double[cap];
-    if (pvals == nullptr) {
-        delete[] new_contig;
-        delete[] fstats;
-        return nullptr;
-    }
-
-    int64_t* pos = new(std::nothrow) int64_t[cap];
-    if (pos == nullptr) {
-        delete[] new_contig;
-        delete[] fstats;
-        delete[] pvals;
-        return nullptr;
-    }
-
-    StatStatus* status = new(std::nothrow) StatStatus[cap];
-    if (status == nullptr) {
-        delete[] new_contig;
-        delete[] fstats;
-        delete[] pvals;
-        delete[] pos;
-        return nullptr;
-    }
-
 
     CtgAssociations* ctg = new(std::nothrow) CtgAssociations(new_contig, 
-            fstats, pvals, pos, status, cap);
+            new_recs, cap);
     if (ctg == nullptr) {
         delete[] new_contig;
-        delete[] fstats;
-        delete[] pvals;
-        delete[] pos;
-        delete[] status;
+        delete[] new_recs;
         return nullptr;
     }
 
@@ -82,60 +43,30 @@ ctg_assoc_t CtgAssociations::init(const char* contig, uint32_t cap) {
 }
 
 
-
-
 Status CtgAssociations::realloc_() {
     // As this is just resizing the data arrays and indexes
     // the contig c-string does not need to be updated
-    if (cap_ > std::numeric_limits<uint32_t>::max() / 2)
-        return Status::ErrOverflow;
 
-    uint32_t new_cap = 2 * cap_;
-    double* new_fstats = new(std::nothrow) double[new_cap];
-    if (new_fstats == nullptr)
-        return Status::ErrHeapAllocation;
+    uint32_t new_cap = cap_;
+    while (new_cap <= size_) {
 
-    double* new_pvals = new(std::nothrow) double[new_cap];
-    if (new_pvals == nullptr) {
-        delete[] new_fstats;
-        return Status::ErrHeapAllocation;
+        if (new_cap > std::numeric_limits<uint32_t>::max() / 2)
+            return Status::ErrOverflow;
+
+        new_cap = new_cap * 2;
     }
 
-    int64_t* new_pos = new(std::nothrow) int64_t[new_cap]; 
-    if (new_pos == nullptr) {
-        delete[] new_fstats;
-        delete[] new_pvals;
+    AssocRec* new_recs = new(std::nothrow) AssocRec[new_cap];
+    if (new_recs == nullptr)
         return Status::ErrHeapAllocation;
-    }
 
-    StatStatus* new_status = new(std::nothrow) StatStatus[new_cap];
-    if (new_status == nullptr) {
-        delete[] new_fstats;
-        delete[] new_pvals;
-        delete[] new_pos;
-        return Status::ErrHeapAllocation;
-    }
+    printf("Ralloc 2\n");
+    for (uint32_t i = 0; i < cap_; i++)
+        new_recs[i] = recs_[i];
 
-    for (uint32_t i = 0; i < cap_; i++) {
-        new_fstats[i] = fstats_[i];
-        new_pvals[i] = pvals_[i];
-        new_pos[i] = pos_[i];
-        new_status[i] = status_[i];
-    }
-
-    delete[] fstats_;
-    fstats_ = new_fstats;
-
-    delete[] pvals_;
-    pvals_ = new_pvals;
-
-    delete[] pos_;
-    pos_ = new_pos;
-
-    delete[] status_;
-    status_ = new_status;
-
-    size_ = cap_;
+    printf("Ralloc 3\n");
+    delete[] recs_;
+    recs_ = new_recs;
     cap_ = new_cap;
 
     return Status::Success;
@@ -155,7 +86,8 @@ Status CtgAssociations::update(int64_t pos,
     if (ols_reduced.df < ols_full.df)
         return Status::ErrInvalidInput;
 
-    if (size_ == cap_) {
+    if (size_ >= cap_) {
+        printf("Reallocating\n");
         status = realloc_();
         if (status != Status::Success)
             return status;
@@ -167,83 +99,67 @@ Status CtgAssociations::update(int64_t pos,
     // This is detected by the degrees-of-freedom of both models being
     // equivalent.  Claude states that NaN is the appropriate result as
     // we can not attribute the association to either genetics or covariates.
+    //
+    AssocRec& rec = recs_[size_];
+    rec.pos = pos;
+    rec.df_numerator = ols_reduced.df - ols_full.df;
+    rec.df_denom = ols_full.df;
+
     if (ols_reduced.df == ols_full.df) {
-        pvals_[size_] = R_NaN;
-        pos_[size_] = pos;
-        status_[size_] = StatStatus::ErrFullAndReducedModelEq;
+        rec.status = StatStatus::ErrFullAndReducedModelEq;
+        rec.fstat = R_NaN;
         size_++;
         return Status::Success;
     }
-
 
     if (ols_full.df == 0) {
-        pvals_[size_] = R_NaN;
-        pos_[size_] = pos;
-        status_[size_] = StatStatus::ErrFullModelSpansSampleSpace;
+        rec.status = StatStatus::ErrFullModelSpansSampleSpace;
+        rec.fstat = R_NaN;
         size_++;
         return Status::Success;
     }
 
-    // numerator contribution to f-statistic
-    int num_df = ols_reduced.df - ols_full.df;
-    double fstat = (ols_reduced.sse - ols_full.sse);
-    fstat = fstat / num_df;
-
-    // denominator contribution to f-statistic
-    fstat = fstat / ols_full.sse;
-    fstat = fstat * ols_full.df;
-
-    fstats_[size_] = fstat;
-
-    // Compute P(F > fstat) under the central F distribution
-    pvals_[size_] = R::pf(fstat, num_df, ols_full.df, false, false);
-    pos_[size_] = pos;
-    status_[size_] = StatStatus::Success;
+    // TODO: over / underflow
+    rec.fstat = (ols_reduced.sse - ols_full.sse) / rec.df_numerator;
+    rec.fstat = rec.fstat * rec.df_denom / ols_full.sse;
+    rec.status = StatStatus::Success;
     size_++;
 
     return Status::Success;
 }
 
 
-Rcpp::List CtgAssociations::to_r() const {
-    Rcpp::NumericVector out_fstats(size_);
-    Rcpp::NumericVector out_pvals(size_);
+Rcpp::NumericMatrix CtgAssociations::to_r() const {
+    Rcpp::NumericMatrix out(size_, 6);
+    // TODO: Need to set column names
+    
+    Rcpp::CharacterVector cnames = Rcpp::CharacterVector::create("pos",
+            "fstat",
+            "df_numerator",
+            "df_denom",
+            "status",
+            "pval");
+    Rcpp::colnames(out) = cnames;
 
-    // annoyingly R's integers are limited to 32 bit meaning that
-    // the maximum value is about 2.1 billion.  To be safe, I will
-    // just store as double
-    Rcpp::NumericVector out_pos(size_);
-
-    Rcpp::IntegerVector out_status(size_);
-    Rcpp::CharacterVector out_status_msg(size_);
-
+    // TODO: warning for when floating point can't faithfully
+    // represent integers, e.g. when they exceed a certain number
+    // the gaps between success values will be bigger than 1
+    AssocRec* rec;
     for (uint32_t i = 0; i < size_; i++) {
-        out_fstats[i] = fstats_[i];
-        out_pvals[i] = pvals_[i];
-        out_pos[i] = static_cast<double>(pos_[i]);
-
-        out_status[i] = static_cast<int>(status_[i]);
-        switch (status_[i]) {
-        case StatStatus::Success:
-            out_status_msg[i] = "success";
-            break;
-        case StatStatus::ErrFullAndReducedModelEq:
-            out_status_msg[i] = "failed: full and reduce model equal df";
-            break;
-        case StatStatus::ErrFullModelSpansSampleSpace:
-            out_status_msg[i] = "failed: full model df = 0";
-            break;
-        default:
-            out_status_msg[i] = "unknown";
-        }
+        rec = &(recs_[i]);
+        out(i, 0) = rec->pos;
+        out(i, 1) = rec->fstat;
+        out(i, 2) = rec->df_numerator;
+        out(i, 3) = rec->df_denom;
+        out(i, 4) = static_cast<int>(rec->status);
+        out(i, 5) = R::pf(rec->fstat, 
+                rec->df_numerator,
+                rec->df_denom,
+                false,
+                false);
     }
 
-    return Rcpp::List::create(Rcpp::Named("contig") = contig_,
-            Rcpp::Named("fstats") = out_fstats,
-            Rcpp::Named("pos") = out_pos,
-            Rcpp::Named("pvals") = out_pvals,
-            Rcpp::Named("status") = out_status,
-            Rcpp::Named("status_msg") = out_status_msg);
+    return out;
 }
 
 

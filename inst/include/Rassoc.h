@@ -43,6 +43,14 @@ struct OlsResult {
 };
 
 
+struct AssocRec {
+    int64_t pos;
+    double fstat;
+    double df_numerator;
+    double df_denom;
+    StatStatus status;
+};
+
 struct CtgAssociations{
 public:
     CtgAssociations()                                   = delete;
@@ -61,31 +69,22 @@ public:
             const OlsResult& ols_full);
 
     Rcpp::String contig_r_str() const;
-    Rcpp::List to_r() const;
+    Rcpp::NumericMatrix to_r() const;
 
 private:
     Status realloc_();
 
     CtgAssociations(const char* contig,
-            double* fstats,
-            double* pvals,
-            int64_t* pos,
-            StatStatus* status,
+            AssocRec* recs,
             uint32_t cap) :
         contig_(contig),
-        fstats_(fstats),
-        pvals_(pvals),
-        pos_(pos),
-        status_(status),
+        recs_(recs),
         cap_(cap),
         size_(0) {};
 
     const char* contig_;
 
-    double* fstats_;
-    double* pvals_;
-    int64_t* pos_;
-    StatStatus* status_;
+    AssocRec* recs_;
 
     uint32_t cap_;
     uint32_t size_;
