@@ -196,7 +196,7 @@ Status CtgAssociations::update(int64_t pos,
     fstats_[size_] = fstat;
 
     // Compute P(F > fstat) under the central F distribution
-    pvals_[size_] = R::pf(fstat, num_df, ols_full.df, true, false);
+    pvals_[size_] = R::pf(fstat, num_df, ols_full.df, false, false);
     pos_[size_] = pos;
     status_[size_] = StatStatus::Success;
     size_++;

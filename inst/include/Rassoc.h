@@ -145,12 +145,14 @@ void update_genetic_data_matrix_(Eigen::MatrixXd& gdata,
         const bcfio::BcfRecord<T>* brec) {
 
     T* data = brec->data;
-    uint16_t ncol = brec->ncol;
+    uint16_t kfounders = brec->ncol;
+    uint16_t gdata_ncol = kfounders - 1;
+
     for (uint32_t i = 0; i < brec->nrow; i++) {
-        for (uint16_t j = 0; j < ncol; j++)
+        for (uint16_t j = 0; j < gdata_ncol; j++)
             gdata(i, j) = data[j];
 
-        data += ncol;
+        data += kfounders;
     }
 }
 
@@ -176,6 +178,8 @@ Rcpp::List run_stream_ctg_assoc_(bcfio::Bcf* bid,
     // Prepare variables and run OLS on reduced model.  
     Eigen::Index nsamps = y.size();
 
+    Eigen::VectorXd ytransformed = eig_transform * y;
+
     // The reduced model is an intercept + covariates.  Moreover,
     // the reduced model needs to be transformed into the diagonlized
     // basis using eig_transform
@@ -189,7 +193,7 @@ Rcpp::List run_stream_ctg_assoc_(bcfio::Bcf* bid,
     Eigen::VectorXd yerr(nsamps);
 
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr_reduced(nsamps, p_reduced);
-    OlsResult ols_reduced = ols_sse_(x_reduced, y, yerr, qr_reduced);
+    OlsResult ols_reduced = ols_sse_(x_reduced, ytransformed, yerr, qr_reduced);
 
 
     // Prepare genetic data matrices.  The genetic data consists of two
@@ -206,7 +210,7 @@ Rcpp::List run_stream_ctg_assoc_(bcfio::Bcf* bid,
     if (status != Status::Success)
         Rcpp::stop(status_msg(status));
 
-    Eigen::Index gdata_ncols = static_cast<Eigen::Index>(kfeatures);
+    Eigen::Index gdata_ncols = static_cast<Eigen::Index>(kfeatures - 1);
 
     Eigen::Index p_full = p_reduced + gdata_ncols;
     MatrixBlock gblc { 0, p_reduced, nsamps, gdata_ncols };
@@ -276,7 +280,7 @@ Rcpp::List run_stream_ctg_assoc_(bcfio::Bcf* bid,
         xfull.block(gblc.ridx, gblc.cidx, 
                 gblc.rsize, gblc.csize) = eig_transform * gdata;
 
-        ols_full = ols_sse_(xfull, y, yerr, qr_full);
+        ols_full = ols_sse_(xfull, ytransformed, yerr, qr_full);
         
         status = curr_res->update(pos, ols_reduced, ols_full);
         if (status != Status::Success)
