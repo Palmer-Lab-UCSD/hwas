@@ -1,10 +1,14 @@
 # haplotype wide association study (hwas)
 
+*** WORK IN PROGRESS ***
+
+
 This package contains tools for running an HWAS interactively
 (e.g. interactive R console or Jupyter notebook) or semi-
 automatically by a programmatic pipeline.  The data are read
 from the vcf, vcf.gz, or bcf file format with htslib [1, 2] 
-and the statistics by code from Karl Broman's QTL2 [3, 4].
+and the association statistic aim to reproduce results
+from R/qtl2 code from Karl Broman's R/qtl2 [3, 4].
 
 
 **Contents**
@@ -85,11 +89,9 @@ in the git logs.
 
 ## Copyright Notice
 
-Portions from the linear mixed model fitting code are:
-
-* Copyright (C) 2020 Karl Browman
-* Copyright (C) 1995, 1996 Robert Gentleman and Ross Ihaka,
-* Copyright (C) 1998-2014 The R Core Team
+R/QTL2 is the gold-standard for these association analysis.  The
+association statistics implemented here are modeled by that 
+implemented by 
 
 ## References
 

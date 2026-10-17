@@ -1,7 +1,7 @@
 Package: hwas
 Version: 0.2.2
 Date: 2026-04-23
-Title: bcf reader for R
+Title: bcf reader for R and genetic association analysis
 Author: Robert Vogel [aut,cre]
 Maintainer: Robert Vogel <rmvogel@ucsd.edu>
 Depends: R (> 4.0)
