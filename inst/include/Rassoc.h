@@ -257,7 +257,7 @@ Rcpp::List run_stream_ctg_assoc_(bcfio::Bcf* bid,
 
         if (i % idx_report_val == 0) {
             Rcpp::checkUserInterrupt();
-            REprintf("\r\x1B[K" "%" PRIu64 " positions processed.", i);
+            REprintf("Positions processed:" PRIu64 "\n", i);
         }
 
         // need to +1 as bcf is zero based positions
