@@ -15,7 +15,7 @@ CtgAssociations::~CtgAssociations() {
 
 
 ctg_assoc_t CtgAssociations::init(const char* contig, uint32_t cap) {
-    if (contig == nullptr)
+    if (contig == nullptr || cap == 0)
         return nullptr;
 
     size_t contig_len = std::strlen(contig);
@@ -258,8 +258,18 @@ Rcpp::List stream_ctg_assoc_(bconn_t bconn,
     Eigen::MatrixXd eigval_inv_matrix = Eigen::MatrixXd::Zero(nsamps, nsamps);
 
     // TODO: Make more robust for when delta is zero, or Inf.
-    for (int i = 0; i < nsamps; i++)
-        eigval_inv_matrix(i, i) = 1 / std::sqrt(grm_eig_vals[i] + delta);
+    double model_eig_val = 0;
+    for (int i = 0; i < nsamps; i++) {
+        model_eig_val = grm_eig_vals[i] + delta;
+
+        if (model_eig_val < 0)
+            Rcpp::stop("Model covariances produces negative variances");
+
+        if (model_eig_val == 0)
+            Rcpp::stop("Model covariance is not full rank.");
+
+        eigval_inv_matrix(i, i) = 1 / std::sqrt(model_eig_val);
+    }
 
 
     Eigen::MatrixXd eig_transform = eigval_inv_matrix * eig_decomp.eigenvectors().transpose();
@@ -291,14 +301,93 @@ Rcpp::List stream_ctg_assoc_(bconn_t bconn,
 }
 
 
- //   Eigen::VectorXd y_transformed = eig_vecs_transpose * y;
-//    x_reduced = eig_vecs_transpose * x_reduced;
-//     // Prepare the reduced model
-//     int p_reduced = covariates.ncol() + 1;
-//     Eigen::MatrixXd x_reduced = Eigen::MatrixXd::Ones(nsamps, p_reduced);
-//     // Add the covariate values to the design matrix with intercept
-//     for (int i = 0; i < nsamps; i++) {
-//         for (int j = 1; j < p_reduced; j++)
-//             x_reduced(i, j) = covariates(i, j-1);
-//     }
-// 
+// [[Rcpp::export]]
+Rcpp::List assoc_no_covars_(const Rcpp::NumericMatrix& gdata, 
+        const Rcpp::NumericVector& phenotypes,
+        const Rcpp::NumericMatrix& grm,
+        const Rcpp::List& var_components) {
+
+    // 
+    // Eigen decompose the phenotype covariance matrix under the model
+    const mapmat_t grm_mat = Rcpp::as<mapmat_t>(grm);
+
+    Eigen::Index nsamps = grm_mat.rows();
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eig_decomp(nsamps);
+    eig_decomp.compute(grm_mat);
+    if (eig_decomp.info() != Eigen::Success)
+        Rcpp::stop("Eigendecomposition of grm failed.");
+
+    double delta = var_components["delta"];
+
+    const Eigen::VectorXd& grm_eig_vals = eig_decomp.eigenvalues();
+    Eigen::MatrixXd eigval_inv_matrix = Eigen::MatrixXd::Zero(nsamps, nsamps);
+
+    // TODO: Make more robust for when delta is zero, or Inf.
+    double model_eig_val = 0;
+    for (int i = 0; i < nsamps; i++) {
+        model_eig_val = grm_eig_vals[i] + delta;
+
+        if (model_eig_val < 0)
+            Rcpp::stop("Model covariances produces negative variances");
+
+        if (model_eig_val == 0)
+            Rcpp::stop("Model covariance is not full rank.");
+
+        eigval_inv_matrix(i, i) = 1 / std::sqrt(model_eig_val);
+    }
+
+
+    Eigen::MatrixXd eig_transform = eigval_inv_matrix * eig_decomp.eigenvectors().transpose();
+
+    const mapvec_t y = Rcpp::as<mapvec_t>(phenotypes);
+    const Eigen::VectorXd ytransformed = eig_transform * y;
+
+    // Fit models 
+    // Allocate memory for error vector
+    Eigen::VectorXd yerr(nsamps);
+
+    // Fit reduced model
+    Eigen::Index p_reduced = 1;
+    Eigen::MatrixXd x_reduced = Eigen::MatrixXd::Ones(nsamps, p_reduced);
+    x_reduced = eig_transform * x_reduced;
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr_reduced(nsamps, p_reduced);
+    OlsResult ols_reduced = ols_sse_(x_reduced, ytransformed, yerr, qr_reduced);
+
+    // Fit the full model
+    Eigen::Index p_full = gdata.cols();
+    Eigen::MatrixXd x_full = Rcpp::as<Eigen::MatrixXd>(gdata);
+    // replace first column with intercept
+    for (int i = 0; i < x_full.rows(); i++)
+        x_full(i, 0) = 1.0;
+    x_full = eig_transform * x_full;
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr_full(nsamps, p_full);
+    OlsResult ols_full = ols_sse_(x_full, ytransformed, yerr, qr_full);
+
+
+    int status = 1;
+    int df_numerator = ols_reduced.df - ols_full.df;
+    int df_denom = ols_full.df;
+    double fstat = R_NaN;
+    double pval = R_NaN;
+    
+    if (ols_reduced.df == ols_full.df) {
+        status = static_cast<int>(StatStatus::ErrFullAndReducedModelEq);
+    } else if (ols_full.df == 0) {
+        status = static_cast<int>(StatStatus::ErrFullModelSpansSampleSpace);
+    } else {
+        // TODO: over / underflow
+        fstat = (ols_reduced.sse - ols_full.sse) / df_numerator;
+        fstat = fstat * df_denom / ols_full.sse;
+        pval = R::pf(fstat,
+                df_numerator, 
+                df_denom, 
+                false, 
+                false);
+        status = 0;
+    }
+    return Rcpp::List::create(Rcpp::Named("status") = status,
+            Rcpp::Named("df_numerator") = df_numerator,
+            Rcpp::Named("df_denom") = df_denom,
+            Rcpp::Named("fstat") = fstat,
+            Rcpp::Named("pval") = pval);
+}

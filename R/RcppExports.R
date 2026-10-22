@@ -5,6 +5,10 @@ stream_ctg_assoc_ <- function(bconn, format_id, phenotypes, covariates, grm, var
     .Call('_hwas_stream_ctg_assoc_', PACKAGE = 'hwas', bconn, format_id, phenotypes, covariates, grm, var_components)
 }
 
+assoc_no_covars_ <- function(gdata, phenotypes, grm, var_components) {
+    .Call('_hwas_assoc_no_covars_', PACKAGE = 'hwas', gdata, phenotypes, grm, var_components)
+}
+
 bread <- function(filename) {
     .Call('_hwas_bread', PACKAGE = 'hwas', filename)
 }

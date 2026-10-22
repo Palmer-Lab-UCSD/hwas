@@ -146,6 +146,7 @@ void update_genetic_data_matrix_(Eigen::MatrixXd& gdata,
     T* data = brec->data;
     uint16_t kfounders = brec->ncol;
     uint16_t gdata_ncol = kfounders - 1;
+    // uint16_t gdata_ncol = kfounders;
 
     for (uint32_t i = 0; i < brec->nrow; i++) {
         for (uint16_t j = 0; j < gdata_ncol; j++)
@@ -403,6 +404,12 @@ Rcpp::List stream_ctg_assoc_(bconn_t bconn,
         const char* format_id,
         const Rcpp::NumericVector& phenotypes,
         const Rcpp::NumericMatrix& covariates,
+        const Rcpp::NumericMatrix& grm,
+        const Rcpp::List& var_components);
+
+
+Rcpp::List assoc_no_covars_(const Rcpp::NumericMatrix&,
+        const Rcpp::NumericVector& phenotypes,
         const Rcpp::NumericMatrix& grm,
         const Rcpp::List& var_components);
 

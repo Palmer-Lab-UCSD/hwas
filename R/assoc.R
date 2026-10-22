@@ -71,3 +71,43 @@ stream_ctg_assoc <- function(bconn,
                              grm,
                              vpars));
 }
+
+
+assoc <- function(gdata,
+                  phenotypes,
+                  grm,
+                  covariates = NULL) {
+
+    if (attr(grm, "class") != "grm")
+        stop("Not a valid grm")
+
+    if (!is.matrix(gdata))
+        stop("genetic data is not a matrix")
+
+    samp_names <- names(phenotypes)
+
+    if (!all(samp_names == rownames(gdata)))
+        stop("Phenotype sample names not aligned with genetic data matrix")
+
+    if (!all(samp_names == rownames(grm)))
+        stop("Phenotype sample names not aligned with loco_grm")
+
+    if (!all(samp_names == colnames(grm)))
+        stop("Phenotype sample names not aligned with loco_grm")
+
+
+    # note we get sample vector length checks with these validation
+    if (is.null(covariates)) {
+        vpars <- est_reml_vars(phenotypes,grm)
+        return(assoc_no_covars_(gdata, phenotypes, grm, vpars))
+    }
+
+    stop("not implemented yet")
+    #$ if (!all(samp_names == rownames(covariates)))
+    #$     stop("Phenotype sample names not aligned with covariates")
+
+    #$ vpars <- est_reml_vars(phenotypes, 
+    #$                        grm,
+    #$                        covariates)
+    #$ return(assoc_(gdata, phenotypes, grm, covariates, vpars))
+}

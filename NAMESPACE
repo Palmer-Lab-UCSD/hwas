@@ -41,6 +41,7 @@ export(accumulate_gsims)
 
 export(est_reml_vars)
 export(stream_ctg_assoc)
+export(assoc)
 
 # simulation
 export(pg_sim)

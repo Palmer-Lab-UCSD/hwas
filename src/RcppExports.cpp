@@ -28,6 +28,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// assoc_no_covars_
+Rcpp::List assoc_no_covars_(const Rcpp::NumericMatrix& gdata, const Rcpp::NumericVector& phenotypes, const Rcpp::NumericMatrix& grm, const Rcpp::List& var_components);
+RcppExport SEXP _hwas_assoc_no_covars_(SEXP gdataSEXP, SEXP phenotypesSEXP, SEXP grmSEXP, SEXP var_componentsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type gdata(gdataSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericVector& >::type phenotypes(phenotypesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type grm(grmSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type var_components(var_componentsSEXP);
+    rcpp_result_gen = Rcpp::wrap(assoc_no_covars_(gdata, phenotypes, grm, var_components));
+    return rcpp_result_gen;
+END_RCPP
+}
 // bread
 bconn_t bread(const char* filename);
 RcppExport SEXP _hwas_bread(SEXP filenameSEXP) {
@@ -219,6 +233,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_hwas_stream_ctg_assoc_", (DL_FUNC) &_hwas_stream_ctg_assoc_, 6},
+    {"_hwas_assoc_no_covars_", (DL_FUNC) &_hwas_assoc_no_covars_, 4},
     {"_hwas_bread", (DL_FUNC) &_hwas_bread, 1},
     {"_hwas_bclose", (DL_FUNC) &_hwas_bclose, 1},
     {"_hwas_is_open", (DL_FUNC) &_hwas_is_open, 1},
