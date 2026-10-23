@@ -253,11 +253,11 @@ Rcpp::List run_stream_ctg_assoc_(bcfio::Bcf* bid,
     int64_t pos = 0;
     const uint64_t idx_report_val = 1000;
     REprintf("start association analysis\n");
-    for (uint64_t i = 0;; i++) {
+    for (uint64_t i = 1;; i++) {
 
         if (i % idx_report_val == 0) {
             Rcpp::checkUserInterrupt();
-            REprintf("Positions processed:" PRIu64 "\n", i);
+            REprintf("Positions processed: %" PRIu64 "\n", i);
         }
 
         // need to +1 as bcf is zero based positions
