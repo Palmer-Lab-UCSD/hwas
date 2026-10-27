@@ -18,7 +18,8 @@
 #   used in the association analysis.
 # @param phenotypes Is an n sample numeric vector of trait 
 #   measurements
-# @param grm the genetic relationship matrix
+# @param grm the genetic relationship matrix rows and column 
+#   names should be sample names
 # @param covariates an n sample by p covariate matrix where row
 #   names are sample id
 # @return List(contig_name_1 = List(fstats = numeric vector,
@@ -33,23 +34,27 @@ stream_ctg_assoc <- function(bconn,
                              grm, 
                              covariates = NULL) {
 
-    if (attr(grm, "class") != "grm")
+    if (!is_grm(grm))
         stop("Not a valid grm")
+    if (!is.vector(phenotypes))
+        stop("Phenotypes must be a vector.")
 
     samp_names <- names(phenotypes)
+    if (is.null(samp_names))
+        stop("Phenotype elements must be labeled with sample name")
 
-    if (!all(samp_names == sample_names(bconn)))
+    if (!identical(samp_names, sample_names(bconn)))
         stop("Phenotype sample names not aligned with bcf file.")
 
-    if (!all(samp_names == rownames(grm)))
-        stop("Phenotype sample names not aligned with loco_grm")
+    if (!identical(samp_names, rownames(grm)))
+        stop("Phenotype sample names not aligned with grm rownames.")
 
-    if (!all(samp_names == colnames(grm)))
-        stop("Phenotype sample names not aligned with loco_grm")
+    if (!identical(samp_names, colnames(grm)))
+        stop("Phenotype sample names not aligned with grm colnames.")
 
 
     # note we get sample vector length checks with these validation
-    if (!is.null(covariates) && !all(samp_names == rownames(covariates)))
+    if (!is.null(covariates) && !identical(samp_names, rownames(covariates)))
         stop("Phenotype sample names not aligned with covariates")
 
     vpars <- est_reml_vars(phenotypes, 
@@ -78,7 +83,7 @@ assoc <- function(gdata,
                   grm,
                   covariates = NULL) {
 
-    if (attr(grm, "class") != "grm")
+    if (!is_grm(grm)) 
         stop("Not a valid grm")
 
     if (!is.matrix(gdata))

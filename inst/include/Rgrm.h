@@ -15,10 +15,8 @@
 #include <cinttypes>
 
 // STL C++ DEPENDENCIES
-#include <optional>
-#include <memory>
+#include <limits>
 #include <utility>
-#include <map>
 
 // RCPP INDEPENDENT HEADERS
 #include <status.h>
@@ -155,6 +153,7 @@ Rcpp::NumericMatrix calc_gsim(bconn_t bconn, const char* id);
 // @param[in,out] gsim is an n sample x n sample similarity matrix
 void gsim_to_grm(Rcpp::NumericMatrix& gsim);
 
+bool is_grm(const Rcpp::NumericMatrix& m, double tol=1e-8);
 
 
 #endif

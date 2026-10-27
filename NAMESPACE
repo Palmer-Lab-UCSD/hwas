@@ -37,6 +37,7 @@ export(next_record)
 export(calc_gsim)
 export(gsim_to_grm)
 export(accumulate_gsims)
+export(is_grm)
 
 
 export(est_reml_vars)

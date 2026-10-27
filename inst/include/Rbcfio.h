@@ -74,7 +74,7 @@ uint32_t num_samples(bconn_t bconn);
 uint16_t k_fmt(bconn_t bconn, const char* format_id);
 
 
-Rcpp::RObject sample_names(bconn_t bconn);
+Rcpp::CharacterVector sample_names(bconn_t bconn);
 
 // @brief Subset bconn sample list 
 // @param[in] bconn is a connection to an open bcf file

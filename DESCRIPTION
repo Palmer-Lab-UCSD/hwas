@@ -1,11 +1,11 @@
 Package: hwas
-Version: 0.2.6
+Version: 0.2.7
 Date: 2026-04-23
 Title: bcf reader for R and genetic association analysis
 Author: Robert Vogel [aut,cre]
 Maintainer: Robert Vogel <rmvogel@ucsd.edu>
 Depends: R (> 4.0)
-Imports: Rcpp (>= 1.1), yaml (>= 2.3)
+Imports: Rcpp (>= 1.1)
 LinkingTo: Rcpp, RcppEigen
 Description: Reading genetic data can be tough.
 License: GPL-3

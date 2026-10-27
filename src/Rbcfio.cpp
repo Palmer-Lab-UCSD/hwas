@@ -98,7 +98,7 @@ int64_t num_positions(bconn_t bconn) {
 }
 
 // [[Rcpp::export]]
-Rcpp::RObject sample_names(bconn_t bconn) {
+Rcpp::CharacterVector sample_names(bconn_t bconn) {
     Status status = Status::ErrInvalidInput;
     if (!bconn)
         Rcpp::stop(status_msg(status));

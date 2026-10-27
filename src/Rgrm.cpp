@@ -53,3 +53,28 @@ void gsim_to_grm(Rcpp::NumericMatrix& gsim) {
 
     gsim.attr("class") = "grm";
 }
+
+
+// [[Rcpp::export]]
+bool is_grm(const Rcpp::NumericMatrix& m, double tol) {
+    double mat_sum = 0;
+    Status status = matutils::matrix_sum(m, mat_sum);
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
+
+    double mat_tr = 0;
+    status = matutils::matrix_trace(m, mat_tr);
+    if (status != Status::Success)
+        Rcpp::stop(status_msg(status));
+
+    int n = m.nrow();
+    // double norm_const = (mat_tr - mat_sum / n) / (n - 1);
+    double norm_const = (mat_tr - mat_sum / n);
+    double truth_val = n - 1;
+    // double tol = 100 * truth_val * std::numeric_limits<double>::epsilon();
+
+    if ((norm_const > truth_val - tol) && (norm_const < truth_val + tol))
+        return true;
+
+    return false;
+}
