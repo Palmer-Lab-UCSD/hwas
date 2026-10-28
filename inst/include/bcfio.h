@@ -290,6 +290,7 @@ struct Bcf
     htsFile* fid;
     bcf_hdr_t* hdr;
     std::set<GenomicCoord> pos;
+    int n_threads = 1;
 
 private:
     Bcf(htsFile* hfid, bcf_hdr_t* hhdr): 

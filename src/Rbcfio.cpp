@@ -261,6 +261,8 @@ int set_threads(bconn_t bconn, int n) {
     if (hts_set_threads(bconn->fid, n) != 0)
         Rcpp::stop(status_msg(Status::ErrHtslib));
 
+    bconn->n_threads = n;
+
     return 0;
 }
 

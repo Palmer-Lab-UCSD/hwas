@@ -293,6 +293,14 @@ bcfio::bid_t bcfio::replicate(const bcfio::Bcf* bin) {
     // set elements
     bout->pos = bin->pos;
 
+    if (bin->n_threads > 1) {
+        int hts_status = hts_set_threads(bout->fid, bin->n_threads);
+        if (hts_status != 0)
+            return nullptr;
+
+        bout->n_threads = bin->n_threads;
+    }
+
     return bout;
 }
 
