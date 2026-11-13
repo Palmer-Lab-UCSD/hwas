@@ -55,7 +55,7 @@ Rcpp::NumericMatrix calc_gsim_(bcfio::Bcf* bid,
         Rcpp::stop("Internal Error, could not initialize bcf record"
                 " for reading bcf data.");
 
-    grm::ugrm_t<T> g = grm::UnnormalizedGrm<T>::init(nsamps);
+    grm::ugrm_t<double> g = grm::UnnormalizedGrm<double>::init(nsamps);
     if (g == nullptr)
         Rcpp::stop("Internal Error,k could not initialize grm.");
     
@@ -153,7 +153,7 @@ Rcpp::NumericMatrix calc_gsim(bconn_t bconn, const char* id);
 // @param[in,out] gsim is an n sample x n sample similarity matrix
 void gsim_to_grm(Rcpp::NumericMatrix& gsim);
 
-bool is_grm(const Rcpp::NumericMatrix& m, double tol=1e-8);
+bool is_grm_normalized(const Rcpp::NumericMatrix& m, double tol);
 
 
 #endif

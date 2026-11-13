@@ -194,13 +194,6 @@ Rcpp::List Associations::to_r() {
     return out;
 }
 
-// @brief compute the ordinary least squares sum squared errors
-// @param x Is the n sample x p predictor design matrix
-// @param y Is the n sample column vector of sample responses
-// @param qr Is the pre-allocated n sample x n sample qr matrix object
-// @param yerr Is the pre-allocated n sample column vector for 
-//  sample errors
-// @return the sum squared errors of the linear model
 OlsResult ols_sse_(const Eigen::MatrixXd& x,
         const Eigen::VectorXd& y,
         Eigen::VectorXd& yerr,
@@ -210,11 +203,19 @@ OlsResult ols_sse_(const Eigen::MatrixXd& x,
     int rank = static_cast<int>(qr.rank());
     int nsamps = static_cast<int>(y.size());
 
-    auto qmat = qr.householderQ();  
-    yerr = qmat.transpose() * y;
-    yerr.head(rank).setZero();
+    // Recall that householderQ does not return the dense n x n
+    // matrix Q of the QR decomposition.  Instead it has an optimized
+    // internal representation that we usee for transforming y
+    yerr = qr.householderQ().transpose() * y;
 
-    yerr = qmat * yerr;
+    // In the new basis, yerr is is organized so that the first 
+    // rank r values correspond to the column space of design
+    // matrix x.  The complement set of values correspond to the 
+    // subspace of the data and complment to the colspace(x).  
+    // Consequently, if we set the components of yerr in the colspace(x)
+    // to zero and compute the squared vector norm, the resulting 
+    // scalar is the sum squared errors.
+    yerr.head(rank).setZero();
 
     return OlsResult(yerr.squaredNorm(), nsamps - rank);
 }

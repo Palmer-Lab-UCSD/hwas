@@ -201,15 +201,15 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// is_grm
-bool is_grm(const Rcpp::NumericMatrix& m, double tol);
-RcppExport SEXP _hwas_is_grm(SEXP mSEXP, SEXP tolSEXP) {
+// is_grm_normalized
+bool is_grm_normalized(const Rcpp::NumericMatrix& m, double tol);
+RcppExport SEXP _hwas_is_grm_normalized(SEXP mSEXP, SEXP tolSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const Rcpp::NumericMatrix& >::type m(mSEXP);
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
-    rcpp_result_gen = Rcpp::wrap(is_grm(m, tol));
+    rcpp_result_gen = Rcpp::wrap(is_grm_normalized(m, tol));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -260,7 +260,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_hwas_next_record", (DL_FUNC) &_hwas_next_record, 2},
     {"_hwas_calc_gsim", (DL_FUNC) &_hwas_calc_gsim, 2},
     {"_hwas_gsim_to_grm", (DL_FUNC) &_hwas_gsim_to_grm, 1},
-    {"_hwas_is_grm", (DL_FUNC) &_hwas_is_grm, 2},
+    {"_hwas_is_grm_normalized", (DL_FUNC) &_hwas_is_grm_normalized, 2},
     {"_hwas_pg_sim", (DL_FUNC) &_hwas_pg_sim, 2},
     {"_hwas_pg_sim_qtl", (DL_FUNC) &_hwas_pg_sim_qtl, 7},
     {NULL, NULL, 0}

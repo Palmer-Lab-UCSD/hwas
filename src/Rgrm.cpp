@@ -56,7 +56,7 @@ void gsim_to_grm(Rcpp::NumericMatrix& gsim) {
 
 
 // [[Rcpp::export]]
-bool is_grm(const Rcpp::NumericMatrix& m, double tol) {
+bool is_grm_normalized(const Rcpp::NumericMatrix& m, double tol) {
     double mat_sum = 0;
     Status status = matutils::matrix_sum(m, mat_sum);
     if (status != Status::Success)

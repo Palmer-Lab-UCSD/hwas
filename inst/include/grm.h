@@ -41,7 +41,8 @@ public:
     // @description
     // @param[in] brec is a record queried from a Bcf file
     // @return Status:  Success, ErrDimensionsNotEqual, 
-    Status update(const bcfio::BcfRecord<T>* brec);
+    template <typename Trec>
+    Status update(const bcfio::BcfRecord<Trec>* brec);
 
     // @brief unsafe retrieval of values
     T operator()(const uint32_t i, const uint32_t j) const;
@@ -186,7 +187,8 @@ uint32_t UnnormalizedGrm<T>::sym_midx_to_arr_(const uint32_t i,
 
 // int hap_update_kernel(Grm* grmat, const bcfio::BcfRecord<float>* rec);
 template <typename T>
-Status UnnormalizedGrm<T>::update(const bcfio::BcfRecord<T>* rec) {
+template <typename Trec>
+Status UnnormalizedGrm<T>::update(const bcfio::BcfRecord<Trec>* rec) {
 
     // instantiate indexing variables used in for loops
     // use static to prevent construction and destruction of variables
@@ -197,8 +199,8 @@ Status UnnormalizedGrm<T>::update(const bcfio::BcfRecord<T>* rec) {
     uint16_t k_cols = rec->ncol;
     uint16_t k_col = 0;
 
-    const T* samp_i = rec->data;
-    const T* samp_j = nullptr;
+    const Trec* samp_i = rec->data;
+    const Trec* samp_j = nullptr;
 
     T val = static_cast<T>(0);
 
@@ -212,7 +214,7 @@ Status UnnormalizedGrm<T>::update(const bcfio::BcfRecord<T>* rec) {
             val = 0;
 
             for (k_col = 0; k_col < k_cols; k_col++)
-                val += samp_i[k_col] * samp_j[k_col];
+                val += static_cast<T>(samp_i[k_col]) * static_cast<T>(samp_j[k_col]);
 
             // note that sym_matrix_idx_to_array_ assumes that index
             // i <= j this is implemented by the nested for loops.

@@ -1,10 +1,6 @@
 useDynLib(hwas)
 import(Rcpp)
 
-#########################################################
-## pipeline functionality
-#########################################################
-# export(init)
 
 #########################################################
 ## bcfio and htslib interface
@@ -33,11 +29,18 @@ export(next_record)
 #########################################################
 ## HWAS computation
 #########################################################
+# data checks
+export(is_valid_phenotypes)
+export(is_valid_grm)
+export(is_valid_covars)
+export(is_valid_bconn)
+
+
 # grm
 export(calc_gsim)
 export(gsim_to_grm)
 export(accumulate_gsims)
-export(is_grm)
+export(is_grm_normalized)
 
 
 export(est_reml_vars)

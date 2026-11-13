@@ -65,8 +65,8 @@ gsim_to_grm <- function(gsim) {
     invisible(.Call('_hwas_gsim_to_grm', PACKAGE = 'hwas', gsim))
 }
 
-is_grm <- function(m, tol = 1e-8) {
-    .Call('_hwas_is_grm', PACKAGE = 'hwas', m, tol)
+is_grm_normalized <- function(m, tol) {
+    .Call('_hwas_is_grm_normalized', PACKAGE = 'hwas', m, tol)
 }
 
 pg_sim <- function(grmatrix, heritability) {

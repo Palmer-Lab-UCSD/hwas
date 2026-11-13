@@ -117,13 +117,22 @@ struct Associations {
 //
 //  H = X (X^T X)^{-1} X^T 
 //
-//  is the idempotent projection matrix to the column space of X. 
-//  I - H is then the idempotent matrix projecting the data to the
-//  residual / error space of the data y.  
+//  is the projection matrix to the column space of X. I - H is then the 
+//  idempotent matrix projecting the data to the residual / error 
+//  subspace of the data y.  
 //
 //  This understanding is important as it is the basis for the approach
-//  in the ols_sse_ function.  The errors are computed by 
-//
+//  in the ols_sse_ function.  In this fuction the QR decomposition of
+//  matrix x is performed.  The values of the response variable, y, are
+//  transformed to the basis defined by Q.  The components of the
+//  transformed y that are in the colspace(x) are set to zero.  The 
+//  squared vector norm is the sum squared errors.
+// @param x Is the n sample x p predictor design matrix
+// @param y Is the n sample column vector of sample responses
+// @param qr Is the pre-allocated n sample x n sample qr matrix object
+// @param yerr Is the pre-allocated n sample column vector for 
+//  sample errors
+// @return the sum squared errors of the linear model
 OlsResult ols_sse_(const Eigen::MatrixXd& x, 
         const Eigen::VectorXd& y,
         Eigen::VectorXd& yerr,
@@ -185,6 +194,7 @@ Rcpp::List run_stream_ctg_assoc_(bcfio::Bcf* bid,
     // basis using eig_transform
     Eigen::Index p_reduced = covars.cols() + 1;
 
+    // Add intercept term
     Eigen::MatrixXd x_reduced = Eigen::MatrixXd::Ones(nsamps, p_reduced);
     x_reduced.block(0, 1, nsamps, covars.cols()) = covars;
     x_reduced = eig_transform * x_reduced;
@@ -192,9 +202,12 @@ Rcpp::List run_stream_ctg_assoc_(bcfio::Bcf* bid,
     // Allocate memory for error vector
     Eigen::VectorXd yerr(nsamps);
 
-    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr_reduced(nsamps, p_reduced);
-    OlsResult ols_reduced = ols_sse_(x_reduced, ytransformed, yerr, qr_reduced);
-
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> qr_reduced(nsamps, 
+            p_reduced);
+    OlsResult ols_reduced = ols_sse_(x_reduced, 
+            ytransformed, 
+            yerr, 
+            qr_reduced);
 
     // Prepare genetic data matrices.  The genetic data consists of two
     // matrices.  The first is gdata, it is the matrix that bcf records
@@ -301,80 +314,6 @@ Rcpp::List run_stream_ctg_assoc_(bcfio::Bcf* bid,
 
 
 
-// if (brec == nullptr)
-//     Rcpp::stop(status_msg(Status::ErrInternal));
-
-// // Prepare design matrix and coefficient matrix
-// uint16_t k = 0;
-// Status status = bcfio::k_fmt(bid, format_id, &k)
-
-
-// // If we can't read the first record abort
-// Status status = bcfio::next_record(bid, brec.get(), format_id);
-// if (status != Status::Success)
-//     Rcpp::stop(status_msg(status));
-
-// int32_t ctg_rid = brec->rec->rid;
-
-// const char* ctg_name= nullptr;
-
-// int64_t nrecords = 10000
-// if (!bid->pos.empty())
-//     nrecords = bid->pos.size();
-
-// positions = std::vector<int64_t>(nrecords);
-// fstat_vals = std::vector<double>(nrecords);
-// fstat_val = double;
-// // Resets size to 0 without affecting capacity.  The reason is that
-// // for some unknown reason I can't figure out how to instantiate a 
-// // vector with a specified capacity and not size.  
-// pos.clear();
-// fstat.clear();
-
-// int32_t contig_rid = -1;
-// for (; bstatus == Status::Success; idx++) {
-//     tmp_rid = brec->rec->rid;
-
-
-//     // Register that the contig has changed and that the
-//     // data should be stored and in results map.  The vectors
-//     // for holding data are reset
-//     if (tmp_rid != contig_rid) {
-//         ctg_name = bcf_hdr_id2name(bid->hdr, current_rid);
-
-//         // move assignment
-//         // note that argument data are all copied to the new instance
-//         // of ContigAssocRecord stored at results[contig_rid]
-//         results[contig_rid] = ContigAssocRecord(ctg_name,
-//                 fstat_vals,
-//                 positions);
-
-//         fstat_vals.clear();
-//         positions.clear();
-
-//         // Terminate early as contigs aren't grouped together
-//         if (results.count(tmp_rid) == 1)
-//             break
-
-//         current_rid = tmp_rid;
-//     }
-
-//     status = calc_assoc_at_locus_(transformed_design_matrix, 
-//             transformed_phenotypes,
-//             c_matrix,
-//             &fstat);
-
-//     if (status != Status::Success) {
-//     }
-
-//     if (idx % idx_report_val == 0) {
-//         Rcpp::checkUserInterrupt();
-//         REprintf("\r\x1B[K" "%" PRIu64 " positions processed.",
-//                 idx);
-//     }
-
-//     bstatus = bcfio::next_record(bid, brec.get(), format_id);
-// }
 
 
 // List 
