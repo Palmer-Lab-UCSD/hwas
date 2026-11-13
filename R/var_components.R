@@ -149,44 +149,14 @@ reml_delta_normal_eqn <- function(delta, ysq, eigvals, df) {
 }
 
 
-# @brief estimate the variance componets with REML
-# @description Kang et al. Genetics 2008, the EMMA paper
-est_reml_vars <- function(phenotypes,
-                          grm,
-                          covariates = NULL) {
 
-    if (!is_grm(grm))
-        stop("Input is not a valid the grm class")
-    if (!is.vector(phenotypes))
-        stop("Phenotypes must be a vector.")
-
-    samp_names <- names(phenotypes)
-    if (is.null(samp_names))
-        stop("Phenotype elements must be labeled with sample name")
-
-    # note we get sample vector length checks with these validation
-    if (!identical(samp_names, rownames(grm)))
-        stop("Phenotype sample names not aligned with grm rownames")
-
-    if (!identical(samp_names, colnames(grm)))
-        stop("Phenotype sample names not aligned with grm colnames")
-
-    if (!is.null(covariates) && !identical(samp_names, rownames(covariates)))
-        stop("Phenotype sample names not aligned with covariates")
-
-    nsamps <- length(phenotypes)
-
-    # add the intercept
-    if (is.matrix(covariates))
-        p_covars <- dim(covariates)[2] + 1
-    else if (is.vector(covariates))
-        p_covars <- 2
-    else 
-        p_covars <- 1
-
-    design_matrix <- matrix(1., nsamps, p_covars)
-    if (p_covars > 1)
-        design_matrix[,2:p_covars] <- covariates
+# @brief Internal function call to estimate variance component pars
+# @description Estimate REML variance component from data assumed
+#   to be correctly formated.  This should only be called by internal
+#   functions.
+reml_vars_computation <- function(phenotypes,
+                                  grm,
+                                  design_matrix) {
 
     # Use QR decomposition for the matrix that projects the response
     # variable Y to the residual vector space.  The data are defined
@@ -207,12 +177,17 @@ est_reml_vars <- function(phenotypes,
     # S = Q_2 Q_2^T
     #
     # no inverse or squaring necessary!
-
+    nsamps <- dim(grm)[1]
     qr_decomp <- qr(design_matrix)
     qmat <- qr.Q(qr_decomp, complete=TRUE)[, (qr_decomp$rank+1):nsamps]
 
-    # I think the matrix mult is the bottleneck
-    eig_reml <- eigen(t(qmat) %*% grm %*% qmat, TRUE)
+    # Add identity matrix to grm for eigenvector computation.  This will
+    # help eigenvector solution in the case that the grm has rank < N.
+    # I remove the identity be subtracting 1 from the eigen values
+    # below.
+    eig_reml <- eigen(t(qmat) %*% (grm + diag(1, nsamps)) %*% qmat, 
+                      TRUE)
+    eig_reml$values <- eig_reml$values - 1
     reml_transformation = qmat %*% eig_reml$vectors
 
     transformed_y <- as.vector(t(reml_transformation) %*% phenotypes)
@@ -286,4 +261,67 @@ est_reml_vars <- function(phenotypes,
                           delta = delta,
                           fout = fout),
         class = "var_components"))
+}
+
+
+# @brief estimate the variance componets with REML
+# @description 
+# @param phenotypes vector of phenotype measurements, each element
+#   must be labeled with sample name
+# @param grm is a symmetric positive semi-definite matrix that satisfies
+#   the normalization requirement Kang et al. Nature Genetics 2010
+# @param covariates NULL or an n sample by p covariate matrix where row
+#   names are sample id.  If NULL, the interecept must be TRUE.
+# @param intercept is a boolean on whether an intercept should be modeled
+# @return S3 class of var_components, data are in list with attributes:
+#   herit: estimated narrow sense heritability
+#   vare: the estimated environment variance
+#   varg: the estimated variance of polygenic effects
+#   delta: value optimized by the EMMA algorithm for REML estimation of
+#       variance components, Kang et al. 2008 Genetics.
+#   fout: NULL or output of R's uniroot function
+est_reml_vars <- function(phenotypes,
+                          grm,
+                          covariates = NULL,
+                          intercept = TRUE) {
+
+    # Validate user input
+    if (!is.vector(phenotypes))
+        stop("Phenotypes must be a vector.")
+
+    snames <- names(phenotypes)
+    if (is.null(snames))
+        stop("Phenotype elements must be labeled with sample name")
+
+    if (!is_grm(grm))
+        stop("Input is not a valid the grm class")
+
+    # note we get sample vector length checks with these validation
+    if (!identical(snames, rownames(grm)))
+        stop("Phenotype sample names not aligned with grm rownames")
+
+    if (!identical(snames, colnames(grm)))
+        stop("Phenotype sample names not aligned with grm colnames")
+
+    # I prefer the code does what the user expects, as such I don't
+    # want to set intercept to TRUE when covariates is NULL in case
+    # the user was not expecting this.
+    if (is.null(covariates) && !intercept)
+        stop("If no covariates provided intercept must be TRUE")
+
+    if (!is.null(covariates) && !identical(snames, rownames(covariates)))
+        stop("Phenotype sample names not aligned with covariates")
+
+    nsamps <- length(phenotypes)
+
+    # add the intercept
+    if (intercept) {
+        design_matrix <- matrix(1., nrow = nsamps, ncol = 1)
+
+        if (is.matrix(covariates) || is.vector(covariates))
+            design_matrix <- cbind(design_matrix, covariates)
+    } else
+        design_matrix <- covariates
+
+    return(reml_vars_computation(phenotypes, grm, design_matrix))
 }
